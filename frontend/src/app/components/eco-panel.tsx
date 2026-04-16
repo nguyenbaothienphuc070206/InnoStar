@@ -40,10 +40,10 @@ export default function EcoPanel({
   return (
     <>
       <div className="ecoPanelActions">
-        <button onClick={() => setOpen((value) => !value)}>{open ? "Hide Panel" : "Show Panel"}</button>
-        <button onClick={() => setSheetState("full")}>Full</button>
-        <button onClick={() => setSheetState("half")}>Half</button>
-        <button onClick={() => setSheetState("min")}>Mini</button>
+        <button data-testid="panel-toggle" onClick={() => setOpen((value) => !value)}>{open ? "Hide Panel" : "Show Panel"}</button>
+        <button data-testid="sheet-full" onClick={() => setSheetState("full")}>Full</button>
+        <button data-testid="sheet-half" onClick={() => setSheetState("half")}>Half</button>
+        <button data-testid="sheet-min" onClick={() => setSheetState("min")}>Mini</button>
       </div>
 
       {open ? (
@@ -66,6 +66,8 @@ export default function EcoPanel({
           initial={{ y: 0, opacity: 0 }}
           animate={{ y: yMap[sheetState], opacity: 1 }}
           transition={{ type: "spring", stiffness: 120, damping: 18 }}
+          data-state={sheetState}
+          data-testid="eco-sheet"
           className="ecoPanel"
         >
           <h2>Eco Journey</h2>

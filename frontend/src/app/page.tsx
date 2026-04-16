@@ -3,10 +3,12 @@
 import { FormEvent, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { io, Socket } from "socket.io-client";
+import CameraListPanel from "./components/camera-list-panel";
 import EcoPanel from "./components/eco-panel";
 import LayerControl from "./components/layer-control";
 import TopBar from "./components/top-bar";
 import { RouteSuggestion, Slot } from "./components/types";
+import { useDebouncedValue } from "./hooks/use-debounced-value";
 import { useMapStore } from "./store/use-map-store";
 
 const MapView = dynamic(() => import("./components/map-view"), { ssr: false });
@@ -36,6 +38,8 @@ export default function Home() {
     bumpEco,
     mergeRealtimeSlots
   } = useMapStore();
+
+  const debouncedQuery = useDebouncedValue(query, 280);
 
   useEffect(() => {
     const cachedName = window.localStorage.getItem("greenpark-user");
@@ -148,6 +152,7 @@ export default function Home() {
         <h3>Live View</h3>
         <video src={cameraStreamUrl} controls autoPlay className="liveCameraVideo" />
         <p className="cameraHint">Markers: {stats.available}/{slots.length} available • Recommended: {recommendedSlots.length}</p>
+        <CameraListPanel slots={slots} searchTerm={debouncedQuery} />
       </aside>
     </main>
   );

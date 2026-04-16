@@ -193,6 +193,31 @@ body {
   font-size: 0.86rem;
 }
 
+.cameraList {
+  margin-top: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.cameraListRow {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0 10px;
+  font-size: 0.82rem;
+}
+
+.cameraListRow .online {
+  color: var(--green);
+}
+
+.cameraListRow .offline {
+  color: #f26567;
+}
+
 .slotMarkerHost {
   background: transparent;
   border: none;

@@ -6,6 +6,7 @@ import { io, Socket } from "socket.io-client";
 import CameraListPanel from "./components/camera-list-panel";
 import EcoPanel from "./components/eco-panel";
 import LayerControl from "./components/layer-control";
+import SlotMiniDashboard from "./components/slot-mini-dashboard";
 import TopBar from "./components/top-bar";
 import { RouteSuggestion, Slot } from "./components/types";
 import { useDebouncedValue } from "./hooks/use-debounced-value";
@@ -29,11 +30,13 @@ export default function Home() {
     ecoPoints,
     report,
     statusMessage,
+    selectedSlot,
     setQuery,
     setProfileName,
     setReport,
     setRoute,
     setStatusMessage,
+    setSelectedSlot,
     toggleLayer,
     bumpEco,
     mergeRealtimeSlots
@@ -91,14 +94,40 @@ export default function Home() {
 
   async function findParking() {
     try {
+      setStatusMessage("Analyzing best parking route...");
       const response = await fetch(`${backendUrl}/parking/route?destination=${encodeURIComponent(query)}`);
       const data = (await response.json()) as RouteSuggestion;
       setRoute(data);
       bumpEco(16, 0.35);
+      setStatusMessage(`Best route ready: ${data.etaMinutes} min ETA`);
     } catch {
       setStatusMessage("Route API unavailable");
     }
   }
+
+  async function navigateToSelectedSlot() {
+    if (!selectedSlot) {
+      return;
+    }
+    setQuery(`Slot S${selectedSlot.id}`);
+    await findParking();
+  }
+
+  function openSelectedLiveView() {
+    if (!selectedSlot) {
+      return;
+    }
+    setStatusMessage(`Live view focused on S${selectedSlot.id}`);
+  }
+
+  const treeEquivalent = Math.max(0.1, Number((co2SavedKg / 21).toFixed(2)));
+  const selectedSlotStatus = selectedSlot
+    ? selectedSlot.available
+      ? "Available now"
+      : (selectedSlot.predictedFreeMin ?? 99) <= 10
+        ? `Likely free in ${selectedSlot.predictedFreeMin ?? 8} min`
+        : "Currently full"
+    : "Tap a slot marker to inspect";
 
   async function submitReport(event: FormEvent) {
     event.preventDefault();
@@ -122,8 +151,14 @@ export default function Home() {
       <MapView
         slots={slots}
         layers={layers}
+        selectedSlotId={selectedSlot?.id ?? null}
         routePath={route?.path || []}
-        onSlotClick={(slot) => setStatusMessage(`S${slot.id} ${slot.available ? "available" : "full"}`)}
+        onSlotClick={(slot) => {
+          setSelectedSlot(slot);
+          const soonFree = !slot.available && (slot.predictedFreeMin ?? 99) <= 10;
+          const state = slot.available ? "available" : soonFree ? `free in ~${slot.predictedFreeMin ?? 8} min` : "full";
+          setStatusMessage(`S${slot.id} ${state}`);
+        }}
       />
 
       <TopBar
@@ -148,11 +183,27 @@ export default function Home() {
         onFindParking={findParking}
       />
 
+      <SlotMiniDashboard slot={selectedSlot} onNavigate={navigateToSelectedSlot} onOpenLiveView={openSelectedLiveView} />
+
       <aside className="liveCameraCard">
         <h3>Live View</h3>
-        <video src={cameraStreamUrl} controls autoPlay className="liveCameraVideo" />
-        <p className="cameraHint">Markers: {stats.available}/{slots.length} available • Recommended: {recommendedSlots.length}</p>
+        <div className="liveCameraFrame">
+          <video src={cameraStreamUrl} controls autoPlay className="liveCameraVideo" />
+          {selectedSlot ? (
+            <div className="aiOverlayBox" aria-hidden>
+              <span>AI Tracking S{selectedSlot.id}</span>
+            </div>
+          ) : null}
+        </div>
+        <p className="cameraHint">
+          Markers: {stats.available}/{slots.length} available • Recommended: {recommendedSlots.length} • {selectedSlotStatus}
+        </p>
         <CameraListPanel slots={slots} searchTerm={debouncedQuery} />
+        <div className="recommendCard">
+          <p>Recommended for you</p>
+          <strong>{recommendedSlots[0] ? `S${recommendedSlots[0].id} in ${recommendedSlots[0].distanceM ?? 150}m` : "No optimal slot yet"}</strong>
+          <span>Impact: {co2SavedKg}kg CO2 saved, equivalent to {treeEquivalent} tree-months.</span>
+        </div>
       </aside>
     </main>
   );

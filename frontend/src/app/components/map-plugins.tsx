@@ -9,10 +9,11 @@ import { LayersState, Slot } from "./types";
 type MapPluginContext = {
   slots: Slot[];
   layers: LayersState;
+  selectedSlotId: number | null;
   routePath: Array<[number, number]>;
   onSlotClick: (slot: Slot) => void;
   toLatLng: (slot: Slot) => [number, number];
-  markerIcon: (available: boolean) => L.DivIcon;
+  markerIcon: (slot: Slot, isSelected: boolean) => L.DivIcon;
 };
 
 type MapLayerPlugin = {
@@ -36,18 +37,25 @@ export function createMapPlugins(): MapLayerPlugin[] {
     {
       id: "route",
       render: ({ layers, routePath }) =>
-        layers.route && routePath.length > 1 ? <Polyline positions={routePath} color="#1FF4FA" weight={5} opacity={0.9} /> : null
+        layers.route && routePath.length > 1 ? (
+          <Polyline positions={routePath} pathOptions={{ color: "#1FF4FA", weight: 5, opacity: 0.9, dashArray: "8 10", className: "routePulse" }} />
+        ) : null
     },
     {
       id: "parking",
-      render: ({ layers, slots, markerIcon, onSlotClick, toLatLng }) => {
+      render: ({ layers, slots, markerIcon, selectedSlotId, onSlotClick, toLatLng }) => {
         if (!layers.parking) {
           return null;
         }
 
         const shouldCluster = slots.length > 100;
         const markers = slots.map((slot) => (
-          <Marker key={slot.id} position={toLatLng(slot)} icon={markerIcon(slot.available)} eventHandlers={{ click: () => onSlotClick(slot) }}>
+          <Marker
+            key={slot.id}
+            position={toLatLng(slot)}
+            icon={markerIcon(slot, selectedSlotId === slot.id)}
+            eventHandlers={{ click: () => onSlotClick(slot) }}
+          >
             <Popup>
               S{slot.id} - {slot.available ? "Available" : "Full"} - {slot.zone}
             </Popup>

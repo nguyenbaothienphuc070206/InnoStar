@@ -187,6 +187,34 @@ body {
   background: #050505;
 }
 
+.liveCameraFrame {
+  position: relative;
+}
+
+.aiOverlayBox {
+  position: absolute;
+  top: 20%;
+  left: 18%;
+  width: 52%;
+  height: 38%;
+  border: 2px solid rgba(93, 255, 52, 0.95);
+  border-radius: 10px;
+  box-shadow: 0 0 18px rgba(93, 255, 52, 0.5);
+  animation: aiScan 1.8s ease-in-out infinite alternate;
+}
+
+.aiOverlayBox span {
+  position: absolute;
+  left: 8px;
+  top: -24px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  background: rgba(93, 255, 52, 0.18);
+  border: 1px solid rgba(93, 255, 52, 0.6);
+  color: #dfffcd;
+}
+
 .cameraHint {
   margin: 8px 0 0;
   color: #cbebee;
@@ -255,10 +283,80 @@ body {
   box-shadow: 0 0 18px #5dff34;
 }
 
+.slotMarkerSoon {
+  background: #f6ff67;
+  box-shadow: 0 0 16px rgba(246, 255, 103, 0.95);
+  animation: soonPulse 1.1s ease-in-out infinite alternate;
+}
+
 .slotMarkerRed {
   background: #ef4f53;
   box-shadow: 0 0 10px #ef4f53;
   opacity: 0.8;
+}
+
+.slotMarkerSelected {
+  transform: scale(1.35);
+  border: 2px solid rgba(255, 255, 255, 0.85);
+}
+
+.routePulse {
+  animation: routeDash 1.4s linear infinite;
+}
+
+.slotMiniDashboard {
+  position: absolute;
+  right: 14px;
+  top: 88px;
+  z-index: 44;
+  width: min(290px, calc(100% - 28px));
+  border: 1px solid rgba(31, 244, 250, 0.38);
+  border-radius: 14px;
+  background: rgba(5, 14, 18, 0.82);
+  backdrop-filter: blur(12px);
+  padding: 12px;
+}
+
+.slotMiniDashboard h4 {
+  margin: 0 0 8px;
+  color: var(--cyan);
+}
+
+.slotMiniDashboard p {
+  margin: 4px 0;
+  font-size: 0.86rem;
+}
+
+.slotMiniActions {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.recommendCard {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(93, 255, 52, 0.35);
+  background: linear-gradient(135deg, rgba(93, 255, 52, 0.12), rgba(31, 244, 250, 0.08));
+  display: grid;
+  gap: 4px;
+}
+
+.recommendCard p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #ccfceb;
+}
+
+.recommendCard strong {
+  color: #e9ffe1;
+}
+
+.recommendCard span {
+  font-size: 0.74rem;
+  color: #b5dcd7;
 }
 
 .cameraMarker span {
@@ -397,6 +495,35 @@ button:hover {
   }
 }
 
+@keyframes aiScan {
+  0% {
+    transform: translateY(-3px);
+    opacity: 0.72;
+  }
+  100% {
+    transform: translateY(4px);
+    opacity: 1;
+  }
+}
+
+@keyframes soonPulse {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.12);
+  }
+}
+
+@keyframes routeDash {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -36;
+  }
+}
+
 @media (max-width: 920px) {
   .topBarShell {
     grid-template-columns: 1fr;
@@ -407,6 +534,14 @@ button:hover {
     top: auto;
     bottom: 14px;
     width: 132px;
+  }
+
+  .slotMiniDashboard {
+    left: 12px;
+    right: 12px;
+    width: auto;
+    top: auto;
+    bottom: 260px;
   }
 
   .liveCameraCard {

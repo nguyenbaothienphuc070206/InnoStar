@@ -10,6 +10,7 @@ import { LayersState, Slot } from "./types";
 type MapViewProps = {
   slots: Slot[];
   layers: LayersState;
+  selectedSlotId: number | null;
   routePath: Array<[number, number]>;
   onSlotClick: (slot: Slot) => void;
 };
@@ -25,16 +26,20 @@ function toLatLng(slot: Slot): [number, number] {
   return [lat, lng];
 }
 
-function markerIcon(available: boolean): L.DivIcon {
+function markerIcon(slot: Slot, isSelected: boolean): L.DivIcon {
+  const soonFree = !slot.available && (slot.predictedFreeMin ?? 99) <= 10;
+  const stateClass = slot.available ? "slotMarkerGreen" : soonFree ? "slotMarkerSoon" : "slotMarkerRed";
+  const selectedClass = isSelected ? "slotMarkerSelected" : "";
+
   return L.divIcon({
     className: "slotMarkerHost",
-    html: `<span class="slotMarker ${available ? "slotMarkerGreen" : "slotMarkerRed"}"></span>`,
+    html: `<span class="slotMarker ${stateClass} ${selectedClass}"></span>`,
     iconSize: [22, 22],
     iconAnchor: [11, 11]
   });
 }
 
-export default function MapView({ slots, layers, routePath, onSlotClick }: MapViewProps) {
+export default function MapView({ slots, layers, selectedSlotId, routePath, onSlotClick }: MapViewProps) {
   const plugins = createMapPlugins();
 
   return (
@@ -45,7 +50,7 @@ export default function MapView({ slots, layers, routePath, onSlotClick }: MapVi
       />
 
       {plugins.map((plugin) => (
-        <Fragment key={plugin.id}>{plugin.render({ slots, layers, routePath, onSlotClick, toLatLng, markerIcon })}</Fragment>
+        <Fragment key={plugin.id}>{plugin.render({ slots, layers, selectedSlotId, routePath, onSlotClick, toLatLng, markerIcon })}</Fragment>
       ))}
     </MapContainer>
   );

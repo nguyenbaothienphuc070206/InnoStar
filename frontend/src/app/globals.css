@@ -21,6 +21,214 @@ body {
   font-family: "Space Grotesk", "Segoe UI", sans-serif;
 }
 
+.platformShell {
+  position: relative;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+}
+
+.mapCanvas {
+  height: 100%;
+  width: 100%;
+  z-index: 0;
+}
+
+.topBarShell {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  z-index: 50;
+  display: grid;
+  grid-template-columns: 170px minmax(180px, 1fr) 160px 210px;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(9, 13, 18, 0.72);
+  backdrop-filter: blur(14px);
+}
+
+.topLogo {
+  color: var(--green);
+  font-weight: 700;
+  letter-spacing: 0.07em;
+}
+
+.topSearch,
+.topProfile {
+  width: 100%;
+  border: 1px solid rgba(31, 244, 250, 0.45);
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  color: #e9f7ff;
+  padding: 10px 12px;
+}
+
+.topScore {
+  border: 1px solid rgba(93, 255, 52, 0.38);
+  border-radius: 12px;
+  padding: 10px;
+  text-align: center;
+  color: var(--green);
+  font-weight: 600;
+}
+
+.layerControl {
+  position: absolute;
+  right: 14px;
+  top: 88px;
+  z-index: 40;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  width: 150px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(5, 8, 10, 0.7);
+  backdrop-filter: blur(10px);
+}
+
+.layerControl button {
+  font-size: 0.85rem;
+  padding: 8px 10px;
+}
+
+.layerControl .active {
+  border-color: var(--green);
+  box-shadow: 0 0 16px rgba(93, 255, 52, 0.3);
+}
+
+.ecoPanelActions {
+  position: absolute;
+  left: 14px;
+  top: 88px;
+  z-index: 45;
+  display: flex;
+  gap: 8px;
+}
+
+.ecoPanel {
+  position: absolute;
+  left: 14px;
+  top: 136px;
+  z-index: 40;
+  width: min(360px, calc(100% - 28px));
+  border-radius: 18px;
+  border: 1px solid rgba(31, 244, 250, 0.45);
+  background: rgba(6, 11, 14, 0.72);
+  backdrop-filter: blur(16px);
+  padding: 14px;
+}
+
+.ecoPanel h2 {
+  margin: 0 0 8px;
+  color: var(--cyan);
+}
+
+.ecoHighlight {
+  color: var(--green);
+  font-weight: 600;
+}
+
+.ecoBadge {
+  margin: 8px 0 12px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(31, 244, 250, 0.4);
+  background: rgba(31, 244, 250, 0.1);
+}
+
+.ecoPanelButtons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.ecoReportForm {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 1fr 100px;
+  gap: 8px;
+}
+
+.ecoReportForm input {
+  border: 1px solid rgba(31, 244, 250, 0.4);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  padding: 10px;
+}
+
+.liveCameraCard {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 40;
+  width: min(360px, calc(100% - 28px));
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(7, 10, 14, 0.78);
+  backdrop-filter: blur(14px);
+  padding: 12px;
+}
+
+.liveCameraCard h3 {
+  margin: 0 0 8px;
+  color: var(--cyan);
+}
+
+.liveCameraVideo {
+  width: 100%;
+  border-radius: 12px;
+  min-height: 188px;
+  background: #050505;
+}
+
+.cameraHint {
+  margin: 8px 0 0;
+  color: #cbebee;
+  font-size: 0.86rem;
+}
+
+.slotMarkerHost {
+  background: transparent;
+  border: none;
+}
+
+.slotMarker {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: block;
+}
+
+.slotMarkerGreen {
+  background: #5dff34;
+  box-shadow: 0 0 18px #5dff34;
+}
+
+.slotMarkerRed {
+  background: #ef4f53;
+  box-shadow: 0 0 10px #ef4f53;
+  opacity: 0.8;
+}
+
+.cameraMarker span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 20px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  border-radius: 999px;
+  color: #05090c;
+  background: #1ff4fa;
+}
+
 .page {
   min-height: 100vh;
   display: grid;
@@ -333,6 +541,29 @@ button:hover {
 }
 
 @media (max-width: 920px) {
+  .topBarShell {
+    grid-template-columns: 1fr;
+  }
+
+  .layerControl {
+    right: 12px;
+    top: auto;
+    bottom: 14px;
+    width: 132px;
+  }
+
+  .liveCameraCard {
+    left: 12px;
+    right: 12px;
+    width: auto;
+    bottom: 132px;
+  }
+
+  .ecoReportForm,
+  .ecoPanelButtons {
+    grid-template-columns: 1fr;
+  }
+
   .page {
     grid-template-rows: auto 1fr auto auto;
   }

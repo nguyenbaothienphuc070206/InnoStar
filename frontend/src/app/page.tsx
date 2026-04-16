@@ -1,12 +1,13 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { io, Socket } from "socket.io-client";
 import EcoPanel from "./components/eco-panel";
 import LayerControl from "./components/layer-control";
 import TopBar from "./components/top-bar";
-import { LayersState, RouteSuggestion, Slot } from "./components/types";
+import { RouteSuggestion, Slot } from "./components/types";
+import { useMapStore } from "./store/use-map-store";
 
 const MapView = dynamic(() => import("./components/map-view"), { ssr: false });
 
@@ -14,41 +15,38 @@ const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001
 const backendWsUrl = backendUrl.replace(/\/api\/v1\/?$/, "");
 const cameraStreamUrl = process.env.NEXT_PUBLIC_CAMERA_STREAM_URL || "http://localhost:8000/stream.m3u8";
 
-const initialSlots: Slot[] = [
-  { id: 1, type: "car", zone: "green", available: true, x: 20, y: 22, cameraOnline: true },
-  { id: 2, type: "car", zone: "standard", available: false, x: 34, y: 38, cameraOnline: false },
-  { id: 3, type: "bike", zone: "green", available: true, x: 58, y: 31, cameraOnline: true },
-  { id: 4, type: "bike", zone: "standard", available: false, x: 67, y: 64, cameraOnline: false },
-  { id: 5, type: "car", zone: "green", available: true, x: 79, y: 44, cameraOnline: true }
-];
-
 export default function Home() {
-  const [slots, setSlots] = useState<Slot[]>(initialSlots);
-  const [query, setQuery] = useState("Ben Thanh Market");
-  const [username, setUsername] = useState("Eco Traveler");
-  const [layers, setLayers] = useState<LayersState>({
-    parking: true,
-    camera: true,
-    traffic: false,
-    route: true
-  });
-  const [co2SavedKg, setCo2SavedKg] = useState(4.8);
-  const [route, setRoute] = useState<RouteSuggestion | null>(null);
-  const [ecoLevel, setEcoLevel] = useState("Eco Driver Lv.2");
-  const [ecoPoints, setEcoPoints] = useState(260);
-  const [report, setReport] = useState("");
-  const [statusMessage, setStatusMessage] = useState("Realtime online");
+  const {
+    slots,
+    query,
+    profileName,
+    layers,
+    co2SavedKg,
+    route,
+    ecoLevel,
+    ecoPoints,
+    report,
+    statusMessage,
+    setQuery,
+    setProfileName,
+    setReport,
+    setRoute,
+    setStatusMessage,
+    toggleLayer,
+    bumpEco,
+    mergeRealtimeSlots
+  } = useMapStore();
 
   useEffect(() => {
     const cachedName = window.localStorage.getItem("greenpark-user");
     if (cachedName) {
-      setUsername(cachedName);
+      setProfileName(cachedName);
     }
-  }, []);
+  }, [setProfileName]);
 
   useEffect(() => {
-    window.localStorage.setItem("greenpark-user", username);
-  }, [username]);
+    window.localStorage.setItem("greenpark-user", profileName);
+  }, [profileName]);
 
   useEffect(() => {
     let socket: Socket | undefined;
@@ -61,13 +59,7 @@ export default function Home() {
       socket.on("parking-update", (data: Slot[]) => {
         if (Array.isArray(data)) {
           requestAnimationFrame(() => {
-            setSlots((prev) => {
-              const byId = new Map(data.map((item) => [item.id, item]));
-              return prev.map((slot) => {
-                const next = byId.get(slot.id);
-                return next ? { ...slot, ...next } : slot;
-              });
-            });
+            mergeRealtimeSlots(data);
           });
         }
       });
@@ -78,7 +70,7 @@ export default function Home() {
     return () => {
       socket?.disconnect();
     };
-  }, []);
+  }, [mergeRealtimeSlots, setStatusMessage]);
 
   const stats = useMemo(() => {
     const available = slots.filter((slot) => slot.available).length;
@@ -98,9 +90,7 @@ export default function Home() {
       const response = await fetch(`${backendUrl}/parking/route?destination=${encodeURIComponent(query)}`);
       const data = (await response.json()) as RouteSuggestion;
       setRoute(data);
-      setCo2SavedKg((value) => Number((value + 0.35).toFixed(2)));
-      setEcoPoints((value) => value + 16);
-      setEcoLevel((level) => (ecoPoints + 16 >= 300 ? "Eco Driver Lv.3" : level));
+      bumpEco(16, 0.35);
     } catch {
       setStatusMessage("Route API unavailable");
     }
@@ -114,17 +104,13 @@ export default function Home() {
       await fetch(`${backendUrl}/parking/report`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: report, user: username })
+        body: JSON.stringify({ message: report, user: profileName })
       });
       setReport("");
       setStatusMessage("Thanks for your community report");
     } catch {
       setStatusMessage("Could not send report");
     }
-  }
-
-  function toggleLayer(layer: keyof LayersState) {
-    setLayers((prev) => ({ ...prev, [layer]: !prev[layer] }));
   }
 
   return (
@@ -140,8 +126,8 @@ export default function Home() {
         query={query}
         onQueryChange={setQuery}
         greenScore={route?.score ?? stats.score}
-        profileName={username}
-        onProfileNameChange={setUsername}
+        profileName={profileName}
+        onProfileNameChange={setProfileName}
       />
 
       <LayerControl layers={layers} onToggle={toggleLayer} />

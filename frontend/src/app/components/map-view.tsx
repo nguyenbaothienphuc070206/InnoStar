@@ -3,6 +3,7 @@
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { MapContainer, Marker, Polyline, Popup, TileLayer } from "react-leaflet";
+import MarkerClusterGroup from "react-leaflet-cluster";
 import { LayersState, Slot } from "./types";
 
 type MapViewProps = {
@@ -33,6 +34,24 @@ function markerIcon(available: boolean): L.DivIcon {
 }
 
 export default function MapView({ slots, layers, routePath, onSlotClick }: MapViewProps) {
+  const shouldCluster = slots.length > 100;
+
+  const parkingMarkers = slots.map((slot) => (
+    <Marker key={slot.id} position={toLatLng(slot)} icon={markerIcon(slot.available)} eventHandlers={{ click: () => onSlotClick(slot) }}>
+      <Popup>
+        S{slot.id} - {slot.available ? "Available" : "Full"} - {slot.zone}
+      </Popup>
+    </Marker>
+  ));
+
+  const cameraMarkers = slots
+    .filter((slot) => slot.cameraOnline)
+    .map((slot) => (
+      <Marker key={`camera-${slot.id}`} position={toLatLng(slot)} icon={L.divIcon({ className: "cameraMarker", html: "<span>CAM</span>" })}>
+        <Popup>Live camera near S{slot.id}</Popup>
+      </Marker>
+    ));
+
   return (
     <MapContainer center={center} zoom={15} className="mapCanvas" zoomControl={false} preferCanvas>
       <TileLayer
@@ -50,25 +69,11 @@ export default function MapView({ slots, layers, routePath, onSlotClick }: MapVi
 
       {layers.route && routePath.length > 1 ? <Polyline positions={routePath} color="#1FF4FA" weight={5} opacity={0.9} /> : null}
 
-      {layers.parking
-        ? slots.map((slot) => (
-            <Marker key={slot.id} position={toLatLng(slot)} icon={markerIcon(slot.available)} eventHandlers={{ click: () => onSlotClick(slot) }}>
-              <Popup>
-                S{slot.id} - {slot.available ? "Available" : "Full"} - {slot.zone}
-              </Popup>
-            </Marker>
-          ))
-        : null}
+      {layers.parking ? (
+        shouldCluster ? <MarkerClusterGroup chunkedLoading>{parkingMarkers}</MarkerClusterGroup> : parkingMarkers
+      ) : null}
 
-      {layers.camera
-        ? slots
-            .filter((slot) => slot.cameraOnline)
-            .map((slot) => (
-              <Marker key={`camera-${slot.id}`} position={toLatLng(slot)} icon={L.divIcon({ className: "cameraMarker", html: "<span>CAM</span>" })}>
-                <Popup>Live camera near S{slot.id}</Popup>
-              </Marker>
-            ))
-        : null}
+      {layers.camera ? (shouldCluster ? <MarkerClusterGroup chunkedLoading>{cameraMarkers}</MarkerClusterGroup> : cameraMarkers) : null}
     </MapContainer>
   );
 }

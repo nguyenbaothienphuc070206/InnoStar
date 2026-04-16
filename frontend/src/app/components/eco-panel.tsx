@@ -3,6 +3,8 @@
 import { motion } from "framer-motion";
 import { FormEvent, useState } from "react";
 
+type SheetState = "full" | "half" | "min";
+
 type EcoPanelProps = {
   status: string;
   co2SavedKg: number;
@@ -27,22 +29,42 @@ export default function EcoPanel({
   onFindParking
 }: EcoPanelProps) {
   const [open, setOpen] = useState(true);
-  const [minimized, setMinimized] = useState(false);
+  const [sheetState, setSheetState] = useState<SheetState>("half");
+
+  const yMap: Record<SheetState, number> = {
+    full: 0,
+    half: 220,
+    min: 410
+  };
 
   return (
     <>
       <div className="ecoPanelActions">
         <button onClick={() => setOpen((value) => !value)}>{open ? "Hide Panel" : "Show Panel"}</button>
-        <button onClick={() => setMinimized((value) => !value)}>{minimized ? "Expand" : "Minimize"}</button>
+        <button onClick={() => setSheetState("full")}>Full</button>
+        <button onClick={() => setSheetState("half")}>Half</button>
+        <button onClick={() => setSheetState("min")}>Mini</button>
       </div>
 
       {open ? (
         <motion.aside
           drag="y"
           dragMomentum={false}
-          dragConstraints={{ top: -260, bottom: 320 }}
+          dragElastic={0.08}
+          dragConstraints={{ top: -30, bottom: 450 }}
+          onDragEnd={(_, info) => {
+            if (info.offset.y < -80) {
+              setSheetState("full");
+              return;
+            }
+            if (info.offset.y > 120) {
+              setSheetState("min");
+              return;
+            }
+            setSheetState("half");
+          }}
           initial={{ y: 0, opacity: 0 }}
-          animate={{ y: minimized ? 240 : 0, opacity: 1 }}
+          animate={{ y: yMap[sheetState], opacity: 1 }}
           transition={{ type: "spring", stiffness: 120, damping: 18 }}
           className="ecoPanel"
         >

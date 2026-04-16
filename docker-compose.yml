@@ -1,0 +1,96 @@
+version: "3.8"
+
+services:
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_BACKEND_URL: http://localhost:3001/api/v1
+      NEXT_PUBLIC_CAMERA_STREAM_URL: http://localhost:8000/live
+    depends_on:
+      - backend
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+      AI_SERVICE_URL: http://ai:8000
+      POLLING_INTERVAL_MS: 2000
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: greenpark
+      POSTGRES_PASSWORD: greenpark
+      POSTGRES_DB: greenpark
+      JWT_SECRET: greenpark_dev_secret
+      DB_SYNCHRONIZE: "false"
+      DB_MIGRATIONS_RUN: "true"
+    depends_on:
+      - ai
+      - redis
+      - postgres
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3001/api/v1/ops/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+  ai:
+    build: ./ai-service
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')",
+        ]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: greenpark
+      POSTGRES_PASSWORD: greenpark
+      POSTGRES_DB: greenpark
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U greenpark -d greenpark"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

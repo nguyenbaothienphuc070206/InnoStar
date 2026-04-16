@@ -1,6 +1,7 @@
 "use client";
 
 import { LayersState } from "./types";
+import GlassCard from "./glass-card";
 
 type LayerControlProps = {
   layers: LayersState;
@@ -9,7 +10,7 @@ type LayerControlProps = {
 
 export default function LayerControl({ layers, onToggle }: LayerControlProps) {
   return (
-    <section className="layerControl">
+    <GlassCard className="layerControl">
       <button data-testid="layer-parking" aria-pressed={layers.parking} onClick={() => onToggle("parking")} className={layers.parking ? "active" : ""}>
         Parking
       </button>
@@ -22,6 +23,6 @@ export default function LayerControl({ layers, onToggle }: LayerControlProps) {
       <button data-testid="layer-route" aria-pressed={layers.route} onClick={() => onToggle("route")} className={layers.route ? "active" : ""}>
         Route
       </button>
-    </section>
+    </GlassCard>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import GlassCard from "./glass-card";
 import { Slot } from "./types";
 
 type SlotMiniDashboardProps = {
@@ -24,14 +25,15 @@ export default function SlotMiniDashboard({ slot, onNavigate, onOpenLiveView }: 
       className="slotMiniDashboard"
       data-testid="slot-mini-dashboard"
     >
-      <h4>Slot S{slot.id}</h4>
-      <p>Status: {status}</p>
-      <p>Estimated free: {slot.available ? "Now" : `${slot.predictedFreeMin ?? 12} min`}</p>
-      <p>Distance: {slot.distanceM ?? 150} m</p>
-      <div className="slotMiniActions">
-        <button onClick={onNavigate}>Navigate</button>
-        <button onClick={onOpenLiveView}>Live View</button>
-      </div>
+      <GlassCard className="slotMiniCard">
+        <h4>Slot S{slot.id}</h4>
+        <p>{status}</p>
+        <p>{slot.available ? "Free now" : `Free in ${slot.predictedFreeMin ?? 12} min`} • {slot.distanceM ?? 150}m</p>
+        <div className="slotMiniActions">
+          <button onClick={onNavigate}>Go</button>
+          <button onClick={onOpenLiveView}>View</button>
+        </div>
+      </GlassCard>
     </motion.aside>
   );
 }

@@ -1,11 +1,12 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { io, Socket } from "socket.io-client";
 import CameraListPanel from "./components/camera-list-panel";
 import CameraAIOverlay from "./components/camera-ai-overlay";
 import EcoPanel from "./components/eco-panel";
+import GlassCard from "./components/glass-card";
 import LayerControl from "./components/layer-control";
 import SlotMiniDashboard from "./components/slot-mini-dashboard";
 import TopBar from "./components/top-bar";
@@ -20,6 +21,9 @@ const backendWsUrl = backendUrl.replace(/\/api\/v1\/?$/, "");
 const cameraStreamUrl = process.env.NEXT_PUBLIC_CAMERA_STREAM_URL || "http://localhost:8000/stream.m3u8";
 
 export default function Home() {
+  const [routeLoading, setRouteLoading] = useState(false);
+  const [cameraOffline, setCameraOffline] = useState(false);
+
   const {
     slots,
     query,
@@ -88,12 +92,17 @@ export default function Home() {
   }, [slots]);
 
   const preferredArea = "District 1";
-  const recommendedSlots = useMemo(() => {
+  const nearbyAvailableSlots = useMemo(() => {
     const thresholdX = preferredArea === "District 1" ? 55 : 100;
     return slots.filter((slot) => slot.x <= thresholdX && slot.available);
   }, [slots]);
 
+  const recommendedSlots = useMemo(() => {
+    return [...nearbyAvailableSlots].sort((a, b) => (a.distanceM ?? 9999) - (b.distanceM ?? 9999)).slice(0, 2);
+  }, [nearbyAvailableSlots]);
+
   async function findParking() {
+    setRouteLoading(true);
     try {
       setStatusMessage("Analyzing best parking route...");
       const response = await fetch(`${backendUrl}/parking/route?destination=${encodeURIComponent(query)}`);
@@ -103,6 +112,8 @@ export default function Home() {
       setStatusMessage(`Best route ready: ${data.etaMinutes} min ETA`);
     } catch {
       setStatusMessage("Route API unavailable");
+    } finally {
+      setRouteLoading(false);
     }
   }
 
@@ -162,6 +173,8 @@ export default function Home() {
         }}
       />
 
+      <div className="mapAtmosphereOverlay" aria-hidden />
+
       <TopBar
         query={query}
         onQueryChange={setQuery}
@@ -186,23 +199,51 @@ export default function Home() {
 
       <SlotMiniDashboard slot={selectedSlot} onNavigate={navigateToSelectedSlot} onOpenLiveView={openSelectedLiveView} />
 
-      <aside className="liveCameraCard">
+      <GlassCard className="liveCameraCard">
         <h3>Live View</h3>
+        {routeLoading ? <p className="loadingHint" data-testid="route-loading">Analyzing best parking...</p> : null}
         <div className="liveCameraFrame">
-          <video src={cameraStreamUrl} controls autoPlay className="liveCameraVideo" />
+          <video
+            src={cameraStreamUrl}
+            controls
+            autoPlay
+            className="liveCameraVideo"
+            onError={() => setCameraOffline(true)}
+            onCanPlay={() => setCameraOffline(false)}
+          />
           <CameraAIOverlay active={Boolean(selectedSlot)} seed={selectedSlot?.id ?? 0} />
-          {selectedSlot ? <span className="aiOverlayTag">AI Tracking S{selectedSlot.id}</span> : null}
+          {selectedSlot ? <span className="aiOverlayTag" data-testid="ai-overlay-tag">AI Tracking S{selectedSlot.id}</span> : null}
         </div>
+        {cameraOffline ? <p className="cameraError">Camera offline</p> : null}
         <p className="cameraHint">
           Markers: {stats.available}/{slots.length} available • Recommended: {recommendedSlots.length} • {selectedSlotStatus}
         </p>
         <CameraListPanel slots={slots} searchTerm={debouncedQuery} />
         <div className="recommendCard">
           <p>Recommended for you</p>
-          <strong>{recommendedSlots[0] ? `S${recommendedSlots[0].id} in ${recommendedSlots[0].distanceM ?? 150}m` : "No optimal slot yet"}</strong>
+          {recommendedSlots.length > 0 ? (
+            <>
+              {recommendedSlots.map((slot) => (
+                <div key={slot.id} className="recommendItem">
+                  <strong>{`S${slot.id} in ${slot.distanceM ?? 150}m`}</strong>
+                  <button
+                    data-testid={`inspect-slot-${slot.id}`}
+                    onClick={() => {
+                      setSelectedSlot(slot);
+                      setStatusMessage(`S${slot.id} selected`);
+                    }}
+                  >
+                    Inspect
+                  </button>
+                </div>
+              ))}
+            </>
+          ) : (
+            <strong>No parking available nearby</strong>
+          )}
           <span>Impact: {co2SavedKg}kg CO2 saved, equivalent to {treeEquivalent} tree-months.</span>
         </div>
-      </aside>
+      </GlassCard>
     </main>
   );
 }

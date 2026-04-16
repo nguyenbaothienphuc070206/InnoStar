@@ -57,7 +57,7 @@ export function createMapPlugins(): MapLayerPlugin[] {
             eventHandlers={{ click: () => onSlotClick(slot) }}
           >
             <Popup>
-              S{slot.id} - {slot.available ? "Available" : "Full"} - {slot.zone}
+              S{slot.id} - {slot.available ? "Available" : slot.soon || (slot.predictedFreeMin ?? 99) <= 10 ? "Likely soon" : "Full"} - {slot.zone}
             </Popup>
           </Marker>
         ));

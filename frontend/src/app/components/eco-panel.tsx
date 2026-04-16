@@ -2,8 +2,7 @@
 
 import { motion } from "framer-motion";
 import { FormEvent, useState } from "react";
-
-type SheetState = "full" | "half" | "min";
+import GlassCard from "./glass-card";
 
 type EcoPanelProps = {
   status: string;
@@ -28,72 +27,52 @@ export default function EcoPanel({
   onSubmitReport,
   onFindParking
 }: EcoPanelProps) {
-  const [open, setOpen] = useState(true);
-  const [sheetState, setSheetState] = useState<SheetState>("half");
+  const [collapsed, setCollapsed] = useState(false);
   const treeEquivalent = Math.max(1, Math.round(co2SavedKg / 2.4));
 
-  const yMap: Record<SheetState, number> = {
-    full: 0,
-    half: 220,
-    min: 410
-  };
-
   return (
-    <>
-      <div className="ecoPanelActions">
-        <button data-testid="panel-toggle" onClick={() => setOpen((value) => !value)}>{open ? "Hide Panel" : "Show Panel"}</button>
-        <button data-testid="sheet-full" onClick={() => setSheetState("full")}>Full</button>
-        <button data-testid="sheet-half" onClick={() => setSheetState("half")}>Half</button>
-        <button data-testid="sheet-min" onClick={() => setSheetState("min")}>Mini</button>
-      </div>
+    <motion.aside
+      initial={{ x: -50, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      transition={{ type: "spring", stiffness: 120 }}
+      className="ecoPanelShell"
+      data-testid="eco-sheet"
+    >
+      <GlassCard className={`ecoPanel ${collapsed ? "ecoPanelCollapsed" : ""}`}>
+        <div className="ecoHeader">
+          <h2 className="ecoTitle">Eco Journey</h2>
+          <button data-testid="panel-compact" className="ecoCollapseButton" onClick={() => setCollapsed((value) => !value)}>
+            {collapsed ? "Expand" : "Minimize"}
+          </button>
+        </div>
 
-      {open ? (
-        <motion.aside
-          drag="y"
-          dragMomentum={false}
-          dragElastic={0.08}
-          dragConstraints={{ top: -30, bottom: 450 }}
-          onDragEnd={(_, info) => {
-            if (info.offset.y < -80) {
-              setSheetState("full");
-              return;
-            }
-            if (info.offset.y > 120) {
-              setSheetState("min");
-              return;
-            }
-            setSheetState("half");
-          }}
-          initial={{ y: 0, opacity: 0 }}
-          animate={{ y: yMap[sheetState], opacity: 1 }}
-          transition={{ type: "spring", stiffness: 120, damping: 18 }}
-          data-state={sheetState}
-          data-testid="eco-sheet"
-          className="ecoPanel"
-        >
-          <h2>Eco Journey</h2>
-          <p>Status: {status}</p>
-          <p className="ecoHighlight">You saved {co2SavedKg}kg CO2</p>
-          <p className="ecoSub">Equivalent to planting {treeEquivalent} trees.</p>
-          <p>Green Score: {greenScore}</p>
-          <p className="ecoHighlight">You are greener than 82% users</p>
-          <div className="ecoBadge">{ecoLevel} • {ecoPoints} pts</div>
+        {!collapsed ? (
+          <div className="ecoBody">
+            <p className="ecoStatus">● {status}</p>
 
-          <div className="ecoPanelButtons">
-            <button onClick={onFindParking}>Find Parking</button>
-            <button onClick={onFindParking}>Green Route</button>
+            <div className="ecoQuickStats">🌱 {co2SavedKg}kg CO2</div>
+            <div className="ecoSub">≈ {treeEquivalent} trees planted</div>
+
+            <div className="ecoScoreRow">
+              <span>Score</span>
+              <strong>{greenScore}</strong>
+            </div>
+
+            <div className="ecoRank">Top 82% users</div>
+            <div className="ecoBadge">{ecoLevel} • {ecoPoints} pts</div>
+
+            <div className="ecoPanelButtons">
+              <button onClick={onFindParking}>Find</button>
+              <button onClick={onFindParking}>Route</button>
+            </div>
+
+            <form onSubmit={onSubmitReport} className="ecoReportForm">
+              <input value={report} onChange={(event) => onReportChange(event.target.value)} placeholder="Report status" />
+              <button type="submit">Send</button>
+            </form>
           </div>
-
-          <form onSubmit={onSubmitReport} className="ecoReportForm">
-            <input
-              value={report}
-              onChange={(event) => onReportChange(event.target.value)}
-              placeholder="Report traffic, weather, slot status"
-            />
-            <button type="submit">Send</button>
-          </form>
-        </motion.aside>
-      ) : null}
-    </>
+        ) : null}
+      </GlassCard>
+    </motion.aside>
   );
 }

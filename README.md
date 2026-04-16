@@ -133,3 +133,11 @@ Bootstrap rule:
 - Add Redis queue + worker for image/video processing.
 - Add Postgres + TimescaleDB for slot history and predictive parking analytics.
 - Add observability with Prometheus + Grafana + OpenTelemetry.
+
+## Enterprise Delivery Baseline
+
+- CI pipeline for frontend, backend, and ai-service checks in .github/workflows/ci.yml.
+- Security pipeline with dependency review and CodeQL in .github/workflows/security.yml.
+- Dependabot automation for npm, pip, and Docker updates in .github/dependabot.yml.
+- PR template and issue templates for standardized collaboration.
+- Dedicated security and contribution guides in SECURITY.md and CONTRIBUTING.md.

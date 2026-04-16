@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { io, Socket } from "socket.io-client";
 import CameraListPanel from "./components/camera-list-panel";
+import CameraAIOverlay from "./components/camera-ai-overlay";
 import EcoPanel from "./components/eco-panel";
 import LayerControl from "./components/layer-control";
 import SlotMiniDashboard from "./components/slot-mini-dashboard";
@@ -124,7 +125,7 @@ export default function Home() {
   const selectedSlotStatus = selectedSlot
     ? selectedSlot.available
       ? "Available now"
-      : (selectedSlot.predictedFreeMin ?? 99) <= 10
+      : selectedSlot.soon || (selectedSlot.predictedFreeMin ?? 99) <= 10
         ? `Likely free in ${selectedSlot.predictedFreeMin ?? 8} min`
         : "Currently full"
     : "Tap a slot marker to inspect";
@@ -155,7 +156,7 @@ export default function Home() {
         routePath={route?.path || []}
         onSlotClick={(slot) => {
           setSelectedSlot(slot);
-          const soonFree = !slot.available && (slot.predictedFreeMin ?? 99) <= 10;
+          const soonFree = !slot.available && (slot.soon || (slot.predictedFreeMin ?? 99) <= 10);
           const state = slot.available ? "available" : soonFree ? `free in ~${slot.predictedFreeMin ?? 8} min` : "full";
           setStatusMessage(`S${slot.id} ${state}`);
         }}
@@ -189,11 +190,8 @@ export default function Home() {
         <h3>Live View</h3>
         <div className="liveCameraFrame">
           <video src={cameraStreamUrl} controls autoPlay className="liveCameraVideo" />
-          {selectedSlot ? (
-            <div className="aiOverlayBox" aria-hidden>
-              <span>AI Tracking S{selectedSlot.id}</span>
-            </div>
-          ) : null}
+          <CameraAIOverlay active={Boolean(selectedSlot)} seed={selectedSlot?.id ?? 0} />
+          {selectedSlot ? <span className="aiOverlayTag">AI Tracking S{selectedSlot.id}</span> : null}
         </div>
         <p className="cameraHint">
           Markers: {stats.available}/{slots.length} available • Recommended: {recommendedSlots.length} • {selectedSlotStatus}

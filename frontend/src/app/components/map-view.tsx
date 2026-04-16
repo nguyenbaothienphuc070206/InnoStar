@@ -27,13 +27,14 @@ function toLatLng(slot: Slot): [number, number] {
 }
 
 function markerIcon(slot: Slot, isSelected: boolean): L.DivIcon {
-  const soonFree = !slot.available && (slot.predictedFreeMin ?? 99) <= 10;
+  const soonFree = !slot.available && (slot.soon || (slot.predictedFreeMin ?? 99) <= 10);
   const stateClass = slot.available ? "slotMarkerGreen" : soonFree ? "slotMarkerSoon" : "slotMarkerRed";
   const selectedClass = isSelected ? "slotMarkerSelected" : "";
+  const status = slot.available ? "free" : soonFree ? "soon" : "full";
 
   return L.divIcon({
     className: "slotMarkerHost",
-    html: `<span class="slotMarker ${stateClass} ${selectedClass}"></span>`,
+    html: `<span class="slotMarker marker-${status} ${stateClass} ${selectedClass}"></span>`,
     iconSize: [22, 22],
     iconAnchor: [11, 11]
   });

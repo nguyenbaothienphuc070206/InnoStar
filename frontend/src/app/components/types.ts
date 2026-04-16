@@ -3,6 +3,7 @@ export type Slot = {
   type: "car" | "bike";
   zone: "green" | "standard";
   available: boolean;
+  soon?: boolean;
   predictedFreeMin?: number;
   distanceM?: number;
   x: number;

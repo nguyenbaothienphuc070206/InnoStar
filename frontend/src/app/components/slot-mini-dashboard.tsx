@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { Slot } from "./types";
 
 type SlotMiniDashboardProps = {
@@ -16,7 +17,13 @@ export default function SlotMiniDashboard({ slot, onNavigate, onOpenLiveView }: 
   const status = slot.available ? "Available" : (slot.predictedFreeMin ?? 0) <= 10 ? "Likely free soon" : "Full";
 
   return (
-    <aside className="slotMiniDashboard" data-testid="slot-mini-dashboard">
+    <motion.aside
+      initial={{ y: 90, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ type: "spring", stiffness: 120, damping: 20 }}
+      className="slotMiniDashboard"
+      data-testid="slot-mini-dashboard"
+    >
       <h4>Slot S{slot.id}</h4>
       <p>Status: {status}</p>
       <p>Estimated free: {slot.available ? "Now" : `${slot.predictedFreeMin ?? 12} min`}</p>
@@ -25,6 +32,6 @@ export default function SlotMiniDashboard({ slot, onNavigate, onOpenLiveView }: 
         <button onClick={onNavigate}>Navigate</button>
         <button onClick={onOpenLiveView}>Live View</button>
       </div>
-    </aside>
+    </motion.aside>
   );
 }

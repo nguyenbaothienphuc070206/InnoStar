@@ -30,6 +30,7 @@ export default function EcoPanel({
 }: EcoPanelProps) {
   const [open, setOpen] = useState(true);
   const [sheetState, setSheetState] = useState<SheetState>("half");
+  const treeEquivalent = Math.max(1, Math.round(co2SavedKg / 2.4));
 
   const yMap: Record<SheetState, number> = {
     full: 0,
@@ -72,7 +73,8 @@ export default function EcoPanel({
         >
           <h2>Eco Journey</h2>
           <p>Status: {status}</p>
-          <p>CO2 saved: {co2SavedKg} kg</p>
+          <p className="ecoHighlight">You saved {co2SavedKg}kg CO2</p>
+          <p className="ecoSub">Equivalent to planting {treeEquivalent} trees.</p>
           <p>Green Score: {greenScore}</p>
           <p className="ecoHighlight">You are greener than 82% users</p>
           <div className="ecoBadge">{ecoLevel} • {ecoPoints} pts</div>

@@ -138,6 +138,16 @@ Bootstrap rule:
 
 - CI pipeline for frontend, backend, and ai-service checks in .github/workflows/ci.yml.
 - Security pipeline with dependency review and CodeQL in .github/workflows/security.yml.
+- Frontend quality pipeline with Playwright E2E and Lighthouse budgets in .github/workflows/frontend-quality.yml.
 - Dependabot automation for npm, pip, and Docker updates in .github/dependabot.yml.
 - PR template and issue templates for standardized collaboration.
 - Dedicated security and contribution guides in SECURITY.md and CONTRIBUTING.md.
+
+## Frontend Quality Checks (Local)
+
+Run in frontend:
+
+- npm run test:e2e
+- npm run test:visual
+- npm run build
+- npm run lhci:autorun

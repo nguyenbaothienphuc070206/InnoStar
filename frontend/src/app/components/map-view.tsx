@@ -35,8 +35,8 @@ function markerIcon(slot: Slot, isSelected: boolean): L.DivIcon {
   return L.divIcon({
     className: "slotMarkerHost",
     html: `<span class="slotMarker marker-${status} ${stateClass} ${selectedClass}" data-testid="slot-marker-${slot.id}" data-status="${status}"></span>`,
-    iconSize: [22, 22],
-    iconAnchor: [11, 11]
+    iconSize: [24, 24],
+    iconAnchor: [12, 12]
   });
 }
 

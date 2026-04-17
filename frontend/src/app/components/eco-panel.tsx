@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import GlassCard from "./glass-card";
 
 type EcoPanelProps = {
@@ -29,6 +29,14 @@ export default function EcoPanel({
 }: EcoPanelProps) {
   const [collapsed, setCollapsed] = useState(false);
   const treeEquivalent = Math.max(1, Math.round(co2SavedKg / 2.4));
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const isMobile = window.innerWidth < 640;
+    setCollapsed(isMobile);
+  }, []);
 
   return (
     <motion.aside

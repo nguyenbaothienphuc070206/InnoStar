@@ -159,7 +159,7 @@ export default function Home() {
   }
 
   return (
-    <main className="platformShell">
+    <main className="platformShell pt-safe pb-safe">
       <MapView
         slots={slots}
         layers={layers}

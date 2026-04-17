@@ -30,6 +30,7 @@ export default function Home() {
   const [cameraOffline, setCameraOffline] = useState(false);
   const [routeProgress, setRouteProgress] = useState(0);
   const [routeRequested, setRouteRequested] = useState(false);
+  const [routeFocusToken, setRouteFocusToken] = useState(0);
   const [finding, setFinding] = useState(false);
   const [reportSent, setReportSent] = useState(false);
   const [etaMinutes, setEtaMinutes] = useState<number | null>(null);
@@ -223,6 +224,7 @@ export default function Home() {
 
     setRouteRequested(true);
     setRouteProgress(0);
+    setRouteFocusToken((value) => value + 1);
     setStatusMessage(`Routing to S${selectedSlot.id}`);
   }
 
@@ -233,6 +235,7 @@ export default function Home() {
       const response = await fetch(`${backendUrl}/parking/route?destination=${encodeURIComponent(query)}`);
       const data = (await response.json()) as RouteSuggestion;
       setRoute(data);
+      setRouteFocusToken((value) => value + 1);
       bumpEco(16, 0.35);
       setStatusMessage(`Best route ready: ${data.etaMinutes} min ETA`);
     } catch {
@@ -283,6 +286,7 @@ export default function Home() {
         layers={layers}
         selectedSlotId={selectedSlot?.id ?? null}
         userLocation={userLocation}
+        routeFocusToken={routeFocusToken}
         routePath={routePath}
         onSlotClick={(slot) => {
           setSelectedSlot(slot);

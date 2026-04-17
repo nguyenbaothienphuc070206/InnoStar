@@ -1,9 +1,9 @@
 "use client";
 
 import L from "leaflet";
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import MarkerClusterGroup from "react-leaflet-cluster";
-import { Circle, Marker, Polyline, Popup, TileLayer } from "react-leaflet";
+import { Circle, Marker, Polyline, Popup, TileLayer, useMap } from "react-leaflet";
 import { LayersState, Slot } from "./types";
 
 type MapPluginContext = {
@@ -11,11 +11,37 @@ type MapPluginContext = {
   layers: LayersState;
   selectedSlotId: number | null;
   userLocation: [number, number];
+  routeFocusToken: number;
   routePath: Array<[number, number]>;
   onSlotClick: (slot: Slot) => void;
   toLatLng: (slot: Slot) => [number, number];
   markerIcon: (slot: Slot, isSelected: boolean) => L.DivIcon;
 };
+
+type RouteAutoFitProps = {
+  routePath: Array<[number, number]>;
+  routeFocusToken: number;
+};
+
+function RouteAutoFit({ routePath, routeFocusToken }: RouteAutoFitProps) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!routeFocusToken || routePath.length < 2) {
+      return;
+    }
+
+    const bounds = L.latLngBounds(routePath.map(([lat, lng]) => L.latLng(lat, lng)));
+    map.fitBounds(bounds, {
+      padding: [40, 40],
+      maxZoom: 16,
+      animate: true,
+      duration: 0.8
+    });
+  }, [map, routeFocusToken, routePath]);
+
+  return null;
+}
 
 type MapLayerPlugin = {
   id: string;
@@ -65,9 +91,12 @@ export function createMapPlugins(): MapLayerPlugin[] {
     },
     {
       id: "route",
-      render: ({ layers, routePath }) =>
+      render: ({ layers, routePath, routeFocusToken }) =>
         layers.route && routePath.length > 1 ? (
-          <Polyline positions={routePath} pathOptions={{ color: "#1FF4FA", weight: 5, opacity: 0.9, dashArray: "8 10", className: "routePulse" }} />
+          <>
+            <RouteAutoFit routePath={routePath} routeFocusToken={routeFocusToken} />
+            <Polyline positions={routePath} pathOptions={{ color: "#1FF4FA", weight: 5, opacity: 0.9, dashArray: "8 10", className: "routePulse" }} />
+          </>
         ) : null
     },
     {

@@ -56,7 +56,7 @@ test("story mode can toggle and auto-dismiss bubble", async ({ page }) => {
 
   const storyBubble = page.getByTestId("story-bubble");
   await expect(storyBubble).toBeVisible();
-  await expect(storyBubble).toContainText(/Khu|Huong/);
+  await expect(storyBubble).toContainText(/Khu|Hướng/);
 
   await expect(storyBubble).toBeHidden({ timeout: 7000 });
 

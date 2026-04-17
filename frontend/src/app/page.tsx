@@ -45,80 +45,80 @@ type StoryContext = "find" | "route" | "inspect" | "available" | "soon" | "full"
 const storybook: Record<StoryCharacter, Record<StoryContext, string[]>> = {
   coba: {
     find: [
-      "Ba tim duoc diem do xe kha dep roi, minh di thong dong la vua.",
-      "Diem nay dung nhip lam, do xe xong di bo ngam pho cho tron ven."
+      "Bà tìm được điểm đỗ xe khá đẹp rồi, mình đi thong dong là vừa.",
+      "Điểm này đúng nhịp lắm, đỗ xe xong đi bộ ngắm phố cho trọn vẹn."
     ],
     route: [
-      "Lo trinh nay dep va ngan, vua tiet kiem thoi gian vua giu nhip em ai.",
-      "Di tuyen nay nhe, thong thoang hon va den noi rat on dinh."
+      "Lộ trình này đẹp và ngắn, vừa tiết kiệm thời gian vừa giữ nhịp êm ái.",
+      "Đi tuyến này nhé, thông thoáng hơn và đến nơi rất ổn định."
     ],
     inspect: [
-      "Goc nay co net xua de thuong, minh do xe gon roi thong dong tham quan.",
-      "Chon cho nay duoc do, tu day di bo ra khu pho co rat hop."
+      "Góc này có nét xưa dễ thương, mình đỗ xe gọn rồi thong dong tham quan.",
+      "Chọn chỗ này được đó, từ đây đi bộ ra khu phố cổ rất hợp."
     ],
     available: [
-      "Cho nay trong san, minh ghe vao la co the gui ngay.",
-      "Con cho trong dep qua, tranh thu do xe truoc khi dong hon nha."
+      "Chỗ này trống sẵn, mình ghé vào là có thể gửi ngay.",
+      "Còn chỗ trống đẹp quá, tranh thủ đỗ xe trước khi đông hơn nha."
     ],
     soon: [
-      "Cho nay sap trong, doi mot chut la minh vao duoc ngay.",
-      "Minh toi dung luc do, bai nay sap xoay vong co cho."
+      "Chỗ này sắp trống, đợi một chút là mình vào được ngay.",
+      "Mình tới đúng lúc đó, bãi này sắp xoay vòng có chỗ."
     ],
     full: [
-      "Khu nay dang dong, minh doi tuyen ke ben cho thong thoang hon nhe.",
-      "Tam nay kin cho roi, ba de xuat re sang tuyen phia ngoai de de tho hon."
+      "Khu này đang đông, mình đổi tuyến kế bên cho thông thoáng hơn nhé.",
+      "Tầm này kín chỗ rồi, bà đề xuất rẽ sang tuyến phía ngoài để dễ thở hơn."
     ]
   },
   driver: {
     find: [
-      "Em lock duoc bai gan nhat roi, vao nhanh la dep.",
-      "Co cho roi nha, minh cham diem nay la tiet kiem thoi gian nhat."
+      "Em chốt được bãi gần nhất rồi, vào nhanh là đẹp.",
+      "Có chỗ rồi nha, mình chạm điểm này là tiết kiệm thời gian nhất."
     ],
     route: [
-      "Lay route nay nhe, de quay dau va den nhanh hon.",
-      "Tuyen nay ngan nhat hien tai, den noi gon le luon."
+      "Lấy route này nhé, dễ quay đầu và đến nhanh hơn.",
+      "Tuyến này ngắn nhất hiện tại, đến nơi gọn lẹ luôn."
     ],
     inspect: [
-      "Spot nay ok, de vao de ra va kha an toan.",
-      "Nhin duoc do, banh xe vao guong la vua khit."
+      "Spot này ổn, dễ vào dễ ra và khá an toàn.",
+      "Nhìn được đó, bánh xe vào gương là vừa khít."
     ],
     available: [
-      "Con trong tot, minh vao gui luon cho khoi mat luot.",
-      "Bai nay dang thoang, chot nhanh la dep."
+      "Còn trống tốt, mình vào gửi luôn cho khỏi mất lượt.",
+      "Bãi này đang thoáng, chốt nhanh là đẹp."
     ],
     soon: [
-      "Sap trong roi, doi tam vai phut la co suat.",
-      "Canh nay sap nhich, minh canh nhip roi chen vao la vua."
+      "Sắp trống rồi, đợi tầm vài phút là có suất.",
+      "Cạnh này sắp nhích, mình canh nhịp rồi chen vào là vừa."
     ],
     full: [
-      "Bai nay full roi, em doi huong qua bai thu hai cho nhanh.",
-      "Dong xe qua, tranh mat thoi gian minh chuyen sang diem du phong nhe."
+      "Bãi này full rồi, em đổi hướng qua bãi thứ hai cho nhanh.",
+      "Đông xe quá, tránh mất thời gian mình chuyển sang điểm dự phòng nhé."
     ]
   },
   youth: {
     find: [
-      "Co spot vui roi, do xe xong la di chill duoc lien.",
-      "Yeh tim thay cho hop ly, vao day la dung vibe luon."
+      "Có spot vui rồi, đỗ xe xong là đi chill được liền.",
+      "Yeh tìm thấy chỗ hợp lý, vào đây là đúng vibe luôn."
     ],
     route: [
-      "Di line nay cho cool, vua nhanh vua dung gu city walk.",
-      "Route nay on nha, do xong la co nguyen khu local de kham pha."
+      "Đi line này cho cool, vừa nhanh vừa đúng gu city walk.",
+      "Route này ổn nha, đỗ xong là có nguyên khu local để khám phá."
     ],
     inspect: [
-      "Spot nay nhin duoc nha, dung chat local chill zone.",
-      "Check cho nay ok, tu day luon co nhieu hem hay de di bo."
+      "Spot này nhìn được nha, đúng chất local chill zone.",
+      "Check chỗ này ok, từ đây luôn có nhiều hẻm hay để đi bộ."
     ],
     available: [
-      "Con slot trong ne, tranh thu vao la dep.",
-      "Qua ngon, cho nay trong san nha!"
+      "Còn slot trống nè, tranh thủ vào là đẹp.",
+      "Quá ngon, chỗ này trống sẵn nha!"
     ],
     soon: [
-      "Sap co cho roi, dung doi xiu la chen vao duoc.",
-      "Bai nay dang quay vong nhanh, canh xiu la co slot."
+      "Sắp có chỗ rồi, đứng đợi xíu là chen vào được.",
+      "Bãi này đang quay vòng nhanh, canh xíu là có slot."
     ],
     full: [
-      "Cho nay kin roi, minh lua qua spot khac cho do ket.",
-      "Dong qua roi, re sang bai ben cho do tho de choi tiep."
+      "Chỗ này kín rồi, mình lùa qua spot khác cho đỡ kẹt.",
+      "Đông quá rồi, rẽ sang bãi bên cho dễ thở để chơi tiếp."
     ]
   }
 };
@@ -137,24 +137,24 @@ function pickStory(character: StoryCharacter, context: StoryContext): StoryMessa
 
 function resolveAreaName(slot: Slot): string {
   if (slot.zone === "green") {
-    return "Le Loi";
+    return "Lê Lợi";
   }
 
   if (typeof slot.lng === "number") {
     if (slot.lng < 106.697) {
-      return "Ben Thanh";
+      return "Bến Thành";
     }
     if (slot.lng > 106.703) {
-      return "Nguyen Hue";
+      return "Nguyễn Huệ";
     }
   }
 
-  return "Sai Gon center";
+  return "trung tâm Sài Gòn";
 }
 
 function withAreaFlavor(base: StoryMessage, slot: Slot): StoryMessage {
   const area = resolveAreaName(slot);
-  const addOn = base.character === "driver" ? ` Huong ${area} dang hop nhat.` : ` Khu ${area} dang len mood rat dep.`;
+  const addOn = base.character === "driver" ? ` Hướng ${area} đang hợp nhất.` : ` Khu ${area} đang lên mood rất đẹp.`;
   return {
     ...base,
     text: `${base.text}${addOn}`

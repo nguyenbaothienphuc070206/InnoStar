@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { io, Socket } from "socket.io-client";
 import CameraListPanel from "./components/camera-list-panel";
@@ -44,9 +44,13 @@ export default function Home() {
   const [routes, setRoutes] = useState<RouteOption[]>([]);
   const [activeRoute, setActiveRoute] = useState(0);
   const [turnSteps, setTurnSteps] = useState<string[]>([]);
+  const [displayRoute, setDisplayRoute] = useState<Array<[number, number]>>([]);
+  const [fadingRoute, setFadingRoute] = useState(false);
   const [finding, setFinding] = useState(false);
   const [reportSent, setReportSent] = useState(false);
   const [etaMinutes, setEtaMinutes] = useState<number | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const requestIdRef = useRef(0);
 
   const {
     slots,
@@ -109,6 +113,14 @@ export default function Home() {
   }, [mergeRealtimeSlots, setStatusMessage]);
 
   useEffect(() => {
+    return () => {
+      if (abortRef.current) {
+        abortRef.current.abort();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (selectedSlot || slots.length === 0) {
       return;
     }
@@ -150,15 +162,37 @@ export default function Home() {
   }, [nearbyAvailableSlots]);
 
   const activeRoutePath = routes[activeRoute]?.coords;
+
+  useEffect(() => {
+    if (!activeRoutePath || activeRoutePath.length < 2) {
+      setDisplayRoute([]);
+      return;
+    }
+
+    let index = 2;
+    setDisplayRoute(activeRoutePath.slice(0, 2));
+
+    const timer = window.setInterval(() => {
+      index += 5;
+      setDisplayRoute(activeRoutePath.slice(0, Math.min(index, activeRoutePath.length)));
+
+      if (index >= activeRoutePath.length) {
+        window.clearInterval(timer);
+      }
+    }, 10);
+
+    return () => window.clearInterval(timer);
+  }, [activeRoutePath]);
+
   const routePath = activeRoutePath?.length ? activeRoutePath : route?.path?.length ? route.path : [];
 
   const routeSegments = useMemo<RouteSegment[]>(() => {
-    if (!layers.traffic || !activeRoutePath || activeRoutePath.length < 2) {
+    if (!layers.traffic || !displayRoute || displayRoute.length < 2) {
       return [];
     }
 
-    return activeRoutePath.slice(1).map((point, index) => {
-      const prev = activeRoutePath[index];
+    return displayRoute.slice(1).map((point, index) => {
+      const prev = displayRoute[index];
       const levelSeed = (index * 37 + activeRoute * 17) % 100;
       const color = levelSeed > 66 ? "#ff4f4f" : levelSeed > 33 ? "#ffc34d" : "#5dff34";
       return {
@@ -166,7 +200,7 @@ export default function Home() {
         color
       };
     });
-  }, [activeRoute, activeRoutePath, layers.traffic]);
+  }, [activeRoute, displayRoute, layers.traffic]);
 
   function findNearestSlot(): Slot | null {
     return slots.reduce<Slot | null>((best, slot) => {
@@ -190,6 +224,10 @@ export default function Home() {
   }
 
   function handleFindNearest() {
+    if (abortRef.current) {
+      abortRef.current.abort();
+    }
+
     setFinding(true);
     setStatusMessage("Analyzing best parking...");
 
@@ -206,6 +244,7 @@ export default function Home() {
       const computedEta = Math.max(1, Math.round(rawDistance * 130));
       setEtaMinutes(computedEta);
       setRoutes([]);
+      setDisplayRoute([]);
       setTurnSteps([]);
       setActiveRoute(0);
       setRoute(null);
@@ -220,6 +259,27 @@ export default function Home() {
       return;
     }
 
+    if (abortRef.current) {
+      abortRef.current.abort();
+    }
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const requestId = ++requestIdRef.current;
+
+    setFadingRoute(true);
+    window.setTimeout(() => {
+      if (requestId !== requestIdRef.current) {
+        return;
+      }
+      setRoutes([]);
+      setDisplayRoute([]);
+      setTurnSteps([]);
+      setActiveRoute(0);
+      setRoute(null);
+      setFadingRoute(false);
+    }, 200);
+
     setRouteLoading(true);
     try {
       setStatusMessage("Finding best route...");
@@ -228,7 +288,7 @@ export default function Home() {
         `https://router.project-osrm.org/route/v1/driving/${userLocation[1]},${userLocation[0]};` +
         `${selectedSlot.lng},${selectedSlot.lat}?overview=full&geometries=geojson&alternatives=true&steps=true`;
 
-      const response = await fetch(osrmUrl);
+      const response = await fetch(osrmUrl, { signal: controller.signal });
       const data = (await response.json()) as {
         routes?: Array<{
           duration: number;
@@ -252,6 +312,10 @@ export default function Home() {
         throw new Error("OSRM route not found");
       }
 
+      if (requestId !== requestIdRef.current) {
+        return;
+      }
+
       setRoutes(parsedRoutes);
       setActiveRoute(0);
       setTurnSteps(parsedRoutes[0].steps);
@@ -260,12 +324,23 @@ export default function Home() {
       setRouteFocusToken((value) => value + 1);
       bumpEco(16, 0.35);
       setStatusMessage(`Route ready: ${parsedRoutes[0].durationMin} min • ${parsedRoutes[0].distanceKm} km`);
-    } catch {
+    } catch (error) {
+      if ((error as Error).name === "AbortError") {
+        return;
+      }
+
+      if (requestId !== requestIdRef.current) {
+        return;
+      }
+
       setRoutes([]);
+      setDisplayRoute([]);
       setTurnSteps([]);
       setStatusMessage("Routing engine unavailable");
     } finally {
-      setRouteLoading(false);
+      if (requestId === requestIdRef.current) {
+        setRouteLoading(false);
+      }
     }
   }
 
@@ -308,14 +383,31 @@ export default function Home() {
         userLocation={userLocation}
         routeFocusToken={routeFocusToken}
         routeSegments={routeSegments}
-        routePath={routePath}
+        routePath={displayRoute.length > 0 ? displayRoute : routePath}
+        routeOpacity={fadingRoute ? 0 : 1}
         onSlotClick={(slot) => {
+          if (abortRef.current) {
+            abortRef.current.abort();
+          }
           setSelectedSlot(slot);
+          setRoutes([]);
+          setDisplayRoute([]);
+          setTurnSteps([]);
+          setEtaMinutes(null);
+          setRoute(null);
+          setFadingRoute(false);
+          setRouteLoading(false);
           const soonFree = !slot.available && (slot.soon || (slot.predictedFreeMin ?? 99) <= 10);
           const state = slot.available ? "available" : soonFree ? `free in ~${slot.predictedFreeMin ?? 8} min` : "full";
           setStatusMessage(`S${slot.id} ${state}`);
         }}
       />
+
+      {routeLoading ? (
+        <div className="topLoadingBar" data-testid="route-loading-bar">
+          <span />
+        </div>
+      ) : null}
 
       <div className="mapAtmosphereOverlay" aria-hidden />
 
@@ -337,6 +429,7 @@ export default function Home() {
         ecoPoints={ecoPoints}
         etaMinutes={etaMinutes}
         finding={finding}
+        routeLoading={routeLoading}
         reportSent={reportSent}
         report={report}
         onReportChange={setReport}
@@ -345,7 +438,7 @@ export default function Home() {
         onDrawRoute={handleDrawRoute}
       />
 
-      <SlotMiniDashboard slot={selectedSlot} onNavigate={handleDrawRoute} onOpenLiveView={openSelectedLiveView} />
+      <SlotMiniDashboard slot={selectedSlot} onNavigate={handleDrawRoute} onOpenLiveView={openSelectedLiveView} routeLoading={routeLoading} />
 
       {routeLoading ? <div className="routeLoadingBanner">Finding best route...</div> : null}
 
@@ -359,6 +452,7 @@ export default function Home() {
               <button
                 key={`${option.durationMin}-${option.distanceKm}-${index}`}
                 className={`routeOptionItem ${active ? "active" : ""}`}
+                disabled={routeLoading}
                 onClick={() => {
                   setActiveRoute(index);
                   setTurnSteps(option.steps);

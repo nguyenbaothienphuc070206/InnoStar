@@ -13,6 +13,7 @@ type MapPluginContext = {
   userLocation: [number, number];
   routeFocusToken: number;
   routeSegments: Array<{ positions: Array<[number, number]>; color: string }>;
+  routeOpacity: number;
   routePath: Array<[number, number]>;
   onSlotClick: (slot: Slot) => void;
   toLatLng: (slot: Slot) => [number, number];
@@ -92,7 +93,7 @@ export function createMapPlugins(): MapLayerPlugin[] {
     },
     {
       id: "route",
-      render: ({ layers, routePath, routeFocusToken, routeSegments }) =>
+      render: ({ layers, routePath, routeFocusToken, routeSegments, routeOpacity }) =>
         layers.route && routePath.length > 1 ? (
           <>
             <RouteAutoFit routePath={routePath} routeFocusToken={routeFocusToken} />
@@ -101,10 +102,10 @@ export function createMapPlugins(): MapLayerPlugin[] {
                   <Polyline
                     key={`route-segment-${index}`}
                     positions={segment.positions}
-                    pathOptions={{ color: segment.color, weight: 5, opacity: 0.9, dashArray: "8 10", className: "routePulse", lineJoin: "round", lineCap: "round" }}
+                    pathOptions={{ color: segment.color, weight: 5, opacity: routeOpacity * 0.92, dashArray: "8 10", className: "routePulse", lineJoin: "round", lineCap: "round" }}
                   />
                 ))
-              : <Polyline positions={routePath} pathOptions={{ color: "#1FF4FA", weight: 5, opacity: 0.9, dashArray: "8 10", className: "routePulse", lineJoin: "round", lineCap: "round" }} />}
+              : <Polyline positions={routePath} pathOptions={{ color: "#1FF4FA", weight: 5, opacity: routeOpacity, dashArray: "8 10", className: "routePulse", lineJoin: "round", lineCap: "round" }} />}
           </>
         ) : null
     },

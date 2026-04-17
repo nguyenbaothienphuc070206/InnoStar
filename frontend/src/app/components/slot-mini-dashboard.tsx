@@ -8,9 +8,10 @@ type SlotMiniDashboardProps = {
   slot: Slot | null;
   onNavigate: () => void;
   onOpenLiveView: () => void;
+  routeLoading: boolean;
 };
 
-export default function SlotMiniDashboard({ slot, onNavigate, onOpenLiveView }: SlotMiniDashboardProps) {
+export default function SlotMiniDashboard({ slot, onNavigate, onOpenLiveView, routeLoading }: SlotMiniDashboardProps) {
   if (!slot) {
     return null;
   }
@@ -30,7 +31,7 @@ export default function SlotMiniDashboard({ slot, onNavigate, onOpenLiveView }: 
         <p>{status}</p>
         <p>{slot.available ? "Free now" : `Free in ${slot.predictedFreeMin ?? 12} min`} • {slot.distanceM ?? 150}m</p>
         <div className="slotMiniActions">
-          <button onClick={onNavigate}>Go</button>
+          <button onClick={onNavigate} disabled={routeLoading}>Go</button>
           <button onClick={onOpenLiveView}>View</button>
         </div>
       </GlassCard>

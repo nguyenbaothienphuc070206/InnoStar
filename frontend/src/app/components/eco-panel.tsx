@@ -12,6 +12,7 @@ type EcoPanelProps = {
   ecoPoints: number;
   etaMinutes: number | null;
   finding: boolean;
+  routeLoading: boolean;
   reportSent: boolean;
   report: string;
   onReportChange: (value: string) => void;
@@ -28,6 +29,7 @@ export default function EcoPanel({
   ecoPoints,
   etaMinutes,
   finding,
+  routeLoading,
   reportSent,
   report,
   onReportChange,
@@ -79,7 +81,7 @@ export default function EcoPanel({
 
             <div className="ecoPanelButtons">
               <button onClick={onFindNearest}>Find</button>
-              <button onClick={onDrawRoute}>Route</button>
+              <button onClick={onDrawRoute} disabled={routeLoading}>Route</button>
             </div>
 
             {finding ? <p className="loadingHint">Analyzing best parking...</p> : null}

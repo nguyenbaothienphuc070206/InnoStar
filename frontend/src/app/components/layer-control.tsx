@@ -26,6 +26,9 @@ export default function LayerControl({ layers, onToggle }: LayerControlProps) {
       <button data-testid="layer-route" aria-pressed={layers.route} onClick={() => onToggle("route")} className={layers.route ? "active" : ""}>
         Route
       </button>
+      <button data-testid="layer-story" aria-pressed={layers.story} onClick={() => onToggle("story")} className={layers.story ? "active" : ""}>
+        Story
+      </button>
     </GlassCard>
   );
 }

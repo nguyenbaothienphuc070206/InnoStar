@@ -460,6 +460,36 @@ body {
   font-size: 0.78rem;
 }
 
+.storyBubble {
+  position: absolute;
+  left: 50%;
+  bottom: 128px;
+  transform: translateX(-50%);
+  z-index: 53;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: min(90vw, 280px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(1, 8, 11, 0.78);
+  backdrop-filter: blur(16px);
+  padding: 8px 10px;
+  animation: storyIn 0.25s ease;
+}
+
+.storyIcon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.storyBubble p {
+  margin: 0;
+  color: #e6f1f4;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
 .routeOptionsBar {
   position: absolute;
   left: 50%;
@@ -798,6 +828,17 @@ button:active {
   }
 }
 
+@keyframes storyIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 10px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
 .leaflet-overlay-pane path {
   transition: opacity 0.3s ease;
 }
@@ -844,6 +885,10 @@ button:active {
 
   .routeOptionsBar {
     bottom: 118px;
+  }
+
+  .storyBubble {
+    bottom: 146px;
   }
 
   .directionsPanel {

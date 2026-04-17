@@ -33,6 +33,128 @@ type RouteSegment = {
   color: string;
 };
 
+type StoryCharacter = "coba" | "driver" | "youth";
+
+type StoryMessage = {
+  character: StoryCharacter;
+  text: string;
+};
+
+type StoryContext = "find" | "route" | "inspect" | "available" | "soon" | "full";
+
+const storybook: Record<StoryCharacter, Record<StoryContext, string[]>> = {
+  coba: {
+    find: [
+      "Ba tim duoc diem do xe kha dep roi, minh di thong dong la vua.",
+      "Diem nay dung nhip lam, do xe xong di bo ngam pho cho tron ven."
+    ],
+    route: [
+      "Lo trinh nay dep va ngan, vua tiet kiem thoi gian vua giu nhip em ai.",
+      "Di tuyen nay nhe, thong thoang hon va den noi rat on dinh."
+    ],
+    inspect: [
+      "Goc nay co net xua de thuong, minh do xe gon roi thong dong tham quan.",
+      "Chon cho nay duoc do, tu day di bo ra khu pho co rat hop."
+    ],
+    available: [
+      "Cho nay trong san, minh ghe vao la co the gui ngay.",
+      "Con cho trong dep qua, tranh thu do xe truoc khi dong hon nha."
+    ],
+    soon: [
+      "Cho nay sap trong, doi mot chut la minh vao duoc ngay.",
+      "Minh toi dung luc do, bai nay sap xoay vong co cho."
+    ],
+    full: [
+      "Khu nay dang dong, minh doi tuyen ke ben cho thong thoang hon nhe.",
+      "Tam nay kin cho roi, ba de xuat re sang tuyen phia ngoai de de tho hon."
+    ]
+  },
+  driver: {
+    find: [
+      "Em lock duoc bai gan nhat roi, vao nhanh la dep.",
+      "Co cho roi nha, minh cham diem nay la tiet kiem thoi gian nhat."
+    ],
+    route: [
+      "Lay route nay nhe, de quay dau va den nhanh hon.",
+      "Tuyen nay ngan nhat hien tai, den noi gon le luon."
+    ],
+    inspect: [
+      "Spot nay ok, de vao de ra va kha an toan.",
+      "Nhin duoc do, banh xe vao guong la vua khit."
+    ],
+    available: [
+      "Con trong tot, minh vao gui luon cho khoi mat luot.",
+      "Bai nay dang thoang, chot nhanh la dep."
+    ],
+    soon: [
+      "Sap trong roi, doi tam vai phut la co suat.",
+      "Canh nay sap nhich, minh canh nhip roi chen vao la vua."
+    ],
+    full: [
+      "Bai nay full roi, em doi huong qua bai thu hai cho nhanh.",
+      "Dong xe qua, tranh mat thoi gian minh chuyen sang diem du phong nhe."
+    ]
+  },
+  youth: {
+    find: [
+      "Co spot vui roi, do xe xong la di chill duoc lien.",
+      "Yeh tim thay cho hop ly, vao day la dung vibe luon."
+    ],
+    route: [
+      "Di line nay cho cool, vua nhanh vua dung gu city walk.",
+      "Route nay on nha, do xong la co nguyen khu local de kham pha."
+    ],
+    inspect: [
+      "Spot nay nhin duoc nha, dung chat local chill zone.",
+      "Check cho nay ok, tu day luon co nhieu hem hay de di bo."
+    ],
+    available: [
+      "Con slot trong ne, tranh thu vao la dep.",
+      "Qua ngon, cho nay trong san nha!"
+    ],
+    soon: [
+      "Sap co cho roi, dung doi xiu la chen vao duoc.",
+      "Bai nay dang quay vong nhanh, canh xiu la co slot."
+    ],
+    full: [
+      "Cho nay kin roi, minh lua qua spot khac cho do ket.",
+      "Dong qua roi, re sang bai ben cho do tho de choi tiep."
+    ]
+  }
+};
+
+const storyIcon: Record<StoryCharacter, string> = {
+  coba: "🎭",
+  driver: "🚕",
+  youth: "🧢"
+};
+
+function pickStory(character: StoryCharacter, context: StoryContext): StoryMessage {
+  const lines = storybook[character][context];
+  const text = lines[Math.floor(Math.random() * lines.length)];
+  return { character, text };
+}
+
+function slotStoryContext(slot: Slot): StoryContext {
+  if (slot.available) {
+    return "available";
+  }
+  if (slot.soon || (slot.predictedFreeMin ?? 99) <= 10) {
+    return "soon";
+  }
+  return "full";
+}
+
+function pickCharacterForSlot(slot: Slot): StoryCharacter {
+  if (slot.zone === "green") {
+    return "coba";
+  }
+  if ((slot.distanceM ?? 9999) < 220) {
+    return "driver";
+  }
+  return "youth";
+}
+
 function distance(a: [number, number], b: [number, number]): number {
   return Math.hypot(a[0] - b[0], a[1] - b[1]);
 }
@@ -49,6 +171,7 @@ export default function Home() {
   const [finding, setFinding] = useState(false);
   const [reportSent, setReportSent] = useState(false);
   const [etaMinutes, setEtaMinutes] = useState<number | null>(null);
+  const [story, setStory] = useState<StoryMessage | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const requestIdRef = useRef(0);
 
@@ -119,6 +242,28 @@ export default function Home() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!story) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => setStory(null), 5000);
+    return () => window.clearTimeout(timer);
+  }, [story]);
+
+  useEffect(() => {
+    if (!layers.story && story) {
+      setStory(null);
+    }
+  }, [layers.story, story]);
+
+  function emitStory(character: StoryCharacter, context: StoryContext) {
+    if (!layers.story) {
+      return;
+    }
+    setStory(pickStory(character, context));
+  }
 
   useEffect(() => {
     if (selectedSlot || slots.length === 0) {
@@ -249,6 +394,7 @@ export default function Home() {
       setActiveRoute(0);
       setRoute(null);
       setStatusMessage(`Nearest slot found: S${nearest.id}`);
+      emitStory("driver", "find");
       setFinding(false);
     }, 800);
   }
@@ -324,6 +470,7 @@ export default function Home() {
       setRouteFocusToken((value) => value + 1);
       bumpEco(16, 0.35);
       setStatusMessage(`Route ready: ${parsedRoutes[0].durationMin} min • ${parsedRoutes[0].distanceKm} km`);
+      emitStory("coba", "route");
     } catch (error) {
       if ((error as Error).name === "AbortError") {
         return;
@@ -400,6 +547,7 @@ export default function Home() {
           const soonFree = !slot.available && (slot.soon || (slot.predictedFreeMin ?? 99) <= 10);
           const state = slot.available ? "available" : soonFree ? `free in ~${slot.predictedFreeMin ?? 8} min` : "full";
           setStatusMessage(`S${slot.id} ${state}`);
+          emitStory(pickCharacterForSlot(slot), slotStoryContext(slot));
         }}
       />
 
@@ -441,6 +589,13 @@ export default function Home() {
       <SlotMiniDashboard slot={selectedSlot} onNavigate={handleDrawRoute} onOpenLiveView={openSelectedLiveView} routeLoading={routeLoading} />
 
       {routeLoading ? <div className="routeLoadingBanner">Finding best route...</div> : null}
+
+      {story ? (
+        <div className="storyBubble" data-testid="story-bubble">
+          <span className="storyIcon" aria-hidden>{storyIcon[story.character]}</span>
+          <p>{story.text}</p>
+        </div>
+      ) : null}
 
       {routes.length > 0 ? (
         <div className="routeOptionsBar" data-testid="route-options">
@@ -510,6 +665,7 @@ export default function Home() {
                     onClick={() => {
                       setSelectedSlot(slot);
                       setStatusMessage(`S${slot.id} selected`);
+                      emitStory("youth", "inspect");
                     }}
                   >
                     Inspect

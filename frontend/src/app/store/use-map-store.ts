@@ -87,7 +87,8 @@ export const useMapStore = create<MapState>((set) => ({
     camera: true,
     traffic: false,
     heat: true,
-    route: true
+    route: true,
+    story: true
   },
   route: null,
   report: "",

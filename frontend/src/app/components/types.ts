@@ -29,4 +29,5 @@ export type LayersState = {
   traffic: boolean;
   heat: boolean;
   route: boolean;
+  story: boolean;
 };

@@ -14,6 +14,8 @@ type OpsIncident = {
   detectedAt: number;
 };
 
+export type AdminMode = "closed" | "compact" | "full";
+
 type EnterpriseOpsPanelProps = {
   availabilityPct: number;
   cameraOnlinePct: number;
@@ -27,6 +29,8 @@ type EnterpriseOpsPanelProps = {
   };
   updatedAt: number;
   incidents: OpsIncident[];
+  mode: AdminMode;
+  onModeChange: (mode: AdminMode) => void;
   slo: {
     targetPct: number;
     uptime6hPct: number;
@@ -65,9 +69,10 @@ export default function EnterpriseOpsPanel({
   metrics,
   updatedAt,
   incidents,
+  mode,
+  onModeChange,
   slo
 }: EnterpriseOpsPanelProps) {
-  const [collapsed, setCollapsed] = useState(false);
   const [acknowledged, setAcknowledged] = useState<Record<string, boolean>>({});
 
   const stateUi = statusMap(systemState);
@@ -171,121 +176,131 @@ export default function EnterpriseOpsPanel({
     window.URL.revokeObjectURL(url);
   }
 
+  if (mode === "compact") {
+    return (
+      <GlassCard className="enterpriseOps enterpriseOpsCompact">
+        <div className="opsCompactStack" data-testid="ops-compact">
+          <button type="button" data-testid="ops-open" onClick={() => onModeChange("full")}>⚡</button>
+          <span>{stateUi.icon}</span>
+          <span className={`opsPill ${stateUi.className}`}>{stateUi.label}</span>
+          <button type="button" data-testid="ops-close" onClick={() => onModeChange("closed")}>✕</button>
+        </div>
+      </GlassCard>
+    );
+  }
+
   return (
-    <GlassCard className={`enterpriseOps ${collapsed ? "enterpriseOpsCollapsed" : ""}`}>
+    <GlassCard className="enterpriseOps">
       <header className="opsHeader">
         <div>
           <h3>Enterprise Command</h3>
           <span>Runtime posture • {updatedLabel}</span>
         </div>
-        <button type="button" data-testid="ops-toggle" onClick={() => setCollapsed((value) => !value)}>
-          {collapsed ? "Expand" : "Compact"}
-        </button>
+        <div className="opsModeButtons">
+          <button type="button" data-testid="ops-compact-btn" onClick={() => onModeChange("compact")}>Compact</button>
+          <button type="button" data-testid="ops-close" onClick={() => onModeChange("closed")}>Close</button>
+        </div>
       </header>
 
-      {!collapsed ? (
-        <>
-          {hasInvestigatingIncident ? (
-            <div className="opsAlertPulse" data-testid="ops-alert">
-              🚨 Incident detected
-            </div>
-          ) : null}
-
-          <section className="opsServiceGrid">
-            <div className="opsServiceCard" data-testid="ops-live">
-              <strong>Realtime</strong>
-              <span className={`opsPill ${stateUi.className}`}>{stateUi.icon} {stateUi.label}</span>
-            </div>
-            <div className="opsServiceCard" data-testid="ops-ready">
-              <strong>Readiness</strong>
-              <span className={`opsPill ${stateUi.className}`}>{stateUi.icon} {stateUi.label}</span>
-            </div>
-            <div className="opsServiceCard" data-testid="ops-health">
-              <strong>Health</strong>
-              <span className={`opsPill ${stateUi.className}`}>{stateUi.icon} {stateUi.label}</span>
-            </div>
-            <div className="opsServiceCard" data-testid="ops-latency">
-              <strong>API RTT</strong>
-              <span className={latencyClass(metrics.rtt)}>{Math.round(metrics.rtt)}ms</span>
-            </div>
-          </section>
-
-          <section className="opsKpiGrid">
-            <article>
-              <p>Slot Availability</p>
-              <strong className="metricValue">{availabilityPct}%</strong>
-            </article>
-            <article>
-              <p>Camera Uptime</p>
-              <strong className="metricValue">{cameraOnlinePct}%</strong>
-            </article>
-            <article>
-              <p>Route SLA</p>
-              <strong className={`opsText-${routeSla.className}`}>{routeSla.label}</strong>
-            </article>
-            <article>
-              <p>API Uptime</p>
-              <strong className="metricValue">{metrics.uptime.toFixed(2)}%</strong>
-            </article>
-          </section>
-
-          <section className="opsSloGrid" data-testid="ops-slo">
-            <article>
-              <p>SLO Target</p>
-              <strong>{slo.targetPct}%</strong>
-            </article>
-            <article>
-              <p>Uptime 6h</p>
-              <strong>{slo.uptime6hPct}%</strong>
-            </article>
-            <article>
-              <p>Error Budget</p>
-              <strong className={slo.errorBudgetRemainingPct < 35 ? "opsText-danger" : "opsText-ok"}>
-                {slo.errorBudgetRemainingPct}%
-              </strong>
-            </article>
-            <article>
-              <p>Burn 1h / 6h</p>
-              <strong className={slo.burnRate1h > 2 ? "opsText-danger" : slo.burnRate1h > 1 ? "opsText-warn" : "opsText-ok"}>
-                {slo.burnRate1h}x / {slo.burnRate6h}x
-              </strong>
-            </article>
-          </section>
-
-          <section className="opsIncidentFeed" data-testid="ops-incidents">
-            <div className="opsIncidentHeader">
-              <h4>Incident Feed</h4>
-              <button type="button" data-testid="ops-export-csv" onClick={exportOpsCsv}>
-                Export CSV
-              </button>
-            </div>
-            <p className={`opsSystemSummary opsText-${stateUi.className}`}>{summaryText}</p>
-            <ul>
-              {activeIncidents.length ? (
-                activeIncidents.map((incident) => (
-                  <li key={incident.id} className="opsIncidentItem">
-                    <div className="opsIncidentMetaRow">
-                      <span className={`opsSeverity ${incident.severity.toLowerCase()}`}>{incident.severity}</span>
-                      <span>{incident.source}</span>
-                      <span>{new Date(incident.detectedAt).toLocaleTimeString("vi-VN")}</span>
-                    </div>
-                    <p>
-                      {incident.message} — <span className={incident.status === "resolved" ? "opsText-ok" : "opsText-warn"}>{incident.status}</span>
-                    </p>
-                    {incident.status === "investigating" ? (
-                      <button type="button" data-testid={`ack-${incident.id}`} onClick={() => ackIncident(incident.id)}>
-                        Acknowledge
-                      </button>
-                    ) : null}
-                  </li>
-                ))
-              ) : (
-                <li>{summaryText}</li>
-              )}
-            </ul>
-          </section>
-        </>
+      {hasInvestigatingIncident ? (
+        <div className="opsAlertPulse" data-testid="ops-alert">
+          🚨 Incident detected
+        </div>
       ) : null}
+
+      <section className="opsServiceGrid">
+        <div className="opsServiceCard" data-testid="ops-live">
+          <strong>Realtime</strong>
+          <span className={`opsPill ${stateUi.className}`}>{stateUi.icon} {stateUi.label}</span>
+        </div>
+        <div className="opsServiceCard" data-testid="ops-ready">
+          <strong>Readiness</strong>
+          <span className={`opsPill ${stateUi.className}`}>{stateUi.icon} {stateUi.label}</span>
+        </div>
+        <div className="opsServiceCard" data-testid="ops-health">
+          <strong>Health</strong>
+          <span className={`opsPill ${stateUi.className}`}>{stateUi.icon} {stateUi.label}</span>
+        </div>
+        <div className="opsServiceCard" data-testid="ops-latency">
+          <strong>API RTT</strong>
+          <span className={latencyClass(metrics.rtt)}>{Math.round(metrics.rtt)}ms</span>
+        </div>
+      </section>
+
+      <section className="opsKpiGrid">
+        <article>
+          <p>Slot Availability</p>
+          <strong className="metricValue">{availabilityPct}%</strong>
+        </article>
+        <article>
+          <p>Camera Uptime</p>
+          <strong className="metricValue">{cameraOnlinePct}%</strong>
+        </article>
+        <article>
+          <p>Route SLA</p>
+          <strong className={`opsText-${routeSla.className}`}>{routeSla.label}</strong>
+        </article>
+        <article>
+          <p>API Uptime</p>
+          <strong className="metricValue">{metrics.uptime.toFixed(2)}%</strong>
+        </article>
+      </section>
+
+      <section className="opsSloGrid" data-testid="ops-slo">
+        <article>
+          <p>SLO Target</p>
+          <strong>{slo.targetPct}%</strong>
+        </article>
+        <article>
+          <p>Uptime 6h</p>
+          <strong>{slo.uptime6hPct}%</strong>
+        </article>
+        <article>
+          <p>Error Budget</p>
+          <strong className={slo.errorBudgetRemainingPct < 35 ? "opsText-danger" : "opsText-ok"}>
+            {slo.errorBudgetRemainingPct}%
+          </strong>
+        </article>
+        <article>
+          <p>Burn 1h / 6h</p>
+          <strong className={slo.burnRate1h > 2 ? "opsText-danger" : slo.burnRate1h > 1 ? "opsText-warn" : "opsText-ok"}>
+            {slo.burnRate1h}x / {slo.burnRate6h}x
+          </strong>
+        </article>
+      </section>
+
+      <section className="opsIncidentFeed" data-testid="ops-incidents">
+        <div className="opsIncidentHeader">
+          <h4>Incident Feed</h4>
+          <button type="button" data-testid="ops-export-csv" onClick={exportOpsCsv}>
+            Export CSV
+          </button>
+        </div>
+        <p className={`opsSystemSummary opsText-${stateUi.className}`}>{summaryText}</p>
+        <ul>
+          {activeIncidents.length ? (
+            activeIncidents.map((incident) => (
+              <li key={incident.id} className="opsIncidentItem">
+                <div className="opsIncidentMetaRow">
+                  <span className={`opsSeverity ${incident.severity.toLowerCase()}`}>{incident.severity}</span>
+                  <span>{incident.source}</span>
+                  <span>{new Date(incident.detectedAt).toLocaleTimeString("vi-VN")}</span>
+                </div>
+                <p>
+                  {incident.message} — <span className={incident.status === "resolved" ? "opsText-ok" : "opsText-warn"}>{incident.status}</span>
+                </p>
+                {incident.status === "investigating" ? (
+                  <button type="button" data-testid={`ack-${incident.id}`} onClick={() => ackIncident(incident.id)}>
+                    Acknowledge
+                  </button>
+                ) : null}
+              </li>
+            ))
+          ) : (
+            <li>{summaryText}</li>
+          )}
+        </ul>
+      </section>
     </GlassCard>
   );
 }

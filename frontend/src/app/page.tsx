@@ -6,7 +6,7 @@ import { io, Socket } from "socket.io-client";
 import CameraListPanel from "./components/camera-list-panel";
 import CameraAIOverlay from "./components/camera-ai-overlay";
 import EcoPanel from "./components/eco-panel";
-import EnterpriseOpsPanel from "./components/enterprise-ops-panel";
+import EnterpriseOpsPanel, { AdminMode } from "./components/enterprise-ops-panel";
 import GlassCard from "./components/glass-card";
 import LayerControl from "./components/layer-control";
 import SlotMiniDashboard from "./components/slot-mini-dashboard";
@@ -276,7 +276,9 @@ function predictAvailability(current: number): number {
 }
 
 export default function Home() {
-  const [adminOpen, setAdminOpen] = useState(false);
+  const [adminMode, setAdminMode] = useState<AdminMode>("closed");
+  const [adminWidth, setAdminWidth] = useState(340);
+  const [adminResizing, setAdminResizing] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [routeLoading, setRouteLoading] = useState(false);
   const [cameraOffline, setCameraOffline] = useState(false);
@@ -309,6 +311,8 @@ export default function Home() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const requestIdRef = useRef(0);
+  const adminResizeStartXRef = useRef(0);
+  const adminResizeStartWidthRef = useRef(340);
 
   const {
     slots,
@@ -333,6 +337,43 @@ export default function Home() {
 
   const debouncedQuery = useDebouncedValue(query, 280);
 
+  const clampAdminWidth = (value: number) => Math.max(220, Math.min(520, value));
+
+  function startAdminResize(clientX: number) {
+    adminResizeStartXRef.current = clientX;
+    adminResizeStartWidthRef.current = adminWidth;
+    setAdminResizing(true);
+  }
+
+  function moveAdminResize(clientX: number) {
+    if (!adminResizing) {
+      return;
+    }
+
+    const delta = adminResizeStartXRef.current - clientX;
+    const next = clampAdminWidth(adminResizeStartWidthRef.current + delta);
+    setAdminWidth(next);
+    if (next < 260) {
+      setAdminMode("compact");
+    } else {
+      setAdminMode("full");
+    }
+  }
+
+  function endAdminResize() {
+    if (!adminResizing) {
+      return;
+    }
+    setAdminResizing(false);
+
+    if (adminWidth < 260) {
+      setAdminMode("compact");
+      return;
+    }
+
+    setAdminMode("full");
+  }
+
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -346,6 +387,23 @@ export default function Home() {
     window.addEventListener("resize", applyViewport);
     return () => window.removeEventListener("resize", applyViewport);
   }, []);
+
+  useEffect(() => {
+    if (!adminResizing) {
+      return;
+    }
+
+    const onMouseMove = (event: MouseEvent) => moveAdminResize(event.clientX);
+    const onMouseUp = () => endAdminResize();
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, [adminResizing, adminWidth]);
 
   useEffect(() => {
     const cachedName = window.localStorage.getItem("greenpark-user");
@@ -1080,6 +1138,9 @@ export default function Home() {
           setMapCenter(center);
         }}
         onSlotClick={(slot) => {
+          if (adminMode === "full") {
+            setAdminMode("compact");
+          }
           if (abortRef.current) {
             abortRef.current.abort();
           }
@@ -1114,11 +1175,27 @@ export default function Home() {
         onProfileNameChange={setProfileName}
       />
 
-      <button className="adminToggle" data-testid="admin-toggle" onClick={() => setAdminOpen((value) => !value)}>
-        {adminOpen ? "Close Admin" : "Admin Panel"}
+      <button
+        className="adminToggle"
+        data-testid="admin-toggle"
+        onClick={() => setAdminMode((mode) => (mode === "closed" ? "full" : "closed"))}
+      >
+        {adminMode === "closed" ? "Admin Panel" : adminMode === "compact" ? "Expand Admin" : "Close Admin"}
       </button>
 
-      <aside className={`enterpriseDock ${adminOpen ? "open" : ""} ${isMobileViewport ? "mobile" : ""}`}>
+      <aside
+        className={`enterpriseDock ${adminMode !== "closed" ? "open" : ""} ${isMobileViewport ? "mobile" : ""} mode-${adminMode} ${adminResizing ? "resizing" : ""}`}
+        style={{ width: adminMode === "full" ? adminWidth : adminMode === "compact" ? 88 : 0 }}
+      >
+        {adminMode !== "closed" && !isMobileViewport ? (
+          <div
+            className="enterpriseDockResizer"
+            onMouseDown={(event) => {
+              event.preventDefault();
+              startAdminResize(event.clientX);
+            }}
+          />
+        ) : null}
         <EnterpriseOpsPanel
           availabilityPct={availabilityPct}
           cameraOnlinePct={cameraOnlinePct}
@@ -1128,6 +1205,8 @@ export default function Home() {
           metrics={opsMetrics}
           updatedAt={opsUpdatedAt}
           incidents={incidentFeed}
+          mode={adminMode}
+          onModeChange={setAdminMode}
           slo={slo}
         />
       </aside>

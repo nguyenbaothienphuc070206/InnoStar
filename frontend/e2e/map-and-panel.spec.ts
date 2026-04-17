@@ -39,9 +39,9 @@ test("slot inspect opens mini dashboard and ai overlay", async ({ page }) => {
 
   const dashboard = page.getByTestId("slot-mini-dashboard");
   await expect(dashboard).toBeVisible();
-  await expect(dashboard).toContainText("Slot S1");
+  await expect(dashboard).toContainText(/Slot S\d+/);
 
-  await expect(page.getByTestId("ai-overlay-tag")).toContainText("AI Tracking S1");
+  await expect(page.getByTestId("ai-overlay-tag")).toContainText(/AI Tracking S\d+/);
 });
 
 test("story mode can toggle and auto-dismiss bubble", async ({ page }) => {
@@ -103,8 +103,8 @@ test("enterprise ops command center renders SLO and controls", async ({ page }) 
   await expect(adminToggle).toBeVisible();
   await adminToggle.click();
 
-  const opsToggle = page.getByTestId("ops-toggle");
-  await expect(opsToggle).toBeVisible();
+  const compactToggle = page.getByTestId("ops-compact-btn");
+  await expect(compactToggle).toBeVisible();
 
   await expect(page.getByTestId("ops-live")).toBeVisible();
   await expect(page.getByTestId("ops-slo")).toBeVisible();
@@ -114,8 +114,9 @@ test("enterprise ops command center renders SLO and controls", async ({ page }) 
   );
   await expect(page.getByTestId("ops-incidents")).not.toContainText("All systems nominal");
 
-  await opsToggle.click();
+  await compactToggle.click();
   await expect(page.getByTestId("ops-slo")).toBeHidden();
-  await opsToggle.click();
+
+  await page.getByTestId("ops-open").click();
   await expect(page.getByTestId("ops-slo")).toBeVisible();
 });

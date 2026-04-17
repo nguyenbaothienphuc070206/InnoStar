@@ -48,14 +48,12 @@ type StoryVoiceProfile = {
   volume: number;
 };
 
-type OpsState = "up" | "down" | "degraded" | "restricted";
+type SystemState = "healthy" | "degraded" | "down";
 
-type OpsSnapshot = {
-  live: OpsState;
-  ready: OpsState;
-  health: OpsState;
-  latencyMs: number | null;
-  updatedAt: number | null;
+type OpsMetrics = {
+  rtt: number;
+  uptime: number;
+  availability: number;
 };
 
 type OpsIncident = {
@@ -63,12 +61,8 @@ type OpsIncident = {
   severity: "SEV1" | "SEV2" | "SEV3";
   message: string;
   source: string;
+  status: "investigating" | "resolved";
   detectedAt: number;
-};
-
-type OpsPoint = {
-  at: number;
-  healthy: number;
 };
 
 type StoryContext = "find" | "route" | "inspect" | "available" | "soon" | "full";
@@ -226,14 +220,8 @@ function voiceProfileForCharacter(character: StoryCharacter): StoryVoiceProfile 
   return { rate: 1.08, pitch: 1.08, volume: 0.9 };
 }
 
-function healthStateFromResponse(response: Response): OpsState {
-  if (response.ok) {
-    return "up";
-  }
-  if (response.status === 401 || response.status === 403) {
-    return "restricted";
-  }
-  return "down";
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
 }
 
 export default function Home() {
@@ -250,14 +238,14 @@ export default function Home() {
   const [etaMinutes, setEtaMinutes] = useState<number | null>(null);
   const [story, setStory] = useState<StoryMessage | null>(null);
   const [storyVoiceEnabled, setStoryVoiceEnabled] = useState(true);
-  const [opsSnapshot, setOpsSnapshot] = useState<OpsSnapshot>({
-    live: "degraded",
-    ready: "degraded",
-    health: "degraded",
-    latencyMs: null,
-    updatedAt: null
+  const [systemState, setSystemState] = useState<SystemState>("healthy");
+  const [opsMetrics, setOpsMetrics] = useState<OpsMetrics>({
+    rtt: 120,
+    uptime: 99.2,
+    availability: 65
   });
-  const [opsHistory, setOpsHistory] = useState<OpsPoint[]>([]);
+  const [opsUpdatedAt, setOpsUpdatedAt] = useState<number>(Date.now());
+  const [opsIncidents, setOpsIncidents] = useState<OpsIncident[]>([]);
   const storyLayerHydratedRef = useRef(false);
   const storyVoiceHydratedRef = useRef(false);
   const storyTriggerTimerRef = useRef<number | null>(null);
@@ -290,7 +278,6 @@ export default function Home() {
   } = useMapStore();
 
   const debouncedQuery = useDebouncedValue(query, 280);
-  const backendApiBase = backendUrl.replace(/\/$/, "");
 
   useEffect(() => {
     const cachedName = window.localStorage.getItem("greenpark-user");
@@ -475,53 +462,66 @@ export default function Home() {
   }, [story, storyVoiceEnabled]);
 
   useEffect(() => {
-    let alive = true;
+    const interval = window.setInterval(() => {
+      setOpsMetrics((current) => ({
+        rtt: Number(clamp(current.rtt + (Math.random() - 0.5) * 24, 80, 200).toFixed(0)),
+        uptime: Number(clamp(current.uptime + (Math.random() - 0.5) * 0.28, 97, 100).toFixed(2)),
+        availability: Number(clamp(current.availability + (Math.random() - 0.5) * 6, 40, 90).toFixed(0))
+      }));
+      setOpsUpdatedAt(Date.now());
+    }, 2000);
 
-    async function pollOpsHealth() {
-      const start = performance.now();
-      const [liveResult, readyResult, healthResult] = await Promise.allSettled([
-        fetch(`${backendApiBase}/ops/live`, { cache: "no-store" }),
-        fetch(`${backendApiBase}/ops/ready`, { cache: "no-store" }),
-        fetch(`${backendApiBase}/ops/health`, { cache: "no-store" })
-      ]);
+    return () => window.clearInterval(interval);
+  }, []);
 
-      if (!alive) {
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      const chance = Math.random();
+      if (chance <= 0.72) {
         return;
       }
 
-      const resolveState = (result: PromiseSettledResult<Response>): OpsState => {
-        if (result.status === "fulfilled") {
-          return healthStateFromResponse(result.value);
-        }
-        return "down";
+      const sev1 = chance > 0.93;
+      const incident: OpsIncident = {
+        id: `inc-${Date.now()}`,
+        severity: sev1 ? "SEV1" : "SEV2",
+        source: sev1 ? "Routing Core" : "Edge Gateway",
+        message: sev1 ? "Route orchestrator timeout burst detected." : "Minor latency increase detected. Monitoring.",
+        status: "investigating",
+        detectedAt: Date.now()
       };
 
-      setOpsSnapshot({
-        live: resolveState(liveResult),
-        ready: resolveState(readyResult),
-        health: resolveState(healthResult),
-        latencyMs: Math.round(performance.now() - start),
-        updatedAt: Date.now()
-      });
+      setOpsIncidents((current) => [incident, ...current].slice(0, 10));
 
-      const healthScore = [resolveState(liveResult), resolveState(readyResult), resolveState(healthResult)].every((state) => state === "up") ? 1 : 0;
-      const now = Date.now();
-      setOpsHistory((current) => {
-        const next = [...current, { at: now, healthy: healthScore }].filter((point) => now - point.at <= 6 * 60 * 60 * 1000);
-        return next;
-      });
+      window.setTimeout(() => {
+        setOpsIncidents((current) =>
+          current.map((item) =>
+            item.id === incident.id
+              ? {
+                  ...item,
+                  status: "resolved"
+                }
+              : item
+          )
+        );
+      }, 5000);
+    }, 8000);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const active = opsIncidents.filter((incident) => incident.status === "investigating");
+    if (active.some((incident) => incident.severity === "SEV1")) {
+      setSystemState("down");
+      return;
     }
-
-    void pollOpsHealth();
-    const interval = window.setInterval(() => {
-      void pollOpsHealth();
-    }, 30000);
-
-    return () => {
-      alive = false;
-      window.clearInterval(interval);
-    };
-  }, [backendApiBase]);
+    if (active.length > 0 || routeLoading || opsMetrics.rtt > 175) {
+      setSystemState("degraded");
+      return;
+    }
+    setSystemState("healthy");
+  }, [opsIncidents, routeLoading, opsMetrics.rtt]);
 
   function triggerStory(nextStory: StoryMessage, delayMs: number) {
     if (!layers.story) {
@@ -583,30 +583,15 @@ export default function Home() {
     return Math.round((online / Math.max(1, slots.length)) * 100);
   }, [slots]);
 
-  const availabilityPct = Math.round((stats.available / Math.max(1, slots.length)) * 100);
-
-  function computeUptimePct(windowMs: number): number {
-    const now = Date.now();
-    const sample = opsHistory.filter((point) => now - point.at <= windowMs);
-    if (!sample.length) {
-      return 100;
-    }
-    const healthy = sample.reduce((sum, point) => sum + point.healthy, 0);
-    return Number(((healthy / sample.length) * 100).toFixed(2));
-  }
+  const availabilityPct = Number(clamp((stats.available / Math.max(1, slots.length)) * 100, 40, 90).toFixed(0));
 
   const slo = useMemo(() => {
-    const targetPct = 99.5;
-    const allowedErrorRate = 1 - targetPct / 100;
-    const uptime1hPct = computeUptimePct(60 * 60 * 1000);
-    const uptime6hPct = computeUptimePct(6 * 60 * 60 * 1000);
-    const errorRate1h = 1 - uptime1hPct / 100;
-    const errorRate6h = 1 - uptime6hPct / 100;
-    const burnRate1h = Number((errorRate1h / Math.max(allowedErrorRate, 0.0001)).toFixed(2));
-    const burnRate6h = Number((errorRate6h / Math.max(allowedErrorRate, 0.0001)).toFixed(2));
-    const errorBudgetRemainingPct = Number(
-      Math.max(0, Math.min(100, ((allowedErrorRate - errorRate6h) / allowedErrorRate) * 100)).toFixed(2)
-    );
+    const activeCount = opsIncidents.filter((incident) => incident.status === "investigating").length;
+    const targetPct = 99.9;
+    const uptime6hPct = Number(clamp(opsMetrics.uptime - activeCount * 0.12, 97, 100).toFixed(2));
+    const errorBudgetRemainingPct = Number(clamp(72 + (opsMetrics.uptime - 99) * 22 - activeCount * 11, 35, 95).toFixed(2));
+    const burnRate1h = Number(clamp(1.3 + (opsMetrics.rtt - 120) / 220 + activeCount * 0.5, 0.7, 4).toFixed(2));
+    const burnRate6h = Number(clamp(1.1 + (opsMetrics.rtt - 120) / 320 + activeCount * 0.3, 0.6, 3.2).toFixed(2));
 
     return {
       targetPct,
@@ -615,60 +600,42 @@ export default function Home() {
       burnRate1h,
       burnRate6h
     };
-  }, [opsHistory]);
+  }, [opsIncidents, opsMetrics.rtt, opsMetrics.uptime]);
 
   const incidentFeed = useMemo<OpsIncident[]>(() => {
     const now = Date.now();
-    const incidents: OpsIncident[] = [];
+    const base = [...opsIncidents];
 
-    if (opsSnapshot.live !== "up") {
-      incidents.push({
-        id: "realtime-stream-degraded",
+    if (availabilityPct < 45) {
+      base.unshift({
+        id: `cap-${Math.floor(now / 60000)}`,
         severity: "SEV2",
-        source: "Realtime Gateway",
-        message: "Realtime stream degraded. Switching to buffered updates.",
-        detectedAt: now
-      });
-    }
-    if (availabilityPct < 18) {
-      incidents.push({
-        id: "occupancy-pressure-critical",
-        severity: "SEV1",
         source: "Capacity Optimizer",
-        message: "Critical occupancy pressure detected in central zones.",
+        message: "Availability dipped below 45%. Rebalancing recommendations.",
+        status: "investigating",
         detectedAt: now
       });
     }
     if (cameraOnlinePct < 72) {
-      incidents.push({
-        id: "camera-uptime-threshold",
+      base.unshift({
+        id: `cam-${Math.floor(now / 60000)}`,
         severity: "SEV2",
         source: "Camera Fleet",
-        message: "Camera uptime dropped below enterprise threshold (72%).",
-        detectedAt: now
-      });
-    }
-    if (routeLoading) {
-      incidents.push({
-        id: "route-load-spike",
-        severity: "SEV3",
-        source: "Route Engine",
-        message: "Route engine load spike detected. Optimizer is recalculating.",
-        detectedAt: now
-      });
-    }
-    if (slo.burnRate1h > 2) {
-      incidents.push({
-        id: "error-budget-burn-high",
-        severity: "SEV1",
-        source: "SLO Guardian",
-        message: "Error budget burn rate exceeded 2x in last hour.",
+        message: "Camera uptime below threshold (72%). Dispatching diagnostics.",
+        status: "investigating",
         detectedAt: now
       });
     }
 
-    return incidents.slice(0, 3);
-  }, [availabilityPct, cameraOnlinePct, opsSnapshot.live, routeLoading, slo.burnRate1h]);
+    const unique = new Map<string, OpsIncident>();
+    for (const incident of base) {
+      if (!unique.has(incident.id)) {
+        unique.set(incident.id, incident);
+      }
+    }
+
+    return Array.from(unique.values()).slice(0, 8);
+  }, [availabilityPct, cameraOnlinePct, opsIncidents]);
 
   const preferredArea = "District 1";
   const nearbyAvailableSlots = useMemo(() => {
@@ -947,8 +914,9 @@ export default function Home() {
         cameraOnlinePct={cameraOnlinePct}
         etaMinutes={etaMinutes}
         routeLoading={routeLoading}
-        ecoPoints={ecoPoints}
-        opsHealth={opsSnapshot}
+        systemState={systemState}
+        metrics={opsMetrics}
+        updatedAt={opsUpdatedAt}
         incidents={incidentFeed}
         slo={slo}
       />

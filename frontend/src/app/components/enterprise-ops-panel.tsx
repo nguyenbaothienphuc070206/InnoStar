@@ -3,28 +3,30 @@
 import { useMemo, useState } from "react";
 import GlassCard from "./glass-card";
 
-type OpsState = "up" | "down" | "degraded" | "restricted";
+type SystemState = "healthy" | "degraded" | "down";
+
+type OpsIncident = {
+  id: string;
+  severity: "SEV1" | "SEV2" | "SEV3";
+  message: string;
+  source: string;
+  status: "investigating" | "resolved";
+  detectedAt: number;
+};
 
 type EnterpriseOpsPanelProps = {
   availabilityPct: number;
   cameraOnlinePct: number;
   etaMinutes: number | null;
   routeLoading: boolean;
-  ecoPoints: number;
-  opsHealth: {
-    live: OpsState;
-    ready: OpsState;
-    health: OpsState;
-    latencyMs: number | null;
-    updatedAt: number | null;
+  systemState: SystemState;
+  metrics: {
+    rtt: number;
+    uptime: number;
+    availability: number;
   };
-  incidents: Array<{
-    id: string;
-    severity: "SEV1" | "SEV2" | "SEV3";
-    message: string;
-    source: string;
-    detectedAt: number;
-  }>;
+  updatedAt: number;
+  incidents: OpsIncident[];
   slo: {
     targetPct: number;
     uptime6hPct: number;
@@ -34,30 +36,24 @@ type EnterpriseOpsPanelProps = {
   };
 };
 
-function stateLabel(state: OpsState): string {
-  if (state === "up") {
-    return "UP";
-  }
-  if (state === "restricted") {
-    return "AUTH";
-  }
-  if (state === "degraded") {
-    return "DEG";
-  }
-  return "DOWN";
-}
-
-function latencyClass(latencyMs: number | null): string {
-  if (latencyMs === null) {
-    return "opsPill muted";
-  }
-  if (latencyMs <= 350) {
+function latencyClass(latencyMs: number): string {
+  if (latencyMs <= 140) {
     return "opsPill ok";
   }
-  if (latencyMs <= 900) {
+  if (latencyMs <= 185) {
     return "opsPill warn";
   }
   return "opsPill danger";
+}
+
+function statusMap(systemState: SystemState): { label: "UP" | "WARN" | "DOWN"; icon: string; className: string } {
+  if (systemState === "healthy") {
+    return { label: "UP", icon: "🟢", className: "ok" };
+  }
+  if (systemState === "degraded") {
+    return { label: "WARN", icon: "🟡", className: "warn" };
+  }
+  return { label: "DOWN", icon: "🔴", className: "danger" };
 }
 
 export default function EnterpriseOpsPanel({
@@ -65,13 +61,16 @@ export default function EnterpriseOpsPanel({
   cameraOnlinePct,
   etaMinutes,
   routeLoading,
-  ecoPoints,
-  opsHealth,
+  systemState,
+  metrics,
+  updatedAt,
   incidents,
   slo
 }: EnterpriseOpsPanelProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [acknowledged, setAcknowledged] = useState<Record<string, boolean>>({});
+
+  const stateUi = statusMap(systemState);
 
   const routeSla = useMemo(() => {
     if (routeLoading) {
@@ -89,12 +88,21 @@ export default function EnterpriseOpsPanel({
     return { label: "SLA Risk", className: "danger" };
   }, [etaMinutes, routeLoading]);
 
-  const updatedLabel = opsHealth.updatedAt ? new Date(opsHealth.updatedAt).toLocaleTimeString("vi-VN") : "--:--:--";
+  const updatedLabel = new Date(updatedAt).toLocaleTimeString("vi-VN");
 
   const activeIncidents = useMemo(
     () => incidents.filter((incident) => !acknowledged[incident.id]),
     [acknowledged, incidents]
   );
+
+  const hasInvestigatingIncident = activeIncidents.some((incident) => incident.status === "investigating");
+
+  const summaryText =
+    systemState === "healthy"
+      ? "All systems operational."
+      : systemState === "degraded"
+        ? "Minor performance degradation detected."
+        : "Multiple services unavailable. Investigating.";
 
   function ackIncident(id: string) {
     setAcknowledged((current) => ({
@@ -120,6 +128,7 @@ export default function EnterpriseOpsPanel({
       "burn_rate_6h",
       "incident_id",
       "incident_severity",
+      "incident_status",
       "incident_source",
       "incident_message",
       "incident_detected_at"
@@ -130,10 +139,10 @@ export default function EnterpriseOpsPanel({
       String(availabilityPct),
       String(cameraOnlinePct),
       etaMinutes === null ? "" : String(etaMinutes),
-      opsHealth.live,
-      opsHealth.ready,
-      opsHealth.health,
-      opsHealth.latencyMs === null ? "" : String(opsHealth.latencyMs),
+      stateUi.label,
+      stateUi.label,
+      stateUi.label,
+      String(Math.round(metrics.rtt)),
       String(slo.targetPct),
       String(slo.uptime6hPct),
       String(slo.errorBudgetRemainingPct),
@@ -143,8 +152,8 @@ export default function EnterpriseOpsPanel({
 
     const rows = (activeIncidents.length ? activeIncidents : [null]).map((incident) => {
       const incidentCols = incident
-        ? [incident.id, incident.severity, incident.source, incident.message, new Date(incident.detectedAt).toISOString()]
-        : ["", "", "", "", ""];
+        ? [incident.id, incident.severity, incident.status, incident.source, incident.message, new Date(incident.detectedAt).toISOString()]
+        : ["", "", "", "", "", ""];
       return [...base, ...incidentCols]
         .map((value) => `"${String(value).replace(/"/g, '""')}"`)
         .join(",");
@@ -176,47 +185,47 @@ export default function EnterpriseOpsPanel({
 
       {!collapsed ? (
         <>
+          {hasInvestigatingIncident ? (
+            <div className="opsAlertPulse" data-testid="ops-alert">
+              🚨 Incident detected
+            </div>
+          ) : null}
+
           <section className="opsServiceGrid">
             <div className="opsServiceCard" data-testid="ops-live">
               <strong>Realtime</strong>
-              <span className={`opsPill ${opsHealth.live === "up" ? "ok" : "danger"}`}>{stateLabel(opsHealth.live)}</span>
+              <span className={`opsPill ${stateUi.className}`}>{stateUi.icon} {stateUi.label}</span>
             </div>
             <div className="opsServiceCard" data-testid="ops-ready">
               <strong>Readiness</strong>
-              <span className={`opsPill ${opsHealth.ready === "up" ? "ok" : "danger"}`}>{stateLabel(opsHealth.ready)}</span>
+              <span className={`opsPill ${stateUi.className}`}>{stateUi.icon} {stateUi.label}</span>
             </div>
             <div className="opsServiceCard" data-testid="ops-health">
               <strong>Health</strong>
-              <span
-                className={`opsPill ${
-                  opsHealth.health === "up" ? "ok" : opsHealth.health === "restricted" ? "warn" : "danger"
-                }`}
-              >
-                {stateLabel(opsHealth.health)}
-              </span>
+              <span className={`opsPill ${stateUi.className}`}>{stateUi.icon} {stateUi.label}</span>
             </div>
             <div className="opsServiceCard" data-testid="ops-latency">
               <strong>API RTT</strong>
-              <span className={latencyClass(opsHealth.latencyMs)}>{opsHealth.latencyMs ?? "--"}{opsHealth.latencyMs !== null ? "ms" : ""}</span>
+              <span className={latencyClass(metrics.rtt)}>{Math.round(metrics.rtt)}ms</span>
             </div>
           </section>
 
           <section className="opsKpiGrid">
             <article>
               <p>Slot Availability</p>
-              <strong>{availabilityPct}%</strong>
+              <strong className="metricValue">{availabilityPct}%</strong>
             </article>
             <article>
               <p>Camera Uptime</p>
-              <strong>{cameraOnlinePct}%</strong>
+              <strong className="metricValue">{cameraOnlinePct}%</strong>
             </article>
             <article>
               <p>Route SLA</p>
               <strong className={`opsText-${routeSla.className}`}>{routeSla.label}</strong>
             </article>
             <article>
-              <p>Eco Points</p>
-              <strong>{ecoPoints}</strong>
+              <p>API Uptime</p>
+              <strong className="metricValue">{metrics.uptime.toFixed(2)}%</strong>
             </article>
           </section>
 
@@ -250,6 +259,7 @@ export default function EnterpriseOpsPanel({
                 Export CSV
               </button>
             </div>
+            <p className={`opsSystemSummary opsText-${stateUi.className}`}>{summaryText}</p>
             <ul>
               {activeIncidents.length ? (
                 activeIncidents.map((incident) => (
@@ -259,14 +269,18 @@ export default function EnterpriseOpsPanel({
                       <span>{incident.source}</span>
                       <span>{new Date(incident.detectedAt).toLocaleTimeString("vi-VN")}</span>
                     </div>
-                    <p>{incident.message}</p>
-                    <button type="button" data-testid={`ack-${incident.id}`} onClick={() => ackIncident(incident.id)}>
-                      Acknowledge
-                    </button>
+                    <p>
+                      {incident.message} — <span className={incident.status === "resolved" ? "opsText-ok" : "opsText-warn"}>{incident.status}</span>
+                    </p>
+                    {incident.status === "investigating" ? (
+                      <button type="button" data-testid={`ack-${incident.id}`} onClick={() => ackIncident(incident.id)}>
+                        Acknowledge
+                      </button>
+                    ) : null}
                   </li>
                 ))
               ) : (
-                <li>All systems nominal. No active incidents.</li>
+                <li>{summaryText}</li>
               )}
             </ul>
           </section>

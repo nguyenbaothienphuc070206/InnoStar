@@ -103,6 +103,10 @@ test("enterprise ops command center renders SLO and controls", async ({ page }) 
   await expect(page.getByTestId("ops-live")).toBeVisible();
   await expect(page.getByTestId("ops-slo")).toBeVisible();
   await expect(page.getByTestId("ops-export-csv")).toBeVisible();
+  await expect(page.getByTestId("ops-incidents")).toContainText(
+    /All systems operational\.|Minor performance degradation detected\.|Multiple services unavailable\. Investigating\./
+  );
+  await expect(page.getByTestId("ops-incidents")).not.toContainText("All systems nominal");
 
   await opsToggle.click();
   await expect(page.getByTestId("ops-slo")).toBeHidden();

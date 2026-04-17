@@ -27,6 +27,20 @@ test("eco panel supports compact toggle", async ({ page }) => {
   await expect(sheet).toContainText("CO2");
 });
 
+test("eco panel supports keyboard snap controls", async ({ page }) => {
+  await page.goto("/");
+
+  const handle = page.getByTestId("eco-drag-handle");
+  await expect(handle).toBeVisible();
+  await handle.focus();
+
+  await page.keyboard.press("Shift+ArrowUp");
+  await expect(page.getByTestId("panel-compact")).toContainText("Minimize");
+
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("panel-compact")).toContainText("Expand");
+});
+
 test("slot inspect opens mini dashboard and ai overlay", async ({ page }) => {
   await page.goto("/");
 

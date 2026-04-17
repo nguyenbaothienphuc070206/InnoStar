@@ -17,6 +17,8 @@ type EcoPanelProps = {
   onDrawRoute: () => void;
 };
 
+type SnapTarget = "mini" | "half" | "full";
+
 export default function EcoPanel({
   status,
   co2SavedKg,
@@ -59,7 +61,7 @@ export default function EcoPanel({
     return candidates.reduce((best, current) => (Math.abs(current - value) < Math.abs(best - value) ? current : best), snapPoints.half);
   }
 
-  function setSnap(target: "mini" | "half" | "full") {
+  function setSnap(target: SnapTarget) {
     if (target === "mini") {
       setSheetHeight(snapPoints.mini);
       return;
@@ -69,6 +71,16 @@ export default function EcoPanel({
       return;
     }
     setSheetHeight(snapPoints.half);
+  }
+
+  function snapLabel(value: number) {
+    if (value <= snapPoints.mini + 4) {
+      return "Mini";
+    }
+    if (value >= snapPoints.full - 4) {
+      return "Full";
+    }
+    return "Half";
   }
 
   function dragStart(clientY: number) {
@@ -180,6 +192,28 @@ export default function EcoPanel({
     };
   }, [dragging, visibleHeight, snapPoints.half, snapPoints.full, snapPoints.mini]);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+      if (tag === "input" || tag === "textarea" || target?.isContentEditable) {
+        return;
+      }
+
+      if (event.key === "Escape") {
+        setSnap("mini");
+        return;
+      }
+
+      if (event.shiftKey && event.key.toLowerCase() === "f") {
+        setSnap("full");
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [snapPoints.full, snapPoints.mini]);
+
   return (
     <motion.aside
       initial={{ y: 26, opacity: 0 }}
@@ -198,10 +232,40 @@ export default function EcoPanel({
       >
         <div
           className={`ecoDragHandle ${dragging ? "dragging" : ""}`}
+          role="slider"
+          tabIndex={0}
+          data-testid="eco-drag-handle"
+          aria-label="Resize eco panel"
+          aria-orientation="vertical"
+          aria-valuemin={snapPoints.mini}
+          aria-valuemax={snapPoints.full}
+          aria-valuenow={visibleHeight}
+          aria-valuetext={snapLabel(visibleHeight)}
           onMouseDown={(event) => dragStart(event.clientY)}
           onTouchStart={(event) => {
             if (event.touches.length > 0) {
               dragStart(event.touches[0].clientY);
+            }
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowUp" || event.key === "PageUp") {
+              event.preventDefault();
+              setSnap(event.shiftKey ? "full" : "half");
+              return;
+            }
+            if (event.key === "ArrowDown" || event.key === "PageDown" || event.key === "Escape") {
+              event.preventDefault();
+              setSnap("mini");
+              return;
+            }
+            if (event.key === "Home") {
+              event.preventDefault();
+              setSnap("mini");
+              return;
+            }
+            if (event.key === "End") {
+              event.preventDefault();
+              setSnap("full");
             }
           }}
         >

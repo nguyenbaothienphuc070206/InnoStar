@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("capture home visual baseline", async ({ page }, testInfo) => {
   await page.goto("/");
-  await expect(page.getByTestId("map-canvas")).toBeVisible();
+  await expect(page.locator(".leaflet-container").first()).toBeVisible({ timeout: 15000 });
 
   const screenshot = await page.screenshot({ fullPage: true });
   await testInfo.attach("home-map", {

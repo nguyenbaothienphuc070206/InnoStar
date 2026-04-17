@@ -9,6 +9,7 @@ import EcoPanel from "./components/eco-panel";
 import GlassCard from "./components/glass-card";
 import LayerControl from "./components/layer-control";
 import SlotMiniDashboard from "./components/slot-mini-dashboard";
+import StoryBubble from "./components/story-bubble";
 import TopBar from "./components/top-bar";
 import { Slot } from "./components/types";
 import { useDebouncedValue } from "./hooks/use-debounced-value";
@@ -198,7 +199,11 @@ export default function Home() {
   const [reportSent, setReportSent] = useState(false);
   const [etaMinutes, setEtaMinutes] = useState<number | null>(null);
   const [story, setStory] = useState<StoryMessage | null>(null);
+  const [storyVoiceEnabled, setStoryVoiceEnabled] = useState(true);
   const storyLayerHydratedRef = useRef(false);
+  const storyVoiceHydratedRef = useRef(false);
+  const storyTriggerTimerRef = useRef<number | null>(null);
+  const voiceTimerRef = useRef<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const requestIdRef = useRef(0);
 
@@ -262,11 +267,30 @@ export default function Home() {
     };
   }, [mergeRealtimeSlots, setStatusMessage]);
 
+  function cancelVoicePlayback() {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      return;
+    }
+    window.speechSynthesis.cancel();
+  }
+
+  function clearStoryTriggerTimer() {
+    if (storyTriggerTimerRef.current) {
+      window.clearTimeout(storyTriggerTimerRef.current);
+      storyTriggerTimerRef.current = null;
+    }
+  }
+
   useEffect(() => {
     return () => {
       if (abortRef.current) {
         abortRef.current.abort();
       }
+      clearStoryTriggerTimer();
+      if (voiceTimerRef.current) {
+        window.clearTimeout(voiceTimerRef.current);
+      }
+      cancelVoicePlayback();
     };
   }, []);
 
@@ -282,6 +306,8 @@ export default function Home() {
   useEffect(() => {
     if (!layers.story && story) {
       setStory(null);
+      clearStoryTriggerTimer();
+      cancelVoicePlayback();
     }
   }, [layers.story, story]);
 
@@ -304,18 +330,72 @@ export default function Home() {
     window.localStorage.setItem("greenpark-layer-story", layers.story ? "on" : "off");
   }, [layers.story]);
 
-  function emitStory(character: StoryCharacter, context: StoryContext) {
+  useEffect(() => {
+    if (storyVoiceHydratedRef.current) {
+      return;
+    }
+    const savedVoice = window.localStorage.getItem("greenpark-story-voice");
+    if (savedVoice === "off") {
+      setStoryVoiceEnabled(false);
+    }
+    storyVoiceHydratedRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (!storyVoiceHydratedRef.current) {
+      return;
+    }
+    window.localStorage.setItem("greenpark-story-voice", storyVoiceEnabled ? "on" : "off");
+    if (!storyVoiceEnabled) {
+      cancelVoicePlayback();
+    }
+  }, [storyVoiceEnabled]);
+
+  useEffect(() => {
+    if (!story || !storyVoiceEnabled) {
+      cancelVoicePlayback();
+      return;
+    }
+
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      return;
+    }
+
+    cancelVoicePlayback();
+    voiceTimerRef.current = window.setTimeout(() => {
+      const utterance = new SpeechSynthesisUtterance(story.text);
+      utterance.lang = "vi-VN";
+      utterance.rate = story.character === "coba" ? 0.95 : story.character === "driver" ? 1.02 : 1.06;
+      window.speechSynthesis.speak(utterance);
+    }, 200);
+
+    return () => {
+      if (voiceTimerRef.current) {
+        window.clearTimeout(voiceTimerRef.current);
+      }
+      cancelVoicePlayback();
+    };
+  }, [story, storyVoiceEnabled]);
+
+  function triggerStory(nextStory: StoryMessage, delayMs: number) {
     if (!layers.story) {
       return;
     }
-    setStory(pickStory(character, context));
+
+    clearStoryTriggerTimer();
+    setStory(null);
+    storyTriggerTimerRef.current = window.setTimeout(() => {
+      setStory(nextStory);
+      storyTriggerTimerRef.current = null;
+    }, delayMs);
   }
 
-  function emitStoryForSlot(slot: Slot, character: StoryCharacter, context: StoryContext) {
-    if (!layers.story) {
-      return;
-    }
-    setStory(withAreaFlavor(pickStory(character, context), slot));
+  function emitStory(character: StoryCharacter, context: StoryContext, delayMs: number) {
+    triggerStory(pickStory(character, context), delayMs);
+  }
+
+  function emitStoryForSlot(slot: Slot, character: StoryCharacter, context: StoryContext, delayMs: number) {
+    triggerStory(withAreaFlavor(pickStory(character, context), slot), delayMs);
   }
 
   useEffect(() => {
@@ -433,6 +513,7 @@ export default function Home() {
       const nearest = findNearestSlot();
       if (!nearest || typeof nearest.lat !== "number" || typeof nearest.lng !== "number") {
         setStatusMessage("No nearby non-full slot found");
+        emitStory("driver", "full", 300);
         setFinding(false);
         return;
       }
@@ -447,7 +528,7 @@ export default function Home() {
       setActiveRoute(0);
       setRoute(null);
       setStatusMessage(`Nearest slot found: S${nearest.id}`);
-      emitStory("driver", "find");
+      emitStoryForSlot(nearest, "driver", "find", 500);
       setFinding(false);
     }, 800);
   }
@@ -523,7 +604,7 @@ export default function Home() {
       setRouteFocusToken((value) => value + 1);
       bumpEco(16, 0.35);
       setStatusMessage(`Route ready: ${parsedRoutes[0].durationMin} min • ${parsedRoutes[0].distanceKm} km`);
-      emitStory("coba", "route");
+      emitStory("coba", "route", selectedSlot.zone === "green" ? 600 : 800);
     } catch (error) {
       if ((error as Error).name === "AbortError") {
         return;
@@ -600,7 +681,7 @@ export default function Home() {
           const soonFree = !slot.available && (slot.soon || (slot.predictedFreeMin ?? 99) <= 10);
           const state = slot.available ? "available" : soonFree ? `free in ~${slot.predictedFreeMin ?? 8} min` : "full";
           setStatusMessage(`S${slot.id} ${state}`);
-          emitStoryForSlot(slot, pickCharacterForSlot(slot), slotStoryContext(slot));
+          emitStoryForSlot(slot, pickCharacterForSlot(slot), slotStoryContext(slot), 400);
         }}
       />
 
@@ -643,12 +724,13 @@ export default function Home() {
 
       {routeLoading ? <div className="routeLoadingBanner">Finding best route...</div> : null}
 
-      {story ? (
-        <div className="storyBubble" data-testid="story-bubble">
-          <span className="storyIcon" aria-hidden>{storyIcon[story.character]}</span>
-          <p>{story.text}</p>
-        </div>
-      ) : null}
+      <StoryBubble
+        story={story}
+        icon={story ? storyIcon[story.character] : ""}
+        voiceEnabled={storyVoiceEnabled}
+        onToggleVoice={() => setStoryVoiceEnabled((value) => !value)}
+        onStopVoice={cancelVoicePlayback}
+      />
 
       {routes.length > 0 ? (
         <div className="routeOptionsBar" data-testid="route-options">
@@ -718,7 +800,7 @@ export default function Home() {
                     onClick={() => {
                       setSelectedSlot(slot);
                       setStatusMessage(`S${slot.id} selected`);
-                      emitStoryForSlot(slot, "youth", "inspect");
+                      emitStoryForSlot(slot, "youth", "inspect", 400);
                     }}
                   >
                     Inspect

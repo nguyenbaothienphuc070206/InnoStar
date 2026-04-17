@@ -10,7 +10,7 @@ import GlassCard from "./components/glass-card";
 import LayerControl from "./components/layer-control";
 import SlotMiniDashboard from "./components/slot-mini-dashboard";
 import TopBar from "./components/top-bar";
-import { RouteSuggestion, Slot } from "./components/types";
+import { Slot } from "./components/types";
 import { useDebouncedValue } from "./hooks/use-debounced-value";
 import { useMapStore } from "./store/use-map-store";
 
@@ -21,6 +21,18 @@ const backendWsUrl = backendUrl.replace(/\/api\/v1\/?$/, "");
 const cameraStreamUrl = process.env.NEXT_PUBLIC_CAMERA_STREAM_URL || "http://localhost:8000/stream.m3u8";
 const userLocation: [number, number] = [10.772, 106.698];
 
+type RouteOption = {
+  coords: Array<[number, number]>;
+  durationMin: number;
+  distanceKm: number;
+  steps: string[];
+};
+
+type RouteSegment = {
+  positions: Array<[number, number]>;
+  color: string;
+};
+
 function distance(a: [number, number], b: [number, number]): number {
   return Math.hypot(a[0] - b[0], a[1] - b[1]);
 }
@@ -28,9 +40,10 @@ function distance(a: [number, number], b: [number, number]): number {
 export default function Home() {
   const [routeLoading, setRouteLoading] = useState(false);
   const [cameraOffline, setCameraOffline] = useState(false);
-  const [routeProgress, setRouteProgress] = useState(0);
-  const [routeRequested, setRouteRequested] = useState(false);
   const [routeFocusToken, setRouteFocusToken] = useState(0);
+  const [routes, setRoutes] = useState<RouteOption[]>([]);
+  const [activeRoute, setActiveRoute] = useState(0);
+  const [turnSteps, setTurnSteps] = useState<string[]>([]);
   const [finding, setFinding] = useState(false);
   const [reportSent, setReportSent] = useState(false);
   const [etaMinutes, setEtaMinutes] = useState<number | null>(null);
@@ -119,27 +132,6 @@ export default function Home() {
     }
   }, [selectedSlot, setSelectedSlot, slots]);
 
-  useEffect(() => {
-    if (!selectedSlot || !routeRequested) {
-      setRouteProgress(0);
-      return;
-    }
-
-    setRouteProgress(0);
-    const timer = window.setInterval(() => {
-      setRouteProgress((value) => {
-        const next = value + 0.04;
-        if (next >= 1) {
-          window.clearInterval(timer);
-          return 1;
-        }
-        return next;
-      });
-    }, 50);
-
-    return () => window.clearInterval(timer);
-  }, [routeRequested, selectedSlot]);
-
   const stats = useMemo(() => {
     const available = slots.filter((slot) => slot.available).length;
     const greenAvailable = slots.filter((slot) => slot.available && slot.zone === "green").length;
@@ -157,21 +149,24 @@ export default function Home() {
     return [...nearbyAvailableSlots].sort((a, b) => (a.distanceM ?? 9999) - (b.distanceM ?? 9999)).slice(0, 2);
   }, [nearbyAvailableSlots]);
 
-  const fallbackRoute = useMemo<Array<[number, number]>>(() => {
-    if (!routeRequested || !selectedSlot || typeof selectedSlot.lat !== "number" || typeof selectedSlot.lng !== "number") {
+  const activeRoutePath = routes[activeRoute]?.coords;
+  const routePath = activeRoutePath?.length ? activeRoutePath : route?.path?.length ? route.path : [];
+
+  const routeSegments = useMemo<RouteSegment[]>(() => {
+    if (!layers.traffic || !activeRoutePath || activeRoutePath.length < 2) {
       return [];
     }
 
-    const destination: [number, number] = [selectedSlot.lat, selectedSlot.lng];
-    const animatedPoint: [number, number] = [
-      userLocation[0] + (destination[0] - userLocation[0]) * routeProgress,
-      userLocation[1] + (destination[1] - userLocation[1]) * routeProgress
-    ];
-
-    return [userLocation, animatedPoint];
-  }, [routeProgress, routeRequested, selectedSlot]);
-
-  const routePath = route?.path?.length ? route.path : fallbackRoute;
+    return activeRoutePath.slice(1).map((point, index) => {
+      const prev = activeRoutePath[index];
+      const levelSeed = (index * 37 + activeRoute * 17) % 100;
+      const color = levelSeed > 66 ? "#ff4f4f" : levelSeed > 33 ? "#ffc34d" : "#5dff34";
+      return {
+        positions: [prev, point],
+        color
+      };
+    });
+  }, [activeRoute, activeRoutePath, layers.traffic]);
 
   function findNearestSlot(): Slot | null {
     return slots.reduce<Slot | null>((best, slot) => {
@@ -210,47 +205,72 @@ export default function Home() {
       const rawDistance = distance(userLocation, [nearest.lat, nearest.lng]);
       const computedEta = Math.max(1, Math.round(rawDistance * 130));
       setEtaMinutes(computedEta);
-      setRouteRequested(false);
+      setRoutes([]);
+      setTurnSteps([]);
+      setActiveRoute(0);
+      setRoute(null);
       setStatusMessage(`Nearest slot found: S${nearest.id}`);
       setFinding(false);
     }, 800);
   }
 
-  function handleDrawRoute() {
+  async function requestOsrmRoutes() {
     if (!selectedSlot || typeof selectedSlot.lat !== "number" || typeof selectedSlot.lng !== "number") {
       setStatusMessage("Pick a slot first (tap marker or Find)");
       return;
     }
 
-    setRouteRequested(true);
-    setRouteProgress(0);
-    setRouteFocusToken((value) => value + 1);
-    setStatusMessage(`Routing to S${selectedSlot.id}`);
-  }
-
-  async function findParking() {
     setRouteLoading(true);
     try {
-      setStatusMessage("Analyzing best parking route...");
-      const response = await fetch(`${backendUrl}/parking/route?destination=${encodeURIComponent(query)}`);
-      const data = (await response.json()) as RouteSuggestion;
-      setRoute(data);
+      setStatusMessage("Finding best route...");
+
+      const osrmUrl =
+        `https://router.project-osrm.org/route/v1/driving/${userLocation[1]},${userLocation[0]};` +
+        `${selectedSlot.lng},${selectedSlot.lat}?overview=full&geometries=geojson&alternatives=true&steps=true`;
+
+      const response = await fetch(osrmUrl);
+      const data = (await response.json()) as {
+        routes?: Array<{
+          duration: number;
+          distance: number;
+          geometry: { coordinates: Array<[number, number]> };
+          legs: Array<{ steps: Array<{ maneuver?: { instruction?: string }; name?: string }> }>;
+        }>;
+      };
+
+      const parsedRoutes: RouteOption[] =
+        data.routes?.map((routeItem) => ({
+          coords: routeItem.geometry.coordinates.map(([lng, lat]) => [lat, lng]),
+          durationMin: Math.max(1, Math.round(routeItem.duration / 60)),
+          distanceKm: Math.max(1, Math.round(routeItem.distance / 1000)),
+          steps:
+            routeItem.legs?.[0]?.steps?.map((step) => step.maneuver?.instruction || step.name || "Continue straight") ?? []
+        })) ?? [];
+
+      if (!parsedRoutes.length) {
+        setStatusMessage("No route found from routing engine");
+        throw new Error("OSRM route not found");
+      }
+
+      setRoutes(parsedRoutes);
+      setActiveRoute(0);
+      setTurnSteps(parsedRoutes[0].steps);
+      setEtaMinutes(parsedRoutes[0].durationMin);
+      setRoute(null);
       setRouteFocusToken((value) => value + 1);
       bumpEco(16, 0.35);
-      setStatusMessage(`Best route ready: ${data.etaMinutes} min ETA`);
+      setStatusMessage(`Route ready: ${parsedRoutes[0].durationMin} min • ${parsedRoutes[0].distanceKm} km`);
     } catch {
-      setStatusMessage("Route API unavailable");
+      setRoutes([]);
+      setTurnSteps([]);
+      setStatusMessage("Routing engine unavailable");
     } finally {
       setRouteLoading(false);
     }
   }
 
-  async function navigateToSelectedSlot() {
-    if (!selectedSlot) {
-      return;
-    }
-    setQuery(`Slot S${selectedSlot.id}`);
-    await findParking();
+  function handleDrawRoute() {
+    void requestOsrmRoutes();
   }
 
   function openSelectedLiveView() {
@@ -287,6 +307,7 @@ export default function Home() {
         selectedSlotId={selectedSlot?.id ?? null}
         userLocation={userLocation}
         routeFocusToken={routeFocusToken}
+        routeSegments={routeSegments}
         routePath={routePath}
         onSlotClick={(slot) => {
           setSelectedSlot(slot);
@@ -324,7 +345,44 @@ export default function Home() {
         onDrawRoute={handleDrawRoute}
       />
 
-      <SlotMiniDashboard slot={selectedSlot} onNavigate={navigateToSelectedSlot} onOpenLiveView={openSelectedLiveView} />
+      <SlotMiniDashboard slot={selectedSlot} onNavigate={handleDrawRoute} onOpenLiveView={openSelectedLiveView} />
+
+      {routeLoading ? <div className="routeLoadingBanner">Finding best route...</div> : null}
+
+      {routes.length > 0 ? (
+        <div className="routeOptionsBar" data-testid="route-options">
+          {routes.map((option, index) => {
+            const ecoIndex = routes.reduce((best, item, idx) => (item.distanceKm < routes[best].distanceKm ? idx : best), 0);
+            const active = index === activeRoute;
+
+            return (
+              <button
+                key={`${option.durationMin}-${option.distanceKm}-${index}`}
+                className={`routeOptionItem ${active ? "active" : ""}`}
+                onClick={() => {
+                  setActiveRoute(index);
+                  setTurnSteps(option.steps);
+                  setEtaMinutes(option.durationMin);
+                  setRouteFocusToken((value) => value + 1);
+                }}
+              >
+                {option.durationMin} min • {option.distanceKm} km {index === ecoIndex ? "🌱" : ""}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+
+      {turnSteps.length > 0 ? (
+        <aside className="directionsPanel" data-testid="turn-directions">
+          <h3>Directions</h3>
+          <ul>
+            {turnSteps.map((step, index) => (
+              <li key={`${step}-${index}`}>• {step}</li>
+            ))}
+          </ul>
+        </aside>
+      ) : null}
 
       <GlassCard className="liveCameraCard">
         <h3>Live View</h3>

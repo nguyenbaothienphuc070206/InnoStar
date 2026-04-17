@@ -12,6 +12,7 @@ type MapPluginContext = {
   selectedSlotId: number | null;
   userLocation: [number, number];
   routeFocusToken: number;
+  routeSegments: Array<{ positions: Array<[number, number]>; color: string }>;
   routePath: Array<[number, number]>;
   onSlotClick: (slot: Slot) => void;
   toLatLng: (slot: Slot) => [number, number];
@@ -91,11 +92,19 @@ export function createMapPlugins(): MapLayerPlugin[] {
     },
     {
       id: "route",
-      render: ({ layers, routePath, routeFocusToken }) =>
+      render: ({ layers, routePath, routeFocusToken, routeSegments }) =>
         layers.route && routePath.length > 1 ? (
           <>
             <RouteAutoFit routePath={routePath} routeFocusToken={routeFocusToken} />
-            <Polyline positions={routePath} pathOptions={{ color: "#1FF4FA", weight: 5, opacity: 0.9, dashArray: "8 10", className: "routePulse" }} />
+            {routeSegments.length > 0
+              ? routeSegments.map((segment, index) => (
+                  <Polyline
+                    key={`route-segment-${index}`}
+                    positions={segment.positions}
+                    pathOptions={{ color: segment.color, weight: 5, opacity: 0.9, dashArray: "8 10", className: "routePulse", lineJoin: "round", lineCap: "round" }}
+                  />
+                ))
+              : <Polyline positions={routePath} pathOptions={{ color: "#1FF4FA", weight: 5, opacity: 0.9, dashArray: "8 10", className: "routePulse", lineJoin: "round", lineCap: "round" }} />}
           </>
         ) : null
     },

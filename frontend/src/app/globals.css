@@ -768,6 +768,46 @@ body {
   animation: routeDash 1.4s linear infinite;
 }
 
+.routeGlow {
+  filter: blur(0.4px);
+}
+
+.routeArrow {
+  background: transparent;
+  border: none;
+}
+
+.routeArrow span {
+  font-size: 0.66rem;
+  text-shadow: 0 0 8px rgba(31, 244, 250, 0.42);
+}
+
+.routeEndpoint {
+  background: transparent;
+  border: none;
+}
+
+.routeEndpoint span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.58rem;
+  font-weight: 700;
+  background: rgba(2, 12, 18, 0.74);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #e5fcff;
+}
+
+.routeStart span {
+  border-color: rgba(31, 244, 250, 0.56);
+}
+
+.routeEnd span {
+  border-color: rgba(93, 255, 52, 0.55);
+}
+
 .routeLoadingBanner {
   position: absolute;
   top: 8px;
@@ -1219,6 +1259,10 @@ button:active {
 
 .leaflet-overlay-pane path {
   transition: opacity 0.3s ease;
+}
+
+.zoneCircle {
+  transition: all 0.5s ease;
 }
 
 @media (min-width: 640px) {

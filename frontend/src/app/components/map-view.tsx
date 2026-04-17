@@ -3,12 +3,13 @@
 import L from "leaflet";
 import { Fragment } from "react";
 import "leaflet/dist/leaflet.css";
-import { MapContainer, TileLayer } from "react-leaflet";
+import { MapContainer, TileLayer, useMapEvents } from "react-leaflet";
 import { createMapPlugins } from "./map-plugins";
-import { LayersState, Slot } from "./types";
+import { LayersState, Slot, ZonePoint } from "./types";
 
 type MapViewProps = {
   slots: Slot[];
+  zones: ZonePoint[];
   layers: LayersState;
   selectedSlotId: number | null;
   userLocation: [number, number];
@@ -16,10 +17,32 @@ type MapViewProps = {
   routeSegments: Array<{ positions: Array<[number, number]>; color: string }>;
   routeOpacity: number;
   routePath: Array<[number, number]>;
+  activeRoutePenalty: number;
+  activeRouteIsEco: boolean;
   onSlotClick: (slot: Slot) => void;
+  onViewportCenterChange: (center: { lat: number; lng: number }) => void;
 };
 
 const center: [number, number] = [10.772, 106.698];
+
+type ViewportTrackerProps = {
+  onViewportCenterChange: (center: { lat: number; lng: number }) => void;
+};
+
+function ViewportTracker({ onViewportCenterChange }: ViewportTrackerProps) {
+  useMapEvents({
+    moveend: (event) => {
+      const point = event.target.getCenter();
+      onViewportCenterChange({ lat: point.lat, lng: point.lng });
+    },
+    zoomend: (event) => {
+      const point = event.target.getCenter();
+      onViewportCenterChange({ lat: point.lat, lng: point.lng });
+    }
+  });
+
+  return null;
+}
 
 function toLatLng(slot: Slot): [number, number] {
   if (typeof slot.lat === "number" && typeof slot.lng === "number") {
@@ -44,7 +67,7 @@ function markerIcon(slot: Slot, isSelected: boolean): L.DivIcon {
   });
 }
 
-export default function MapView({ slots, layers, selectedSlotId, userLocation, routeFocusToken, routeSegments, routeOpacity, routePath, onSlotClick }: MapViewProps) {
+export default function MapView({ slots, zones, layers, selectedSlotId, userLocation, routeFocusToken, routeSegments, routeOpacity, routePath, activeRoutePenalty, activeRouteIsEco, onSlotClick, onViewportCenterChange }: MapViewProps) {
   const plugins = createMapPlugins();
 
   return (
@@ -54,8 +77,10 @@ export default function MapView({ slots, layers, selectedSlotId, userLocation, r
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
 
+      <ViewportTracker onViewportCenterChange={onViewportCenterChange} />
+
       {plugins.map((plugin) => (
-        <Fragment key={plugin.id}>{plugin.render({ slots, layers, selectedSlotId, userLocation, routeFocusToken, routeSegments, routeOpacity, routePath, onSlotClick, toLatLng, markerIcon })}</Fragment>
+        <Fragment key={plugin.id}>{plugin.render({ slots, zones, layers, selectedSlotId, userLocation, routeFocusToken, routeSegments, routeOpacity, routePath, activeRoutePenalty, activeRouteIsEco, onSlotClick, toLatLng, markerIcon })}</Fragment>
       ))}
     </MapContainer>
   );

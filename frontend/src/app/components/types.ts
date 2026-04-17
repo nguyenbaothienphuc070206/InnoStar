@@ -23,6 +23,14 @@ export type RouteSuggestion = {
   path: Array<[number, number]>;
 };
 
+export type ZonePoint = {
+  id: string;
+  lat: number;
+  lng: number;
+  value: number;
+  type: "green" | "yellow" | "red";
+};
+
 export type LayersState = {
   parking: boolean;
   camera: boolean;

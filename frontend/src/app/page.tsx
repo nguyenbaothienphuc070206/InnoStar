@@ -12,7 +12,7 @@ import LayerControl from "./components/layer-control";
 import SlotMiniDashboard from "./components/slot-mini-dashboard";
 import StoryBubble from "./components/story-bubble";
 import TopBar from "./components/top-bar";
-import { Slot } from "./components/types";
+import { Slot, ZonePoint } from "./components/types";
 import { useDebouncedValue } from "./hooks/use-debounced-value";
 import { useMapStore } from "./store/use-map-store";
 
@@ -26,6 +26,8 @@ const userLocation: [number, number] = [10.772, 106.698];
 type RouteOption = {
   coords: Array<[number, number]>;
   durationMin: number;
+  smartEtaMin: number;
+  penaltyScore: number;
   distanceKm: number;
   steps: string[];
 };
@@ -224,6 +226,55 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
+function getTimeFactor(): number {
+  const hour = new Date().getHours();
+  if ((hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 19)) {
+    return 0.35;
+  }
+  return 0.72;
+}
+
+function getZoneType(availability: number): ZonePoint["type"] {
+  if (availability > 70) {
+    return "green";
+  }
+  if (availability > 40) {
+    return "yellow";
+  }
+  return "red";
+}
+
+function pointDistance(a: [number, number], b: [number, number]): number {
+  return Math.hypot(a[0] - b[0], a[1] - b[1]);
+}
+
+function scoreRoute(routeCoords: Array<[number, number]>, zones: ZonePoint[]): number {
+  let penalty = 0;
+
+  for (const point of routeCoords) {
+    for (const zone of zones) {
+      const d = pointDistance(point, [zone.lat, zone.lng]);
+      if (d < 0.0026) {
+        if (zone.type === "red") {
+          penalty += 10;
+        } else if (zone.type === "yellow") {
+          penalty += 4;
+        }
+      }
+    }
+  }
+
+  return penalty;
+}
+
+function smartEta(baseTime: number, penalty: number): number {
+  return Math.max(1, Math.round(baseTime + penalty * 0.2));
+}
+
+function predictAvailability(current: number): number {
+  return Number(clamp(current + (Math.random() - 0.5) * 15, 0, 100).toFixed(0));
+}
+
 export default function Home() {
   const [adminOpen, setAdminOpen] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
@@ -238,6 +289,9 @@ export default function Home() {
   const [finding, setFinding] = useState(false);
   const [etaMinutes, setEtaMinutes] = useState<number | null>(null);
   const [story, setStory] = useState<StoryMessage | null>(null);
+  const [zones, setZones] = useState<ZonePoint[]>([]);
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: userLocation[0], lng: userLocation[1] });
+  const [predictedAvailabilityPct, setPredictedAvailabilityPct] = useState<number | null>(null);
   const [storyVoiceEnabled, setStoryVoiceEnabled] = useState(true);
   const [systemState, setSystemState] = useState<SystemState>("healthy");
   const [opsMetrics, setOpsMetrics] = useState<OpsMetrics>({
@@ -247,6 +301,7 @@ export default function Home() {
   });
   const [opsUpdatedAt, setOpsUpdatedAt] = useState<number>(Date.now());
   const [opsIncidents, setOpsIncidents] = useState<OpsIncident[]>([]);
+  const zoneRegenerationTokenRef = useRef(0);
   const storyLayerHydratedRef = useRef(false);
   const storyVoiceHydratedRef = useRef(false);
   const storyTriggerTimerRef = useRef<number | null>(null);
@@ -536,6 +591,102 @@ export default function Home() {
     setSystemState("healthy");
   }, [opsIncidents, routeLoading, opsMetrics.rtt]);
 
+  function generateSmartZones(center: { lat: number; lng: number }, sourceSlots: Slot[]) {
+    const token = ++zoneRegenerationTokenRef.current;
+    const factor = getTimeFactor();
+
+    const points = sourceSlots
+      .filter((slot) => typeof slot.lat === "number" && typeof slot.lng === "number")
+      .slice(0, 30)
+      .map((slot, index) => {
+        const lat = slot.lat as number;
+        const lng = slot.lng as number;
+        const centerDistance = pointDistance([lat, lng], [center.lat, center.lng]);
+        const centerBias = clamp(1 - centerDistance * 42, 0.35, 1.05);
+        const baseAvailability = slot.available ? 82 : slot.soon || (slot.predictedFreeMin ?? 99) <= 10 ? 54 : 22;
+        const withTimeFactor = baseAvailability * factor * centerBias;
+        const availability = Number(clamp(withTimeFactor + (Math.random() - 0.5) * 12, 0, 100).toFixed(0));
+
+        return {
+          id: `zone-${token}-${slot.id}-${index}`,
+          lat,
+          lng,
+          value: availability,
+          type: getZoneType(availability)
+        } satisfies ZonePoint;
+      });
+
+    if (points.length < 12) {
+      const synthetic = Array.from({ length: 12 - points.length }, (_, index) => {
+        const lat = center.lat + (Math.random() - 0.5) * 0.02;
+        const lng = center.lng + (Math.random() - 0.5) * 0.02;
+        const availability = Number(clamp((Math.random() * 100) * factor, 0, 100).toFixed(0));
+        return {
+          id: `zone-${token}-synthetic-${index}`,
+          lat,
+          lng,
+          value: availability,
+          type: getZoneType(availability)
+        } satisfies ZonePoint;
+      });
+      setZones([...points, ...synthetic]);
+      return;
+    }
+
+    setZones(points);
+  }
+
+  useEffect(() => {
+    generateSmartZones(mapCenter, slots);
+  }, [mapCenter, slots]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setZones((current) =>
+        current.map((zone) => {
+          const nextValue = Number(clamp(zone.value + (Math.random() - 0.5) * 10, 0, 100).toFixed(0));
+          return {
+            ...zone,
+            value: nextValue,
+            type: getZoneType(nextValue)
+          };
+        })
+      );
+    }, 3000);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      generateSmartZones(mapCenter, slots);
+    }, 10000);
+    return () => window.clearInterval(interval);
+  }, [mapCenter, slots]);
+
+  function dominantZoneAround(point: [number, number]): ZonePoint["type"] {
+    const near = zones.filter((zone) => pointDistance(point, [zone.lat, zone.lng]) < 0.0034);
+    if (!near.length) {
+      return "yellow";
+    }
+
+    const score = near.reduce(
+      (acc, zone) => {
+        acc[zone.type] += 1;
+        return acc;
+      },
+      { green: 0, yellow: 0, red: 0 } as Record<ZonePoint["type"], number>
+    );
+
+    if (score.red >= score.yellow && score.red >= score.green) {
+      return "red";
+    }
+    if (score.green >= score.yellow) {
+      return "green";
+    }
+    return "yellow";
+  }
+
   function triggerStory(nextStory: StoryMessage, delayMs: number) {
     if (!layers.story) {
       return;
@@ -661,6 +812,15 @@ export default function Home() {
   }, [nearbyAvailableSlots]);
 
   const activeRoutePath = routes[activeRoute]?.coords;
+  const ecoRouteIndex = useMemo(() => {
+    if (!routes.length) {
+      return 0;
+    }
+    return routes.reduce((best, item, idx) => (item.distanceKm < routes[best].distanceKm ? idx : best), 0);
+  }, [routes]);
+
+  const activeRoutePenalty = routes[activeRoute]?.penaltyScore ?? 0;
+  const activeRouteIsEco = activeRoute === ecoRouteIndex;
 
   useEffect(() => {
     if (!activeRoutePath || activeRoutePath.length < 2) {
@@ -748,8 +908,18 @@ export default function Home() {
       setTurnSteps([]);
       setActiveRoute(0);
       setRoute(null);
+      generateSmartZones(mapCenter, slots);
       setStatusMessage(`Nearest slot found: S${nearest.id}`);
-      emitStoryForSlot(nearest, "driver", "find", 500);
+      const zoneType = dominantZoneAround([nearest.lat, nearest.lng]);
+      if (zoneType === "red") {
+        emitStory("driver", "full", 500);
+      } else if (zoneType === "green") {
+        emitStory("coba", "find", 500);
+      } else {
+        emitStoryForSlot(nearest, "driver", "find", 500);
+      }
+      const baseAvailability = nearest.available ? 85 : nearest.soon || (nearest.predictedFreeMin ?? 99) <= 10 ? 55 : 20;
+      setPredictedAvailabilityPct(predictAvailability(baseAvailability));
       setFinding(false);
     }, 800);
   }
@@ -803,6 +973,8 @@ export default function Home() {
         data.routes?.map((routeItem) => ({
           coords: routeItem.geometry.coordinates.map(([lng, lat]) => [lat, lng]),
           durationMin: Math.max(1, Math.round(routeItem.duration / 60)),
+          smartEtaMin: 0,
+          penaltyScore: 0,
           distanceKm: Math.max(1, Math.round(routeItem.distance / 1000)),
           steps:
             routeItem.legs?.[0]?.steps?.map((step) => step.maneuver?.instruction || step.name || "Continue straight") ?? []
@@ -817,15 +989,39 @@ export default function Home() {
         return;
       }
 
-      setRoutes(parsedRoutes);
-      setActiveRoute(0);
-      setTurnSteps(parsedRoutes[0].steps);
-      setEtaMinutes(parsedRoutes[0].durationMin);
+      const scored = parsedRoutes.map((routeItem) => {
+        const penaltyScore = scoreRoute(routeItem.coords, zones);
+        return {
+          ...routeItem,
+          penaltyScore,
+          smartEtaMin: smartEta(routeItem.durationMin, penaltyScore)
+        };
+      });
+
+      const bestRouteIndex = scored.reduce((best, current, index, all) => {
+        if (current.penaltyScore < all[best].penaltyScore) {
+          return index;
+        }
+        if (current.penaltyScore === all[best].penaltyScore && current.smartEtaMin < all[best].smartEtaMin) {
+          return index;
+        }
+        return best;
+      }, 0);
+
+      setRoutes(scored);
+      setActiveRoute(bestRouteIndex);
+      setTurnSteps(scored[bestRouteIndex].steps);
+      setEtaMinutes(scored[bestRouteIndex].smartEtaMin);
       setRoute(null);
       setRouteFocusToken((value) => value + 1);
       bumpEco(16, 0.35);
-      setStatusMessage(`Route ready: ${parsedRoutes[0].durationMin} min • ${parsedRoutes[0].distanceKm} km`);
-      emitStory("coba", "route", selectedSlot.zone === "green" ? 600 : 800);
+      generateSmartZones(mapCenter, slots);
+      setStatusMessage(`Route ready: ${scored[bestRouteIndex].smartEtaMin} min • ${scored[bestRouteIndex].distanceKm} km`);
+      if (scored[bestRouteIndex].penaltyScore > 15) {
+        emitStory("driver", "route", 800);
+      } else {
+        emitStory("coba", "route", selectedSlot.zone === "green" ? 600 : 800);
+      }
     } catch (error) {
       if ((error as Error).name === "AbortError") {
         return;
@@ -870,6 +1066,7 @@ export default function Home() {
     <main className="platformShell pt-safe pb-safe">
       <MapView
         slots={slots}
+        zones={zones}
         layers={layers}
         selectedSlotId={selectedSlot?.id ?? null}
         userLocation={userLocation}
@@ -877,6 +1074,11 @@ export default function Home() {
         routeSegments={routeSegments}
         routePath={displayRoute.length > 0 ? displayRoute : routePath}
         routeOpacity={fadingRoute ? 0 : 1}
+        activeRoutePenalty={activeRoutePenalty}
+        activeRouteIsEco={activeRouteIsEco}
+        onViewportCenterChange={(center) => {
+          setMapCenter(center);
+        }}
         onSlotClick={(slot) => {
           if (abortRef.current) {
             abortRef.current.abort();
@@ -968,7 +1170,6 @@ export default function Home() {
       {routes.length > 0 ? (
         <div className="routeOptionsBar" data-testid="route-options">
           {routes.map((option, index) => {
-            const ecoIndex = routes.reduce((best, item, idx) => (item.distanceKm < routes[best].distanceKm ? idx : best), 0);
             const active = index === activeRoute;
 
             return (
@@ -979,11 +1180,11 @@ export default function Home() {
                 onClick={() => {
                   setActiveRoute(index);
                   setTurnSteps(option.steps);
-                  setEtaMinutes(option.durationMin);
+                  setEtaMinutes(option.smartEtaMin);
                   setRouteFocusToken((value) => value + 1);
                 }}
               >
-                {option.durationMin} min • {option.distanceKm} km {index === ecoIndex ? "🌱" : ""}
+                {option.smartEtaMin} min • {option.distanceKm} km {index === ecoRouteIndex ? "🌱" : ""}
               </button>
             );
           })}
@@ -1020,6 +1221,7 @@ export default function Home() {
         <p className="cameraHint">
           Markers: {stats.available}/{slots.length} available • Recommended: {recommendedSlots.length} • {selectedSlotStatus}
         </p>
+        {predictedAvailabilityPct !== null ? <p className="cameraHint">Expected availability (5m): {predictedAvailabilityPct}%</p> : null}
         <CameraListPanel slots={slots} searchTerm={debouncedQuery} />
         <div className="recommendCard">
           <p>Recommended for you</p>

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import GlassCard from "./glass-card";
 
 type EcoPanelProps = {
@@ -13,10 +13,6 @@ type EcoPanelProps = {
   etaMinutes: number | null;
   finding: boolean;
   routeLoading: boolean;
-  reportSent: boolean;
-  report: string;
-  onReportChange: (value: string) => void;
-  onSubmitReport: (event: FormEvent) => Promise<void>;
   onFindNearest: () => void;
   onDrawRoute: () => void;
 };
@@ -30,10 +26,6 @@ export default function EcoPanel({
   etaMinutes,
   finding,
   routeLoading,
-  reportSent,
-  report,
-  onReportChange,
-  onSubmitReport,
   onFindNearest,
   onDrawRoute
 }: EcoPanelProps) {
@@ -76,7 +68,6 @@ export default function EcoPanel({
               <strong>{greenScore}</strong>
             </div>
 
-            <div className="ecoRank">Top 82% users</div>
             <div className="ecoBadge">{ecoLevel} • {ecoPoints} pts</div>
 
             <div className="ecoPanelButtons">
@@ -86,13 +77,6 @@ export default function EcoPanel({
 
             {finding ? <p className="loadingHint">Analyzing best parking...</p> : null}
             {etaMinutes ? <p className="ecoEta">ETA: ~{Math.max(1, etaMinutes)} min</p> : null}
-
-            <form onSubmit={onSubmitReport} className="ecoReportForm">
-              <input value={report} onChange={(event) => onReportChange(event.target.value)} placeholder="Report status" />
-              <button type="submit">Send</button>
-            </form>
-
-            {reportSent ? <p className="reportSent">Sent successfully ✅</p> : null}
           </div>
         ) : null}
       </GlassCard>

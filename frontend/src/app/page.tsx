@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { io, Socket } from "socket.io-client";
 import CameraListPanel from "./components/camera-list-panel";
@@ -225,6 +225,8 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 export default function Home() {
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [routeLoading, setRouteLoading] = useState(false);
   const [cameraOffline, setCameraOffline] = useState(false);
   const [routeFocusToken, setRouteFocusToken] = useState(0);
@@ -234,7 +236,6 @@ export default function Home() {
   const [displayRoute, setDisplayRoute] = useState<Array<[number, number]>>([]);
   const [fadingRoute, setFadingRoute] = useState(false);
   const [finding, setFinding] = useState(false);
-  const [reportSent, setReportSent] = useState(false);
   const [etaMinutes, setEtaMinutes] = useState<number | null>(null);
   const [story, setStory] = useState<StoryMessage | null>(null);
   const [storyVoiceEnabled, setStoryVoiceEnabled] = useState(true);
@@ -263,12 +264,10 @@ export default function Home() {
     route,
     ecoLevel,
     ecoPoints,
-    report,
     statusMessage,
     selectedSlot,
     setQuery,
     setProfileName,
-    setReport,
     setRoute,
     setStatusMessage,
     setSelectedSlot,
@@ -278,6 +277,20 @@ export default function Home() {
   } = useMapStore();
 
   const debouncedQuery = useDebouncedValue(query, 280);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const applyViewport = () => {
+      setIsMobileViewport(window.innerWidth < 768);
+    };
+
+    applyViewport();
+    window.addEventListener("resize", applyViewport);
+    return () => window.removeEventListener("resize", applyViewport);
+  }, []);
 
   useEffect(() => {
     const cachedName = window.localStorage.getItem("greenpark-user");
@@ -853,16 +866,6 @@ export default function Home() {
         : "Currently full"
     : "Tap a slot marker to inspect";
 
-  async function submitReport(event: FormEvent) {
-    event.preventDefault();
-    if (!report.trim()) return;
-
-    setReport("");
-    setReportSent(true);
-    setStatusMessage("Report sent successfully");
-    window.setTimeout(() => setReportSent(false), 2000);
-  }
-
   return (
     <main className="platformShell pt-safe pb-safe">
       <MapView
@@ -909,17 +912,23 @@ export default function Home() {
         onProfileNameChange={setProfileName}
       />
 
-      <EnterpriseOpsPanel
-        availabilityPct={availabilityPct}
-        cameraOnlinePct={cameraOnlinePct}
-        etaMinutes={etaMinutes}
-        routeLoading={routeLoading}
-        systemState={systemState}
-        metrics={opsMetrics}
-        updatedAt={opsUpdatedAt}
-        incidents={incidentFeed}
-        slo={slo}
-      />
+      <button className="adminToggle" data-testid="admin-toggle" onClick={() => setAdminOpen((value) => !value)}>
+        {adminOpen ? "Close Admin" : "Admin Panel"}
+      </button>
+
+      <aside className={`enterpriseDock ${adminOpen ? "open" : ""} ${isMobileViewport ? "mobile" : ""}`}>
+        <EnterpriseOpsPanel
+          availabilityPct={availabilityPct}
+          cameraOnlinePct={cameraOnlinePct}
+          etaMinutes={etaMinutes}
+          routeLoading={routeLoading}
+          systemState={systemState}
+          metrics={opsMetrics}
+          updatedAt={opsUpdatedAt}
+          incidents={incidentFeed}
+          slo={slo}
+        />
+      </aside>
 
       <LayerControl layers={layers} onToggle={toggleLayer} />
 
@@ -932,15 +941,19 @@ export default function Home() {
         etaMinutes={etaMinutes}
         finding={finding}
         routeLoading={routeLoading}
-        reportSent={reportSent}
-        report={report}
-        onReportChange={setReport}
-        onSubmitReport={submitReport}
         onFindNearest={handleFindNearest}
         onDrawRoute={handleDrawRoute}
       />
 
       <SlotMiniDashboard slot={selectedSlot} onNavigate={handleDrawRoute} onOpenLiveView={openSelectedLiveView} routeLoading={routeLoading} />
+
+      <div className="actionDock" data-testid="action-dock">
+        <button onClick={handleFindNearest} disabled={finding}>Find</button>
+        <button onClick={handleDrawRoute} disabled={routeLoading}>Route</button>
+        <button onClick={selectedSlot ? handleDrawRoute : handleFindNearest} disabled={!selectedSlot && finding}>
+          Go
+        </button>
+      </div>
 
       {routeLoading ? <div className="routeLoadingBanner">Finding best route...</div> : null}
 

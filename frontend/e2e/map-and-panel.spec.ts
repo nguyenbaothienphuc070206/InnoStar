@@ -24,7 +24,7 @@ test("eco panel supports compact toggle", async ({ page }) => {
   await expect(sheet).toContainText("Eco Journey");
 
   await page.getByTestId("panel-compact").click();
-  await expect(sheet).toContainText("Top 82% users");
+  await expect(sheet).toContainText("CO2");
 });
 
 test("slot inspect opens mini dashboard and ai overlay", async ({ page }) => {
@@ -96,6 +96,12 @@ test("story voice controls can mute and persist", async ({ page }) => {
 
 test("enterprise ops command center renders SLO and controls", async ({ page }) => {
   await page.goto("/");
+
+  await expect(page.getByTestId("ops-live")).toBeHidden();
+
+  const adminToggle = page.getByTestId("admin-toggle");
+  await expect(adminToggle).toBeVisible();
+  await adminToggle.click();
 
   const opsToggle = page.getByTestId("ops-toggle");
   await expect(opsToggle).toBeVisible();

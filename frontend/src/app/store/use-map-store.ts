@@ -26,13 +26,35 @@ type MapState = {
   mergeRealtimeSlots: (incoming: Slot[]) => void;
 };
 
-const initialSlots: Slot[] = [
-  { id: 1, type: "car", zone: "green", available: true, soon: false, x: 20, y: 22, cameraOnline: true, predictedFreeMin: 0, distanceM: 120 },
-  { id: 2, type: "car", zone: "standard", available: false, soon: false, x: 34, y: 38, cameraOnline: false, predictedFreeMin: 14, distanceM: 260 },
-  { id: 3, type: "bike", zone: "green", available: false, soon: true, x: 58, y: 31, cameraOnline: true, predictedFreeMin: 7, distanceM: 180 },
-  { id: 4, type: "bike", zone: "standard", available: false, soon: false, x: 67, y: 64, cameraOnline: false, predictedFreeMin: 19, distanceM: 340 },
-  { id: 5, type: "car", zone: "green", available: true, soon: false, x: 79, y: 44, cameraOnline: true, predictedFreeMin: 0, distanceM: 220 }
-];
+function generateSlots(count = 60): Slot[] {
+  return Array.from({ length: count }, (_, index) => {
+    const statusSeed = Math.random();
+    const available = statusSeed <= 0.33;
+    const soon = !available && statusSeed <= 0.66;
+    const x = Math.round(Math.random() * 100);
+    const y = Math.round(Math.random() * 100);
+    const lat = 10.768 + Math.random() * 0.014;
+    const lng = 106.691 + Math.random() * 0.015;
+
+    return {
+      id: index + 1,
+      type: Math.random() > 0.25 ? "car" : "bike",
+      zone: Math.random() > 0.45 ? "green" : "standard",
+      available,
+      soon,
+      predictedFreeMin: available ? 0 : soon ? 4 + Math.round(Math.random() * 6) : 14 + Math.round(Math.random() * 9),
+      distanceM: 80 + Math.round(Math.random() * 420),
+      x,
+      y,
+      lat,
+      lng,
+      cameraOnline: Math.random() > 0.32,
+      updatedAt: new Date(Date.now() - Math.round(Math.random() * 100000)).toISOString()
+    };
+  });
+}
+
+const initialSlots: Slot[] = generateSlots(60);
 
 function maybeSoon(slot: Slot): boolean {
   if (slot.available) {
@@ -41,7 +63,7 @@ function maybeSoon(slot: Slot): boolean {
   if (typeof slot.predictedFreeMin === "number") {
     return slot.predictedFreeMin <= 10;
   }
-  return Math.random() > 0.7;
+  return Math.random() > 0.5;
 }
 
 function slotChanged(prev: Slot, next: Slot): boolean {
@@ -64,6 +86,7 @@ export const useMapStore = create<MapState>((set) => ({
     parking: true,
     camera: true,
     traffic: false,
+    heat: true,
     route: true
   },
   route: null,

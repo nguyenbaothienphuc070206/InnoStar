@@ -20,6 +20,9 @@ export default function LayerControl({ layers, onToggle }: LayerControlProps) {
       <button data-testid="layer-traffic" aria-pressed={layers.traffic} onClick={() => onToggle("traffic")} className={layers.traffic ? "active" : ""}>
         Traffic
       </button>
+      <button data-testid="layer-heat" aria-pressed={layers.heat} onClick={() => onToggle("heat")} className={layers.heat ? "active" : ""}>
+        Heatmap
+      </button>
       <button data-testid="layer-route" aria-pressed={layers.route} onClick={() => onToggle("route")} className={layers.route ? "active" : ""}>
         Route
       </button>

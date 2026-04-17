@@ -3,13 +3,14 @@
 import L from "leaflet";
 import { ReactNode } from "react";
 import MarkerClusterGroup from "react-leaflet-cluster";
-import { Marker, Polyline, Popup, TileLayer } from "react-leaflet";
+import { Circle, Marker, Polyline, Popup, TileLayer } from "react-leaflet";
 import { LayersState, Slot } from "./types";
 
 type MapPluginContext = {
   slots: Slot[];
   layers: LayersState;
   selectedSlotId: number | null;
+  userLocation: [number, number];
   routePath: Array<[number, number]>;
   onSlotClick: (slot: Slot) => void;
   toLatLng: (slot: Slot) => [number, number];
@@ -35,11 +36,50 @@ export function createMapPlugins(): MapLayerPlugin[] {
         ) : null
     },
     {
+      id: "heat",
+      render: ({ layers, slots, toLatLng }) => {
+        if (!layers.heat) {
+          return null;
+        }
+
+        return slots.map((slot) => {
+          const [lat, lng] = toLatLng(slot);
+          const intensity = slot.available ? 0.3 : slot.soon || (slot.predictedFreeMin ?? 99) <= 10 ? 0.6 : 0.95;
+          const color = intensity > 0.8 ? "#ff7e36" : intensity > 0.45 ? "#ffd167" : "#67f8b4";
+
+          return (
+            <Circle
+              key={`heat-${slot.id}`}
+              center={[lat, lng]}
+              radius={30 + intensity * 45}
+              pathOptions={{
+                color,
+                fillColor: color,
+                fillOpacity: 0.2 + intensity * 0.28,
+                weight: 0
+              }}
+            />
+          );
+        });
+      }
+    },
+    {
       id: "route",
       render: ({ layers, routePath }) =>
         layers.route && routePath.length > 1 ? (
           <Polyline positions={routePath} pathOptions={{ color: "#1FF4FA", weight: 5, opacity: 0.9, dashArray: "8 10", className: "routePulse" }} />
         ) : null
+    },
+    {
+      id: "user-location",
+      render: ({ userLocation }) => (
+        <Marker
+          position={userLocation}
+          icon={L.divIcon({ className: "userMarker", html: "<span>YOU</span>", iconSize: [44, 22], iconAnchor: [22, 11] })}
+        >
+          <Popup>Your current position</Popup>
+        </Marker>
+      )
     },
     {
       id: "parking",

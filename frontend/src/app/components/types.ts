@@ -27,5 +27,6 @@ export type LayersState = {
   parking: boolean;
   camera: boolean;
   traffic: boolean;
+  heat: boolean;
   route: boolean;
 };

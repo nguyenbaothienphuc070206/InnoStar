@@ -19,10 +19,16 @@ const MapView = dynamic(() => import("./components/map-view"), { ssr: false });
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001/api/v1";
 const backendWsUrl = backendUrl.replace(/\/api\/v1\/?$/, "");
 const cameraStreamUrl = process.env.NEXT_PUBLIC_CAMERA_STREAM_URL || "http://localhost:8000/stream.m3u8";
+const userLocation: [number, number] = [10.772, 106.698];
+
+function distance(a: [number, number], b: [number, number]): number {
+  return Math.hypot(a[0] - b[0], a[1] - b[1]);
+}
 
 export default function Home() {
   const [routeLoading, setRouteLoading] = useState(false);
   const [cameraOffline, setCameraOffline] = useState(false);
+  const [routeProgress, setRouteProgress] = useState(0);
 
   const {
     slots,
@@ -84,6 +90,51 @@ export default function Home() {
     };
   }, [mergeRealtimeSlots, setStatusMessage]);
 
+  useEffect(() => {
+    if (selectedSlot || slots.length === 0) {
+      return;
+    }
+
+    const nearest = slots.reduce<Slot | null>((best, slot) => {
+      if (!slot.available || typeof slot.lat !== "number" || typeof slot.lng !== "number") {
+        return best;
+      }
+
+      if (!best) {
+        return slot;
+      }
+
+      const bestDistance = distance(userLocation, [best.lat ?? userLocation[0], best.lng ?? userLocation[1]]);
+      const currentDistance = distance(userLocation, [slot.lat, slot.lng]);
+      return currentDistance < bestDistance ? slot : best;
+    }, null);
+
+    if (nearest) {
+      setSelectedSlot(nearest);
+    }
+  }, [selectedSlot, setSelectedSlot, slots]);
+
+  useEffect(() => {
+    if (!selectedSlot) {
+      setRouteProgress(0);
+      return;
+    }
+
+    setRouteProgress(0);
+    const timer = window.setInterval(() => {
+      setRouteProgress((value) => {
+        const next = value + 0.04;
+        if (next >= 1) {
+          window.clearInterval(timer);
+          return 1;
+        }
+        return next;
+      });
+    }, 50);
+
+    return () => window.clearInterval(timer);
+  }, [selectedSlot]);
+
   const stats = useMemo(() => {
     const available = slots.filter((slot) => slot.available).length;
     const greenAvailable = slots.filter((slot) => slot.available && slot.zone === "green").length;
@@ -100,6 +151,22 @@ export default function Home() {
   const recommendedSlots = useMemo(() => {
     return [...nearbyAvailableSlots].sort((a, b) => (a.distanceM ?? 9999) - (b.distanceM ?? 9999)).slice(0, 2);
   }, [nearbyAvailableSlots]);
+
+  const fallbackRoute = useMemo<Array<[number, number]>>(() => {
+    if (!selectedSlot || typeof selectedSlot.lat !== "number" || typeof selectedSlot.lng !== "number") {
+      return [];
+    }
+
+    const destination: [number, number] = [selectedSlot.lat, selectedSlot.lng];
+    const animatedPoint: [number, number] = [
+      userLocation[0] + (destination[0] - userLocation[0]) * routeProgress,
+      userLocation[1] + (destination[1] - userLocation[1]) * routeProgress
+    ];
+
+    return [userLocation, animatedPoint];
+  }, [routeProgress, selectedSlot]);
+
+  const routePath = route?.path?.length ? route.path : fallbackRoute;
 
   async function findParking() {
     setRouteLoading(true);
@@ -164,7 +231,8 @@ export default function Home() {
         slots={slots}
         layers={layers}
         selectedSlotId={selectedSlot?.id ?? null}
-        routePath={route?.path || []}
+        userLocation={userLocation}
+        routePath={routePath}
         onSlotClick={(slot) => {
           setSelectedSlot(slot);
           const soonFree = !slot.available && (slot.soon || (slot.predictedFreeMin ?? 99) <= 10);

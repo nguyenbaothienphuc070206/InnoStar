@@ -11,6 +11,7 @@ type MapViewProps = {
   slots: Slot[];
   layers: LayersState;
   selectedSlotId: number | null;
+  userLocation: [number, number];
   routePath: Array<[number, number]>;
   onSlotClick: (slot: Slot) => void;
 };
@@ -40,7 +41,7 @@ function markerIcon(slot: Slot, isSelected: boolean): L.DivIcon {
   });
 }
 
-export default function MapView({ slots, layers, selectedSlotId, routePath, onSlotClick }: MapViewProps) {
+export default function MapView({ slots, layers, selectedSlotId, userLocation, routePath, onSlotClick }: MapViewProps) {
   const plugins = createMapPlugins();
 
   return (
@@ -51,7 +52,7 @@ export default function MapView({ slots, layers, selectedSlotId, routePath, onSl
       />
 
       {plugins.map((plugin) => (
-        <Fragment key={plugin.id}>{plugin.render({ slots, layers, selectedSlotId, routePath, onSlotClick, toLatLng, markerIcon })}</Fragment>
+        <Fragment key={plugin.id}>{plugin.render({ slots, layers, selectedSlotId, userLocation, routePath, onSlotClick, toLatLng, markerIcon })}</Fragment>
       ))}
     </MapContainer>
   );

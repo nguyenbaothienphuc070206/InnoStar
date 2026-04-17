@@ -41,6 +41,12 @@ type StoryMessage = {
   text: string;
 };
 
+type StoryVoiceProfile = {
+  rate: number;
+  pitch: number;
+  volume: number;
+};
+
 type StoryContext = "find" | "route" | "inspect" | "available" | "soon" | "full";
 
 const storybook: Record<StoryCharacter, Record<StoryContext, string[]>> = {
@@ -186,6 +192,16 @@ function distance(a: [number, number], b: [number, number]): number {
   return Math.hypot(a[0] - b[0], a[1] - b[1]);
 }
 
+function voiceProfileForCharacter(character: StoryCharacter): StoryVoiceProfile {
+  if (character === "coba") {
+    return { rate: 0.94, pitch: 0.88, volume: 0.9 };
+  }
+  if (character === "driver") {
+    return { rate: 1.03, pitch: 1.0, volume: 0.92 };
+  }
+  return { rate: 1.08, pitch: 1.08, volume: 0.9 };
+}
+
 export default function Home() {
   const [routeLoading, setRouteLoading] = useState(false);
   const [cameraOffline, setCameraOffline] = useState(false);
@@ -204,6 +220,7 @@ export default function Home() {
   const storyVoiceHydratedRef = useRef(false);
   const storyTriggerTimerRef = useRef<number | null>(null);
   const voiceTimerRef = useRef<number | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const requestIdRef = useRef(0);
 
@@ -281,6 +298,39 @@ export default function Home() {
     }
   }
 
+  function playStoryHint(character: StoryCharacter) {
+    if (typeof window === "undefined" || !("AudioContext" in window)) {
+      return;
+    }
+
+    try {
+      if (!audioContextRef.current || audioContextRef.current.state === "closed") {
+        audioContextRef.current = new window.AudioContext();
+      }
+
+      const context = audioContextRef.current;
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      const baseFreq = character === "coba" ? 660 : character === "driver" ? 520 : 740;
+
+      oscillator.type = "sine";
+      oscillator.frequency.value = baseFreq;
+      gain.gain.value = 0.0001;
+
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+
+      const now = context.currentTime;
+      gain.gain.exponentialRampToValueAtTime(0.02, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+
+      oscillator.start(now);
+      oscillator.stop(now + 0.12);
+    } catch {
+      // Ignore hint audio errors to avoid interrupting interaction flow.
+    }
+  }
+
   useEffect(() => {
     return () => {
       if (abortRef.current) {
@@ -290,6 +340,7 @@ export default function Home() {
       if (voiceTimerRef.current) {
         window.clearTimeout(voiceTimerRef.current);
       }
+      audioContextRef.current?.close().catch(() => undefined);
       cancelVoicePlayback();
     };
   }, []);
@@ -365,7 +416,10 @@ export default function Home() {
     voiceTimerRef.current = window.setTimeout(() => {
       const utterance = new SpeechSynthesisUtterance(story.text);
       utterance.lang = "vi-VN";
-      utterance.rate = story.character === "coba" ? 0.95 : story.character === "driver" ? 1.02 : 1.06;
+      const profile = voiceProfileForCharacter(story.character);
+      utterance.rate = profile.rate;
+      utterance.pitch = profile.pitch;
+      utterance.volume = profile.volume;
       window.speechSynthesis.speak(utterance);
     }, 200);
 
@@ -385,6 +439,9 @@ export default function Home() {
     clearStoryTriggerTimer();
     setStory(null);
     storyTriggerTimerRef.current = window.setTimeout(() => {
+      if (storyVoiceEnabled) {
+        playStoryHint(nextStory.character);
+      }
       setStory(nextStory);
       storyTriggerTimerRef.current = null;
     }, delayMs);

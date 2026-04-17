@@ -66,3 +66,30 @@ test("story mode can toggle and auto-dismiss bubble", async ({ page }) => {
   await inspect.click();
   await expect(storyBubble).toBeHidden();
 });
+
+test("story voice controls can mute and persist", async ({ page }) => {
+  await page.goto("/");
+
+  const inspect = page.locator('[data-testid^="inspect-slot-"]').first();
+  await expect(inspect).toBeVisible({ timeout: 15000 });
+  await inspect.click();
+
+  const storyBubble = page.getByTestId("story-bubble");
+  await expect(storyBubble).toBeVisible();
+
+  const voiceToggle = page.getByTestId("story-voice-toggle");
+  await expect(voiceToggle).toContainText("🔊");
+  await voiceToggle.evaluate((element) => (element as HTMLButtonElement).click());
+  await expect(voiceToggle).toContainText("🔇");
+
+  await expect.poll(async () => {
+    return page.evaluate(() => window.localStorage.getItem("greenpark-story-voice"));
+  }).toBe("off");
+
+  const stopVoice = page.getByTestId("story-voice-stop");
+  await stopVoice.evaluate((element) => (element as HTMLButtonElement).click());
+
+  await inspect.click();
+  await expect(storyBubble).toBeVisible();
+  await expect(voiceToggle).toContainText("🔇");
+});

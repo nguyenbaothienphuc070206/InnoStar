@@ -32,10 +32,15 @@ export default function StoryBubble({ story, icon, voiceEnabled, onToggleVoice, 
           <div className="storyBody">
             <p>{story.text}</p>
             <div className="storyActions">
-              <button type="button" data-testid="story-voice-toggle" onClick={onToggleVoice}>
+              <button
+                type="button"
+                data-testid="story-voice-toggle"
+                aria-label={voiceEnabled ? "Mute story voice" : "Unmute story voice"}
+                onClick={onToggleVoice}
+              >
                 {voiceEnabled ? "🔊" : "🔇"}
               </button>
-              <button type="button" data-testid="story-voice-stop" onClick={onStopVoice}>
+              <button type="button" data-testid="story-voice-stop" aria-label="Stop story voice" onClick={onStopVoice}>
                 ⏹
               </button>
             </div>

@@ -6,6 +6,7 @@ import { io, Socket } from "socket.io-client";
 import CameraListPanel from "./components/camera-list-panel";
 import CameraAIOverlay from "./components/camera-ai-overlay";
 import EcoPanel from "./components/eco-panel";
+import EnterpriseOpsPanel from "./components/enterprise-ops-panel";
 import GlassCard from "./components/glass-card";
 import LayerControl from "./components/layer-control";
 import SlotMiniDashboard from "./components/slot-mini-dashboard";
@@ -45,6 +46,16 @@ type StoryVoiceProfile = {
   rate: number;
   pitch: number;
   volume: number;
+};
+
+type OpsState = "up" | "down" | "degraded" | "restricted";
+
+type OpsSnapshot = {
+  live: OpsState;
+  ready: OpsState;
+  health: OpsState;
+  latencyMs: number | null;
+  updatedAt: number | null;
 };
 
 type StoryContext = "find" | "route" | "inspect" | "available" | "soon" | "full";
@@ -202,6 +213,16 @@ function voiceProfileForCharacter(character: StoryCharacter): StoryVoiceProfile 
   return { rate: 1.08, pitch: 1.08, volume: 0.9 };
 }
 
+function healthStateFromResponse(response: Response): OpsState {
+  if (response.ok) {
+    return "up";
+  }
+  if (response.status === 401 || response.status === 403) {
+    return "restricted";
+  }
+  return "down";
+}
+
 export default function Home() {
   const [routeLoading, setRouteLoading] = useState(false);
   const [cameraOffline, setCameraOffline] = useState(false);
@@ -216,6 +237,13 @@ export default function Home() {
   const [etaMinutes, setEtaMinutes] = useState<number | null>(null);
   const [story, setStory] = useState<StoryMessage | null>(null);
   const [storyVoiceEnabled, setStoryVoiceEnabled] = useState(true);
+  const [opsSnapshot, setOpsSnapshot] = useState<OpsSnapshot>({
+    live: "degraded",
+    ready: "degraded",
+    health: "degraded",
+    latencyMs: null,
+    updatedAt: null
+  });
   const storyLayerHydratedRef = useRef(false);
   const storyVoiceHydratedRef = useRef(false);
   const storyTriggerTimerRef = useRef<number | null>(null);
@@ -248,6 +276,7 @@ export default function Home() {
   } = useMapStore();
 
   const debouncedQuery = useDebouncedValue(query, 280);
+  const backendApiBase = backendUrl.replace(/\/$/, "");
 
   useEffect(() => {
     const cachedName = window.localStorage.getItem("greenpark-user");
@@ -431,6 +460,48 @@ export default function Home() {
     };
   }, [story, storyVoiceEnabled]);
 
+  useEffect(() => {
+    let alive = true;
+
+    async function pollOpsHealth() {
+      const start = performance.now();
+      const [liveResult, readyResult, healthResult] = await Promise.allSettled([
+        fetch(`${backendApiBase}/ops/live`, { cache: "no-store" }),
+        fetch(`${backendApiBase}/ops/ready`, { cache: "no-store" }),
+        fetch(`${backendApiBase}/ops/health`, { cache: "no-store" })
+      ]);
+
+      if (!alive) {
+        return;
+      }
+
+      const resolveState = (result: PromiseSettledResult<Response>): OpsState => {
+        if (result.status === "fulfilled") {
+          return healthStateFromResponse(result.value);
+        }
+        return "down";
+      };
+
+      setOpsSnapshot({
+        live: resolveState(liveResult),
+        ready: resolveState(readyResult),
+        health: resolveState(healthResult),
+        latencyMs: Math.round(performance.now() - start),
+        updatedAt: Date.now()
+      });
+    }
+
+    void pollOpsHealth();
+    const interval = window.setInterval(() => {
+      void pollOpsHealth();
+    }, 30000);
+
+    return () => {
+      alive = false;
+      window.clearInterval(interval);
+    };
+  }, [backendApiBase]);
+
   function triggerStory(nextStory: StoryMessage, delayMs: number) {
     if (!layers.story) {
       return;
@@ -485,6 +556,32 @@ export default function Home() {
     const score = Math.round((greenAvailable / Math.max(1, slots.length)) * 100);
     return { available, greenAvailable, score };
   }, [slots]);
+
+  const cameraOnlinePct = useMemo(() => {
+    const online = slots.filter((slot) => slot.cameraOnline !== false).length;
+    return Math.round((online / Math.max(1, slots.length)) * 100);
+  }, [slots]);
+
+  const availabilityPct = Math.round((stats.available / Math.max(1, slots.length)) * 100);
+
+  const incidentFeed = useMemo(() => {
+    const incidents: string[] = [];
+
+    if (opsSnapshot.live !== "up") {
+      incidents.push("Realtime stream degraded. Switching to buffered updates.");
+    }
+    if (availabilityPct < 18) {
+      incidents.push("Critical occupancy pressure detected in central zones.");
+    }
+    if (cameraOnlinePct < 72) {
+      incidents.push("Camera uptime dropped below enterprise threshold (72%).");
+    }
+    if (routeLoading) {
+      incidents.push("Route engine load spike detected. Optimizer is recalculating.");
+    }
+
+    return incidents.slice(0, 3);
+  }, [availabilityPct, cameraOnlinePct, opsSnapshot.live, routeLoading]);
 
   const preferredArea = "District 1";
   const nearbyAvailableSlots = useMemo(() => {
@@ -756,6 +853,16 @@ export default function Home() {
         greenScore={route?.score ?? stats.score}
         profileName={profileName}
         onProfileNameChange={setProfileName}
+      />
+
+      <EnterpriseOpsPanel
+        availabilityPct={availabilityPct}
+        cameraOnlinePct={cameraOnlinePct}
+        etaMinutes={etaMinutes}
+        routeLoading={routeLoading}
+        ecoPoints={ecoPoints}
+        opsHealth={opsSnapshot}
+        incidents={incidentFeed}
       />
 
       <LayerControl layers={layers} onToggle={toggleLayer} />

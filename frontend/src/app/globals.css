@@ -121,6 +121,169 @@ body {
   box-shadow: 0 0 16px rgba(93, 255, 52, 0.3);
 }
 
+.enterpriseOps {
+  position: absolute;
+  left: 50%;
+  top: 80px;
+  transform: translateX(-50%);
+  z-index: 46;
+  width: min(94vw, 420px);
+  padding: 10px;
+  background: rgba(4, 12, 18, 0.8);
+}
+
+.enterpriseOpsCollapsed {
+  width: min(92vw, 260px);
+}
+
+.opsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.opsHeader h3 {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #c9f9ff;
+}
+
+.opsHeader span {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.64rem;
+  color: #97b8c0;
+}
+
+.opsHeader button {
+  padding: 4px 8px;
+  font-size: 0.68rem;
+}
+
+.opsServiceGrid {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.opsServiceCard {
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.opsServiceCard strong {
+  font-size: 0.66rem;
+  color: #c7d9df;
+}
+
+.opsPill {
+  border-radius: 999px;
+  padding: 2px 7px;
+  font-size: 0.62rem;
+  border: 1px solid transparent;
+}
+
+.opsPill.ok {
+  color: #d8ffd5;
+  border-color: rgba(93, 255, 52, 0.55);
+  background: rgba(93, 255, 52, 0.18);
+}
+
+.opsPill.warn {
+  color: #fff2cf;
+  border-color: rgba(255, 195, 77, 0.55);
+  background: rgba(255, 195, 77, 0.16);
+}
+
+.opsPill.danger {
+  color: #ffe0e0;
+  border-color: rgba(239, 79, 83, 0.55);
+  background: rgba(239, 79, 83, 0.15);
+}
+
+.opsPill.muted {
+  color: #a9bdc3;
+  border-color: rgba(169, 189, 195, 0.28);
+  background: rgba(169, 189, 195, 0.08);
+}
+
+.opsKpiGrid {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.opsKpiGrid article {
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 7px;
+}
+
+.opsKpiGrid p {
+  margin: 0;
+  font-size: 0.63rem;
+  color: #9eb6bd;
+}
+
+.opsKpiGrid strong {
+  font-size: 0.74rem;
+  color: #e4f5ff;
+}
+
+.opsText-ok {
+  color: #bdfebb;
+}
+
+.opsText-warn {
+  color: #ffd897;
+}
+
+.opsText-danger {
+  color: #ffb5b5;
+}
+
+.opsText-muted {
+  color: #adc3ca;
+}
+
+.opsIncidentFeed {
+  margin-top: 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 8px;
+}
+
+.opsIncidentFeed h4 {
+  margin: 0 0 6px;
+  font-size: 0.67rem;
+  color: #bff9ff;
+}
+
+.opsIncidentFeed ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 5px;
+}
+
+.opsIncidentFeed li {
+  font-size: 0.65rem;
+  color: #c8d8dd;
+  line-height: 1.35;
+}
+
 .ecoPanelShell {
   position: absolute;
   left: 8px;
@@ -882,6 +1045,11 @@ button:active {
     top: 96px;
   }
 
+  .enterpriseOps {
+    top: 96px;
+    width: min(92vw, 470px);
+  }
+
   .liveCameraCard {
     right: 16px;
     top: 96px;
@@ -943,6 +1111,15 @@ button:active {
     bottom: 14px;
     width: auto;
     transform: none;
+  }
+
+  .enterpriseOps {
+    top: 88px;
+    width: min(94vw, 460px);
+  }
+
+  .opsKpiGrid {
+    grid-template-columns: 1fr 1fr;
   }
 
   .slotMiniDashboard {

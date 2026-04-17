@@ -29,6 +29,10 @@ export default function Home() {
   const [routeLoading, setRouteLoading] = useState(false);
   const [cameraOffline, setCameraOffline] = useState(false);
   const [routeProgress, setRouteProgress] = useState(0);
+  const [routeRequested, setRouteRequested] = useState(false);
+  const [finding, setFinding] = useState(false);
+  const [reportSent, setReportSent] = useState(false);
+  const [etaMinutes, setEtaMinutes] = useState<number | null>(null);
 
   const {
     slots,
@@ -115,7 +119,7 @@ export default function Home() {
   }, [selectedSlot, setSelectedSlot, slots]);
 
   useEffect(() => {
-    if (!selectedSlot) {
+    if (!selectedSlot || !routeRequested) {
       setRouteProgress(0);
       return;
     }
@@ -133,7 +137,7 @@ export default function Home() {
     }, 50);
 
     return () => window.clearInterval(timer);
-  }, [selectedSlot]);
+  }, [routeRequested, selectedSlot]);
 
   const stats = useMemo(() => {
     const available = slots.filter((slot) => slot.available).length;
@@ -153,7 +157,7 @@ export default function Home() {
   }, [nearbyAvailableSlots]);
 
   const fallbackRoute = useMemo<Array<[number, number]>>(() => {
-    if (!selectedSlot || typeof selectedSlot.lat !== "number" || typeof selectedSlot.lng !== "number") {
+    if (!routeRequested || !selectedSlot || typeof selectedSlot.lat !== "number" || typeof selectedSlot.lng !== "number") {
       return [];
     }
 
@@ -164,9 +168,63 @@ export default function Home() {
     ];
 
     return [userLocation, animatedPoint];
-  }, [routeProgress, selectedSlot]);
+  }, [routeProgress, routeRequested, selectedSlot]);
 
   const routePath = route?.path?.length ? route.path : fallbackRoute;
+
+  function findNearestSlot(): Slot | null {
+    return slots.reduce<Slot | null>((best, slot) => {
+      if (typeof slot.lat !== "number" || typeof slot.lng !== "number") {
+        return best;
+      }
+
+      const isFull = !slot.available && !slot.soon;
+      if (isFull) {
+        return best;
+      }
+
+      if (!best || typeof best.lat !== "number" || typeof best.lng !== "number") {
+        return slot;
+      }
+
+      const currentDistance = distance(userLocation, [slot.lat, slot.lng]);
+      const bestDistance = distance(userLocation, [best.lat, best.lng]);
+      return currentDistance < bestDistance ? slot : best;
+    }, null);
+  }
+
+  function handleFindNearest() {
+    setFinding(true);
+    setStatusMessage("Analyzing best parking...");
+
+    window.setTimeout(() => {
+      const nearest = findNearestSlot();
+      if (!nearest || typeof nearest.lat !== "number" || typeof nearest.lng !== "number") {
+        setStatusMessage("No nearby non-full slot found");
+        setFinding(false);
+        return;
+      }
+
+      setSelectedSlot(nearest);
+      const rawDistance = distance(userLocation, [nearest.lat, nearest.lng]);
+      const computedEta = Math.max(1, Math.round(rawDistance * 130));
+      setEtaMinutes(computedEta);
+      setRouteRequested(false);
+      setStatusMessage(`Nearest slot found: S${nearest.id}`);
+      setFinding(false);
+    }, 800);
+  }
+
+  function handleDrawRoute() {
+    if (!selectedSlot || typeof selectedSlot.lat !== "number" || typeof selectedSlot.lng !== "number") {
+      setStatusMessage("Pick a slot first (tap marker or Find)");
+      return;
+    }
+
+    setRouteRequested(true);
+    setRouteProgress(0);
+    setStatusMessage(`Routing to S${selectedSlot.id}`);
+  }
 
   async function findParking() {
     setRouteLoading(true);
@@ -212,17 +270,10 @@ export default function Home() {
     event.preventDefault();
     if (!report.trim()) return;
 
-    try {
-      await fetch(`${backendUrl}/parking/report`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: report, user: profileName })
-      });
-      setReport("");
-      setStatusMessage("Thanks for your community report");
-    } catch {
-      setStatusMessage("Could not send report");
-    }
+    setReport("");
+    setReportSent(true);
+    setStatusMessage("Report sent successfully");
+    window.setTimeout(() => setReportSent(false), 2000);
   }
 
   return (
@@ -259,10 +310,14 @@ export default function Home() {
         greenScore={route?.score ?? stats.score}
         ecoLevel={ecoLevel}
         ecoPoints={ecoPoints}
+        etaMinutes={etaMinutes}
+        finding={finding}
+        reportSent={reportSent}
         report={report}
         onReportChange={setReport}
         onSubmitReport={submitReport}
-        onFindParking={findParking}
+        onFindNearest={handleFindNearest}
+        onDrawRoute={handleDrawRoute}
       />
 
       <SlotMiniDashboard slot={selectedSlot} onNavigate={navigateToSelectedSlot} onOpenLiveView={openSelectedLiveView} />

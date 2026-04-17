@@ -249,6 +249,18 @@ body {
   font-size: 0.72rem;
 }
 
+.ecoEta {
+  margin: 0;
+  color: #b9d6da;
+  font-size: 0.72rem;
+}
+
+.reportSent {
+  margin: 0;
+  color: #7ff5aa;
+  font-size: 0.72rem;
+}
+
 .liveCameraCard {
   position: absolute;
   right: 8px;

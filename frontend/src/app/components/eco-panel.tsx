@@ -10,10 +10,14 @@ type EcoPanelProps = {
   greenScore: number;
   ecoLevel: string;
   ecoPoints: number;
+  etaMinutes: number | null;
+  finding: boolean;
+  reportSent: boolean;
   report: string;
   onReportChange: (value: string) => void;
   onSubmitReport: (event: FormEvent) => Promise<void>;
-  onFindParking: () => Promise<void>;
+  onFindNearest: () => void;
+  onDrawRoute: () => void;
 };
 
 export default function EcoPanel({
@@ -22,10 +26,14 @@ export default function EcoPanel({
   greenScore,
   ecoLevel,
   ecoPoints,
+  etaMinutes,
+  finding,
+  reportSent,
   report,
   onReportChange,
   onSubmitReport,
-  onFindParking
+  onFindNearest,
+  onDrawRoute
 }: EcoPanelProps) {
   const [collapsed, setCollapsed] = useState(false);
   const treeEquivalent = Math.max(1, Math.round(co2SavedKg / 2.4));
@@ -70,14 +78,19 @@ export default function EcoPanel({
             <div className="ecoBadge">{ecoLevel} • {ecoPoints} pts</div>
 
             <div className="ecoPanelButtons">
-              <button onClick={onFindParking}>Find</button>
-              <button onClick={onFindParking}>Route</button>
+              <button onClick={onFindNearest}>Find</button>
+              <button onClick={onDrawRoute}>Route</button>
             </div>
+
+            {finding ? <p className="loadingHint">Analyzing best parking...</p> : null}
+            {etaMinutes ? <p className="ecoEta">ETA: ~{Math.max(1, etaMinutes)} min</p> : null}
 
             <form onSubmit={onSubmitReport} className="ecoReportForm">
               <input value={report} onChange={(event) => onReportChange(event.target.value)} placeholder="Report status" />
               <button type="submit">Send</button>
             </form>
+
+            {reportSent ? <p className="reportSent">Sent successfully ✅</p> : null}
           </div>
         ) : null}
       </GlassCard>

@@ -135,6 +135,32 @@ function pickStory(character: StoryCharacter, context: StoryContext): StoryMessa
   return { character, text };
 }
 
+function resolveAreaName(slot: Slot): string {
+  if (slot.zone === "green") {
+    return "Le Loi";
+  }
+
+  if (typeof slot.lng === "number") {
+    if (slot.lng < 106.697) {
+      return "Ben Thanh";
+    }
+    if (slot.lng > 106.703) {
+      return "Nguyen Hue";
+    }
+  }
+
+  return "Sai Gon center";
+}
+
+function withAreaFlavor(base: StoryMessage, slot: Slot): StoryMessage {
+  const area = resolveAreaName(slot);
+  const addOn = base.character === "driver" ? ` Huong ${area} dang hop nhat.` : ` Khu ${area} dang len mood rat dep.`;
+  return {
+    ...base,
+    text: `${base.text}${addOn}`
+  };
+}
+
 function slotStoryContext(slot: Slot): StoryContext {
   if (slot.available) {
     return "available";
@@ -172,6 +198,7 @@ export default function Home() {
   const [reportSent, setReportSent] = useState(false);
   const [etaMinutes, setEtaMinutes] = useState<number | null>(null);
   const [story, setStory] = useState<StoryMessage | null>(null);
+  const storyLayerHydratedRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
   const requestIdRef = useRef(0);
 
@@ -258,11 +285,37 @@ export default function Home() {
     }
   }, [layers.story, story]);
 
+  useEffect(() => {
+    if (storyLayerHydratedRef.current) {
+      return;
+    }
+
+    const savedStoryLayer = window.localStorage.getItem("greenpark-layer-story");
+    if (savedStoryLayer === "off" && layers.story) {
+      toggleLayer("story");
+    }
+    storyLayerHydratedRef.current = true;
+  }, [layers.story, toggleLayer]);
+
+  useEffect(() => {
+    if (!storyLayerHydratedRef.current) {
+      return;
+    }
+    window.localStorage.setItem("greenpark-layer-story", layers.story ? "on" : "off");
+  }, [layers.story]);
+
   function emitStory(character: StoryCharacter, context: StoryContext) {
     if (!layers.story) {
       return;
     }
     setStory(pickStory(character, context));
+  }
+
+  function emitStoryForSlot(slot: Slot, character: StoryCharacter, context: StoryContext) {
+    if (!layers.story) {
+      return;
+    }
+    setStory(withAreaFlavor(pickStory(character, context), slot));
   }
 
   useEffect(() => {
@@ -547,7 +600,7 @@ export default function Home() {
           const soonFree = !slot.available && (slot.soon || (slot.predictedFreeMin ?? 99) <= 10);
           const state = slot.available ? "available" : soonFree ? `free in ~${slot.predictedFreeMin ?? 8} min` : "full";
           setStatusMessage(`S${slot.id} ${state}`);
-          emitStory(pickCharacterForSlot(slot), slotStoryContext(slot));
+          emitStoryForSlot(slot, pickCharacterForSlot(slot), slotStoryContext(slot));
         }}
       />
 
@@ -665,7 +718,7 @@ export default function Home() {
                     onClick={() => {
                       setSelectedSlot(slot);
                       setStatusMessage(`S${slot.id} selected`);
-                      emitStory("youth", "inspect");
+                      emitStoryForSlot(slot, "youth", "inspect");
                     }}
                   >
                     Inspect

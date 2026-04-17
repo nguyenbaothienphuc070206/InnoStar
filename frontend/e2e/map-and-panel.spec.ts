@@ -33,7 +33,7 @@ test("slot inspect opens mini dashboard and ai overlay", async ({ page }) => {
   const mapContainer = page.locator(".leaflet-container").first();
   await expect(mapContainer).toBeVisible({ timeout: 15000 });
 
-  const inspect = page.getByTestId("inspect-slot-1");
+  const inspect = page.locator('[data-testid^="inspect-slot-"]').first();
   await expect(inspect).toBeVisible({ timeout: 15000 });
   await inspect.click();
 
@@ -42,4 +42,27 @@ test("slot inspect opens mini dashboard and ai overlay", async ({ page }) => {
   await expect(dashboard).toContainText("Slot S1");
 
   await expect(page.getByTestId("ai-overlay-tag")).toContainText("AI Tracking S1");
+});
+
+test("story mode can toggle and auto-dismiss bubble", async ({ page }) => {
+  await page.goto("/");
+
+  const storyToggle = page.getByTestId("layer-story");
+  await expect(storyToggle).toHaveAttribute("aria-pressed", "true");
+
+  const inspect = page.locator('[data-testid^="inspect-slot-"]').first();
+  await expect(inspect).toBeVisible({ timeout: 15000 });
+  await inspect.click();
+
+  const storyBubble = page.getByTestId("story-bubble");
+  await expect(storyBubble).toBeVisible();
+  await expect(storyBubble).toContainText(/Khu|Huong/);
+
+  await expect(storyBubble).toBeHidden({ timeout: 7000 });
+
+  await storyToggle.evaluate((element) => (element as HTMLButtonElement).click());
+  await expect(storyToggle).toHaveAttribute("aria-pressed", "false");
+
+  await inspect.click();
+  await expect(storyBubble).toBeHidden();
 });

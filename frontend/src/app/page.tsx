@@ -45,34 +45,34 @@ type StoryContext = "find" | "route" | "inspect" | "available" | "soon" | "full"
 const storybook: Record<StoryCharacter, Record<StoryContext, string[]>> = {
   coba: {
     find: [
-      "Bà tìm được điểm đỗ xe khá đẹp rồi, mình đi thong dong là vừa.",
-      "Điểm này đúng nhịp lắm, đỗ xe xong đi bộ ngắm phố cho trọn vẹn."
+      "Bà tìm được điểm đỗ xe đẹp rồi, mình thong thả gửi xe là vừa.",
+      "Điểm này hợp nhịp lắm, gửi xe xong ta đi bộ ngắm phố cho trọn vẹn."
     ],
     route: [
       "Lộ trình này đẹp và ngắn, vừa tiết kiệm thời gian vừa giữ nhịp êm ái.",
-      "Đi tuyến này nhé, thông thoáng hơn và đến nơi rất ổn định."
+      "Mình đi tuyến này nhé, đường thoáng và đến nơi rất yên tâm."
     ],
     inspect: [
       "Góc này có nét xưa dễ thương, mình đỗ xe gọn rồi thong dong tham quan.",
-      "Chọn chỗ này được đó, từ đây đi bộ ra khu phố cổ rất hợp."
+      "Chọn chỗ này được đó, từ đây tản bộ ra khu phố cổ rất hợp."
     ],
     available: [
       "Chỗ này trống sẵn, mình ghé vào là có thể gửi ngay.",
-      "Còn chỗ trống đẹp quá, tranh thủ đỗ xe trước khi đông hơn nha."
+      "Còn chỗ đẹp quá, tranh thủ đỗ xe trước khi đông hơn nha."
     ],
     soon: [
       "Chỗ này sắp trống, đợi một chút là mình vào được ngay.",
-      "Mình tới đúng lúc đó, bãi này sắp xoay vòng có chỗ."
+      "Mình tới đúng nhịp rồi, bãi này sắp xoay vòng có chỗ."
     ],
     full: [
       "Khu này đang đông, mình đổi tuyến kế bên cho thông thoáng hơn nhé.",
-      "Tầm này kín chỗ rồi, bà đề xuất rẽ sang tuyến phía ngoài để dễ thở hơn."
+      "Tầm này kín chỗ rồi, bà đề xuất rẽ sang hướng ngoài để dễ thở hơn."
     ]
   },
   driver: {
     find: [
-      "Em chốt được bãi gần nhất rồi, vào nhanh là đẹp.",
-      "Có chỗ rồi nha, mình chạm điểm này là tiết kiệm thời gian nhất."
+      "Em chốt được bãi gần nhất rồi, vào ngay là đẹp.",
+      "Có chỗ rồi nha, ghé điểm này là tiết kiệm thời gian nhất."
     ],
     route: [
       "Lấy route này nhé, dễ quay đầu và đến nhanh hơn.",
@@ -80,7 +80,7 @@ const storybook: Record<StoryCharacter, Record<StoryContext, string[]>> = {
     ],
     inspect: [
       "Spot này ổn, dễ vào dễ ra và khá an toàn.",
-      "Nhìn được đó, bánh xe vào gương là vừa khít."
+      "Canh lái chút là vào vừa khít, không phải chỉnh nhiều."
     ],
     available: [
       "Còn trống tốt, mình vào gửi luôn cho khỏi mất lượt.",
@@ -88,7 +88,7 @@ const storybook: Record<StoryCharacter, Record<StoryContext, string[]>> = {
     ],
     soon: [
       "Sắp trống rồi, đợi tầm vài phút là có suất.",
-      "Cạnh này sắp nhích, mình canh nhịp rồi chen vào là vừa."
+      "Lượt xe này sắp nhích, mình canh nhịp rồi vào là vừa."
     ],
     full: [
       "Bãi này full rồi, em đổi hướng qua bãi thứ hai cho nhanh.",
@@ -97,16 +97,16 @@ const storybook: Record<StoryCharacter, Record<StoryContext, string[]>> = {
   },
   youth: {
     find: [
-      "Có spot vui rồi, đỗ xe xong là đi chill được liền.",
-      "Yeh tìm thấy chỗ hợp lý, vào đây là đúng vibe luôn."
+      "Có spot ổn rồi, gửi xe xong là đi chill được liền.",
+      "Yep, tìm thấy chỗ hợp lý, vào đây là đúng vibe luôn."
     ],
     route: [
       "Đi line này cho cool, vừa nhanh vừa đúng gu city walk.",
-      "Route này ổn nha, đỗ xong là có nguyên khu local để khám phá."
+      "Route này ổn nha, gửi xe xong là có nguyên khu local để khám phá."
     ],
     inspect: [
       "Spot này nhìn được nha, đúng chất local chill zone.",
-      "Check chỗ này ok, từ đây luôn có nhiều hẻm hay để đi bộ."
+      "Check chỗ này ok, từ đây có nhiều hẻm hay để đi bộ luôn."
     ],
     available: [
       "Còn slot trống nè, tranh thủ vào là đẹp.",
@@ -114,11 +114,11 @@ const storybook: Record<StoryCharacter, Record<StoryContext, string[]>> = {
     ],
     soon: [
       "Sắp có chỗ rồi, đứng đợi xíu là chen vào được.",
-      "Bãi này đang quay vòng nhanh, canh xíu là có slot."
+      "Bãi này quay vòng nhanh lắm, canh xíu là có slot."
     ],
     full: [
       "Chỗ này kín rồi, mình lùa qua spot khác cho đỡ kẹt.",
-      "Đông quá rồi, rẽ sang bãi bên cho dễ thở để chơi tiếp."
+      "Đông quá rồi, rẽ sang bãi bên cho dễ thở rồi chơi tiếp."
     ]
   }
 };

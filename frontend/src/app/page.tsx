@@ -58,6 +58,19 @@ type OpsSnapshot = {
   updatedAt: number | null;
 };
 
+type OpsIncident = {
+  id: string;
+  severity: "SEV1" | "SEV2" | "SEV3";
+  message: string;
+  source: string;
+  detectedAt: number;
+};
+
+type OpsPoint = {
+  at: number;
+  healthy: number;
+};
+
 type StoryContext = "find" | "route" | "inspect" | "available" | "soon" | "full";
 
 const storybook: Record<StoryCharacter, Record<StoryContext, string[]>> = {
@@ -244,6 +257,7 @@ export default function Home() {
     latencyMs: null,
     updatedAt: null
   });
+  const [opsHistory, setOpsHistory] = useState<OpsPoint[]>([]);
   const storyLayerHydratedRef = useRef(false);
   const storyVoiceHydratedRef = useRef(false);
   const storyTriggerTimerRef = useRef<number | null>(null);
@@ -489,6 +503,13 @@ export default function Home() {
         latencyMs: Math.round(performance.now() - start),
         updatedAt: Date.now()
       });
+
+      const healthScore = [resolveState(liveResult), resolveState(readyResult), resolveState(healthResult)].every((state) => state === "up") ? 1 : 0;
+      const now = Date.now();
+      setOpsHistory((current) => {
+        const next = [...current, { at: now, healthy: healthScore }].filter((point) => now - point.at <= 6 * 60 * 60 * 1000);
+        return next;
+      });
     }
 
     void pollOpsHealth();
@@ -564,24 +585,90 @@ export default function Home() {
 
   const availabilityPct = Math.round((stats.available / Math.max(1, slots.length)) * 100);
 
-  const incidentFeed = useMemo(() => {
-    const incidents: string[] = [];
+  function computeUptimePct(windowMs: number): number {
+    const now = Date.now();
+    const sample = opsHistory.filter((point) => now - point.at <= windowMs);
+    if (!sample.length) {
+      return 100;
+    }
+    const healthy = sample.reduce((sum, point) => sum + point.healthy, 0);
+    return Number(((healthy / sample.length) * 100).toFixed(2));
+  }
+
+  const slo = useMemo(() => {
+    const targetPct = 99.5;
+    const allowedErrorRate = 1 - targetPct / 100;
+    const uptime1hPct = computeUptimePct(60 * 60 * 1000);
+    const uptime6hPct = computeUptimePct(6 * 60 * 60 * 1000);
+    const errorRate1h = 1 - uptime1hPct / 100;
+    const errorRate6h = 1 - uptime6hPct / 100;
+    const burnRate1h = Number((errorRate1h / Math.max(allowedErrorRate, 0.0001)).toFixed(2));
+    const burnRate6h = Number((errorRate6h / Math.max(allowedErrorRate, 0.0001)).toFixed(2));
+    const errorBudgetRemainingPct = Number(
+      Math.max(0, Math.min(100, ((allowedErrorRate - errorRate6h) / allowedErrorRate) * 100)).toFixed(2)
+    );
+
+    return {
+      targetPct,
+      uptime6hPct,
+      errorBudgetRemainingPct,
+      burnRate1h,
+      burnRate6h
+    };
+  }, [opsHistory]);
+
+  const incidentFeed = useMemo<OpsIncident[]>(() => {
+    const now = Date.now();
+    const incidents: OpsIncident[] = [];
 
     if (opsSnapshot.live !== "up") {
-      incidents.push("Realtime stream degraded. Switching to buffered updates.");
+      incidents.push({
+        id: "realtime-stream-degraded",
+        severity: "SEV2",
+        source: "Realtime Gateway",
+        message: "Realtime stream degraded. Switching to buffered updates.",
+        detectedAt: now
+      });
     }
     if (availabilityPct < 18) {
-      incidents.push("Critical occupancy pressure detected in central zones.");
+      incidents.push({
+        id: "occupancy-pressure-critical",
+        severity: "SEV1",
+        source: "Capacity Optimizer",
+        message: "Critical occupancy pressure detected in central zones.",
+        detectedAt: now
+      });
     }
     if (cameraOnlinePct < 72) {
-      incidents.push("Camera uptime dropped below enterprise threshold (72%).");
+      incidents.push({
+        id: "camera-uptime-threshold",
+        severity: "SEV2",
+        source: "Camera Fleet",
+        message: "Camera uptime dropped below enterprise threshold (72%).",
+        detectedAt: now
+      });
     }
     if (routeLoading) {
-      incidents.push("Route engine load spike detected. Optimizer is recalculating.");
+      incidents.push({
+        id: "route-load-spike",
+        severity: "SEV3",
+        source: "Route Engine",
+        message: "Route engine load spike detected. Optimizer is recalculating.",
+        detectedAt: now
+      });
+    }
+    if (slo.burnRate1h > 2) {
+      incidents.push({
+        id: "error-budget-burn-high",
+        severity: "SEV1",
+        source: "SLO Guardian",
+        message: "Error budget burn rate exceeded 2x in last hour.",
+        detectedAt: now
+      });
     }
 
     return incidents.slice(0, 3);
-  }, [availabilityPct, cameraOnlinePct, opsSnapshot.live, routeLoading]);
+  }, [availabilityPct, cameraOnlinePct, opsSnapshot.live, routeLoading, slo.burnRate1h]);
 
   const preferredArea = "District 1";
   const nearbyAvailableSlots = useMemo(() => {
@@ -863,6 +950,7 @@ export default function Home() {
         ecoPoints={ecoPoints}
         opsHealth={opsSnapshot}
         incidents={incidentFeed}
+        slo={slo}
       />
 
       <LayerControl layers={layers} onToggle={toggleLayer} />

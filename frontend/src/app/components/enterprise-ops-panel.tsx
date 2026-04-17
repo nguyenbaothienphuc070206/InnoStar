@@ -18,7 +18,20 @@ type EnterpriseOpsPanelProps = {
     latencyMs: number | null;
     updatedAt: number | null;
   };
-  incidents: string[];
+  incidents: Array<{
+    id: string;
+    severity: "SEV1" | "SEV2" | "SEV3";
+    message: string;
+    source: string;
+    detectedAt: number;
+  }>;
+  slo: {
+    targetPct: number;
+    uptime6hPct: number;
+    errorBudgetRemainingPct: number;
+    burnRate1h: number;
+    burnRate6h: number;
+  };
 };
 
 function stateLabel(state: OpsState): string {
@@ -54,9 +67,11 @@ export default function EnterpriseOpsPanel({
   routeLoading,
   ecoPoints,
   opsHealth,
-  incidents
+  incidents,
+  slo
 }: EnterpriseOpsPanelProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [acknowledged, setAcknowledged] = useState<Record<string, boolean>>({});
 
   const routeSla = useMemo(() => {
     if (routeLoading) {
@@ -75,6 +90,77 @@ export default function EnterpriseOpsPanel({
   }, [etaMinutes, routeLoading]);
 
   const updatedLabel = opsHealth.updatedAt ? new Date(opsHealth.updatedAt).toLocaleTimeString("vi-VN") : "--:--:--";
+
+  const activeIncidents = useMemo(
+    () => incidents.filter((incident) => !acknowledged[incident.id]),
+    [acknowledged, incidents]
+  );
+
+  function ackIncident(id: string) {
+    setAcknowledged((current) => ({
+      ...current,
+      [id]: true
+    }));
+  }
+
+  function exportOpsCsv() {
+    const headers = [
+      "generated_at",
+      "availability_pct",
+      "camera_uptime_pct",
+      "route_eta_min",
+      "ops_live",
+      "ops_ready",
+      "ops_health",
+      "ops_latency_ms",
+      "slo_target_pct",
+      "slo_uptime_6h_pct",
+      "error_budget_remaining_pct",
+      "burn_rate_1h",
+      "burn_rate_6h",
+      "incident_id",
+      "incident_severity",
+      "incident_source",
+      "incident_message",
+      "incident_detected_at"
+    ];
+
+    const base = [
+      new Date().toISOString(),
+      String(availabilityPct),
+      String(cameraOnlinePct),
+      etaMinutes === null ? "" : String(etaMinutes),
+      opsHealth.live,
+      opsHealth.ready,
+      opsHealth.health,
+      opsHealth.latencyMs === null ? "" : String(opsHealth.latencyMs),
+      String(slo.targetPct),
+      String(slo.uptime6hPct),
+      String(slo.errorBudgetRemainingPct),
+      String(slo.burnRate1h),
+      String(slo.burnRate6h)
+    ];
+
+    const rows = (activeIncidents.length ? activeIncidents : [null]).map((incident) => {
+      const incidentCols = incident
+        ? [incident.id, incident.severity, incident.source, incident.message, new Date(incident.detectedAt).toISOString()]
+        : ["", "", "", "", ""];
+      return [...base, ...incidentCols]
+        .map((value) => `"${String(value).replace(/"/g, '""')}"`)
+        .join(",");
+    });
+
+    const csv = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `enterprise-ops-${new Date().toISOString().replace(/[:.]/g, "-")}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  }
 
   return (
     <GlassCard className={`enterpriseOps ${collapsed ? "enterpriseOpsCollapsed" : ""}`}>
@@ -134,11 +220,51 @@ export default function EnterpriseOpsPanel({
             </article>
           </section>
 
+          <section className="opsSloGrid" data-testid="ops-slo">
+            <article>
+              <p>SLO Target</p>
+              <strong>{slo.targetPct}%</strong>
+            </article>
+            <article>
+              <p>Uptime 6h</p>
+              <strong>{slo.uptime6hPct}%</strong>
+            </article>
+            <article>
+              <p>Error Budget</p>
+              <strong className={slo.errorBudgetRemainingPct < 35 ? "opsText-danger" : "opsText-ok"}>
+                {slo.errorBudgetRemainingPct}%
+              </strong>
+            </article>
+            <article>
+              <p>Burn 1h / 6h</p>
+              <strong className={slo.burnRate1h > 2 ? "opsText-danger" : slo.burnRate1h > 1 ? "opsText-warn" : "opsText-ok"}>
+                {slo.burnRate1h}x / {slo.burnRate6h}x
+              </strong>
+            </article>
+          </section>
+
           <section className="opsIncidentFeed" data-testid="ops-incidents">
-            <h4>Incident Feed</h4>
+            <div className="opsIncidentHeader">
+              <h4>Incident Feed</h4>
+              <button type="button" data-testid="ops-export-csv" onClick={exportOpsCsv}>
+                Export CSV
+              </button>
+            </div>
             <ul>
-              {incidents.length ? (
-                incidents.map((incident) => <li key={incident}>{incident}</li>)
+              {activeIncidents.length ? (
+                activeIncidents.map((incident) => (
+                  <li key={incident.id} className="opsIncidentItem">
+                    <div className="opsIncidentMetaRow">
+                      <span className={`opsSeverity ${incident.severity.toLowerCase()}`}>{incident.severity}</span>
+                      <span>{incident.source}</span>
+                      <span>{new Date(incident.detectedAt).toLocaleTimeString("vi-VN")}</span>
+                    </div>
+                    <p>{incident.message}</p>
+                    <button type="button" data-testid={`ack-${incident.id}`} onClick={() => ackIncident(incident.id)}>
+                      Acknowledge
+                    </button>
+                  </li>
+                ))
               ) : (
                 <li>All systems nominal. No active incidents.</li>
               )}

@@ -93,3 +93,19 @@ test("story voice controls can mute and persist", async ({ page }) => {
   await expect(storyBubble).toBeVisible();
   await expect(voiceToggle).toContainText("🔇");
 });
+
+test("enterprise ops command center renders SLO and controls", async ({ page }) => {
+  await page.goto("/");
+
+  const opsToggle = page.getByTestId("ops-toggle");
+  await expect(opsToggle).toBeVisible();
+
+  await expect(page.getByTestId("ops-live")).toBeVisible();
+  await expect(page.getByTestId("ops-slo")).toBeVisible();
+  await expect(page.getByTestId("ops-export-csv")).toBeVisible();
+
+  await opsToggle.click();
+  await expect(page.getByTestId("ops-slo")).toBeHidden();
+  await opsToggle.click();
+  await expect(page.getByTestId("ops-slo")).toBeVisible();
+});

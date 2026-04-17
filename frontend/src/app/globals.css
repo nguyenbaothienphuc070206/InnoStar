@@ -222,6 +222,31 @@ body {
   gap: 6px;
 }
 
+.opsSloGrid {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.opsSloGrid article {
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 7px;
+}
+
+.opsSloGrid p {
+  margin: 0;
+  font-size: 0.63rem;
+  color: #9eb6bd;
+}
+
+.opsSloGrid strong {
+  font-size: 0.74rem;
+  color: #e4f5ff;
+}
+
 .opsKpiGrid article {
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -270,6 +295,23 @@ body {
   color: #bff9ff;
 }
 
+.opsIncidentHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.opsIncidentHeader h4 {
+  margin: 0;
+}
+
+.opsIncidentHeader button {
+  padding: 4px 8px;
+  font-size: 0.66rem;
+}
+
 .opsIncidentFeed ul {
   margin: 0;
   padding: 0;
@@ -282,6 +324,57 @@ body {
   font-size: 0.65rem;
   color: #c8d8dd;
   line-height: 1.35;
+}
+
+.opsIncidentItem {
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.02);
+  padding: 6px;
+}
+
+.opsIncidentMetaRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.62rem;
+  color: #9eb6bd;
+}
+
+.opsSeverity {
+  border-radius: 999px;
+  padding: 1px 6px;
+  border: 1px solid transparent;
+  font-size: 0.58rem;
+}
+
+.opsSeverity.sev1 {
+  color: #ffe6e7;
+  border-color: rgba(239, 79, 83, 0.75);
+  background: rgba(239, 79, 83, 0.2);
+}
+
+.opsSeverity.sev2 {
+  color: #fff1d5;
+  border-color: rgba(255, 195, 77, 0.7);
+  background: rgba(255, 195, 77, 0.2);
+}
+
+.opsSeverity.sev3 {
+  color: #d7ffcb;
+  border-color: rgba(93, 255, 52, 0.68);
+  background: rgba(93, 255, 52, 0.16);
+}
+
+.opsIncidentItem p {
+  margin: 6px 0;
+  font-size: 0.65rem;
+  color: #c8d8dd;
+}
+
+.opsIncidentItem button {
+  padding: 3px 7px;
+  font-size: 0.62rem;
 }
 
 .ecoPanelShell {
@@ -1119,6 +1212,10 @@ button:active {
   }
 
   .opsKpiGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .opsSloGrid {
     grid-template-columns: 1fr 1fr;
   }
 

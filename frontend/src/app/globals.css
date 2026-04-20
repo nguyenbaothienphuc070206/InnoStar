@@ -1,6 +1,6 @@
 :root {
-  --green: #5dff34;
-  --cyan: #1ff4fa;
+  --green: #7fd86a;
+  --cyan: #63c9d3;
   --earth: #753309;
   --bg: #0b0f14;
   --panel: rgba(9, 20, 29, 0.78);
@@ -95,6 +95,34 @@ body {
   text-align: center;
   color: var(--green);
   font-weight: 600;
+}
+
+.behaviorHintBanner {
+  position: absolute;
+  top: 74px;
+  left: 14px;
+  right: 14px;
+  z-index: 51;
+  border-radius: 12px;
+  border: 1px solid rgba(127, 216, 106, 0.4);
+  background: linear-gradient(92deg, rgba(127, 216, 106, 0.16), rgba(99, 201, 211, 0.08));
+  color: #eaf6ef;
+  padding: 9px 12px;
+  font-size: 0.75rem;
+  letter-spacing: 0.01em;
+  animation: behaviorHintIn 0.36s ease;
+}
+
+@keyframes behaviorHintIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.99);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .layerControl {

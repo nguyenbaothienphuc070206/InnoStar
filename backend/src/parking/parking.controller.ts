@@ -25,6 +25,20 @@ export class ParkingController {
     return this.parkingService.getGreenRoute(destination || "City center");
   }
 
+  @Get("route-options")
+  getRouteOptions(
+    @Query("fromLat") fromLat?: string,
+    @Query("fromLng") fromLng?: string,
+    @Query("toLat") toLat?: string,
+    @Query("toLng") toLng?: string
+  ) {
+    const sourceLat = Number(fromLat ?? 10.772);
+    const sourceLng = Number(fromLng ?? 106.698);
+    const destinationLat = Number(toLat ?? 10.7768);
+    const destinationLng = Number(toLng ?? 106.7071);
+    return this.parkingService.getRouteOptions(sourceLat, sourceLng, destinationLat, destinationLng);
+  }
+
   @Post("report")
   report(@Body() body: ReportDto) {
     this.parkingService.addReport(body.user || "anonymous", body.message || "No message");

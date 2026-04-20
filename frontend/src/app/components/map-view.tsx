@@ -1,7 +1,7 @@
 "use client";
 
 import L from "leaflet";
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import "leaflet/dist/leaflet.css";
 import { MapContainer, TileLayer, useMapEvents } from "react-leaflet";
 import { createMapPlugins } from "./map-plugins";
@@ -27,17 +27,32 @@ const center: [number, number] = [10.772, 106.698];
 
 type ViewportTrackerProps = {
   onViewportCenterChange: (center: { lat: number; lng: number }) => void;
+  onBoundsChange: (bounds: { north: number; south: number; east: number; west: number }) => void;
 };
 
-function ViewportTracker({ onViewportCenterChange }: ViewportTrackerProps) {
+function ViewportTracker({ onViewportCenterChange, onBoundsChange }: ViewportTrackerProps) {
   useMapEvents({
     moveend: (event) => {
       const point = event.target.getCenter();
+      const bounds = event.target.getBounds();
       onViewportCenterChange({ lat: point.lat, lng: point.lng });
+      onBoundsChange({
+        north: bounds.getNorth(),
+        south: bounds.getSouth(),
+        east: bounds.getEast(),
+        west: bounds.getWest()
+      });
     },
     zoomend: (event) => {
       const point = event.target.getCenter();
+      const bounds = event.target.getBounds();
       onViewportCenterChange({ lat: point.lat, lng: point.lng });
+      onBoundsChange({
+        north: bounds.getNorth(),
+        south: bounds.getSouth(),
+        east: bounds.getEast(),
+        west: bounds.getWest()
+      });
     }
   });
 
@@ -69,6 +84,7 @@ function markerIcon(slot: Slot, isSelected: boolean): L.DivIcon {
 
 export default function MapView({ slots, zones, layers, selectedSlotId, userLocation, routeFocusToken, routeSegments, routeOpacity, routePath, activeRoutePenalty, activeRouteIsEco, onSlotClick, onViewportCenterChange }: MapViewProps) {
   const plugins = createMapPlugins();
+  const [viewportBounds, setViewportBounds] = useState<{ north: number; south: number; east: number; west: number } | null>(null);
 
   return (
     <MapContainer center={center} zoom={15} className="mapCanvas" zoomControl={false} preferCanvas data-testid="map-canvas">
@@ -77,10 +93,10 @@ export default function MapView({ slots, zones, layers, selectedSlotId, userLoca
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
 
-      <ViewportTracker onViewportCenterChange={onViewportCenterChange} />
+      <ViewportTracker onViewportCenterChange={onViewportCenterChange} onBoundsChange={setViewportBounds} />
 
       {plugins.map((plugin) => (
-        <Fragment key={plugin.id}>{plugin.render({ slots, zones, layers, selectedSlotId, userLocation, routeFocusToken, routeSegments, routeOpacity, routePath, activeRoutePenalty, activeRouteIsEco, onSlotClick, toLatLng, markerIcon })}</Fragment>
+        <Fragment key={plugin.id}>{plugin.render({ slots, zones, layers, selectedSlotId, userLocation, routeFocusToken, routeSegments, routeOpacity, routePath, activeRoutePenalty, activeRouteIsEco, onSlotClick, toLatLng, markerIcon, viewportBounds })}</Fragment>
       ))}
     </MapContainer>
   );

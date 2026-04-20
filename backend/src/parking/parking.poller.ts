@@ -26,6 +26,9 @@ export class ParkingPoller implements OnModuleInit {
 
   onModuleInit() {
     this.parkingGateway.pushUpdate(this.parkingService.getAll());
+    const initialTick = this.parkingService.simulateTick();
+    this.parkingGateway.pushStream(initialTick.payload);
+    this.parkingGateway.pushSlotDiff(initialTick.diff);
 
     setInterval(async () => {
       if (Date.now() < this.circuitOpenUntil) {
@@ -37,12 +40,19 @@ export class ParkingPoller implements OnModuleInit {
         const data = await this.fetchWithRetry();
         const nextSlots = Array.isArray(data.data?.slots) ? data.data.slots : data.slots;
         if (Array.isArray(nextSlots)) {
-          const updatedSlots = this.parkingService.update(nextSlots);
-          this.parkingGateway.pushUpdate(updatedSlots);
+          const updateResult = this.parkingService.update(nextSlots);
+          this.parkingGateway.pushUpdate(updateResult.slots);
+          this.parkingGateway.pushSlotDiff(updateResult.diff);
         }
+        const tick = this.parkingService.simulateTick();
+        this.parkingGateway.pushStream(tick.payload);
+        this.parkingGateway.pushSlotDiff(tick.diff);
         this.failureStreak = 0;
       } catch (error) {
         this.failureStreak += 1;
+        const tick = this.parkingService.simulateTick();
+        this.parkingGateway.pushStream(tick.payload);
+        this.parkingGateway.pushSlotDiff(tick.diff);
         if (this.failureStreak >= 3) {
           this.circuitOpenUntil = Date.now() + 20_000;
           this.logger.error("AI circuit breaker opened for 20s after repeated failures");

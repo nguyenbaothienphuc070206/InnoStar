@@ -1,7 +1,10 @@
 "use client";
 
 import { create } from "zustand";
-import { LayersState, RouteSuggestion, Slot } from "../components/types";
+import { LayersState, RouteSuggestion, Slot, SlotDiff } from "../components/types";
+
+const STATE_STABILITY_WINDOW_MS = 2500;
+const lastSlotStateUpdateAt = new Map<number, number>();
 
 type MapState = {
   slots: Slot[];
@@ -24,6 +27,7 @@ type MapState = {
   toggleLayer: (layer: keyof LayersState) => void;
   bumpEco: (points: number, co2: number) => void;
   mergeRealtimeSlots: (incoming: Slot[]) => void;
+  applyRealtimeDiff: (diff: SlotDiff[]) => void;
 };
 
 function generateSlots(count = 60): Slot[] {
@@ -68,6 +72,7 @@ function maybeSoon(slot: Slot): boolean {
 
 function slotChanged(prev: Slot, next: Slot): boolean {
   return (
+    prev.status !== next.status ||
     prev.available !== next.available ||
     prev.soon !== next.soon ||
     prev.predictedFreeMin !== next.predictedFreeMin ||
@@ -131,6 +136,13 @@ export const useMapStore = create<MapState>((set) => ({
           return slot;
         }
 
+        const now = Date.now();
+        const last = lastSlotStateUpdateAt.get(slot.id) ?? 0;
+        const stateFlip = slot.available !== next.available || slot.cameraOnline !== next.cameraOnline;
+        if (stateFlip && now - last < STATE_STABILITY_WINDOW_MS) {
+          return slot;
+        }
+
         const merged: Slot = {
           ...slot,
           ...next,
@@ -139,6 +151,7 @@ export const useMapStore = create<MapState>((set) => ({
 
         if (slotChanged(slot, merged)) {
           hasChanges = true;
+          lastSlotStateUpdateAt.set(slot.id, now);
         }
         return merged;
       });
@@ -150,5 +163,53 @@ export const useMapStore = create<MapState>((set) => ({
       return {
         slots: nextSlots
       };
+    }),
+  applyRealtimeDiff: (diff) =>
+    set((state) => {
+      if (!Array.isArray(diff) || diff.length === 0) {
+        return state;
+      }
+
+      const byId = new Map(
+        diff.map((item) => [Number(item.id.replace(/^S/i, "")), item])
+      );
+      let hasChanges = false;
+
+      const nextSlots = state.slots.map((slot) => {
+        const update = byId.get(slot.id);
+        if (!update) {
+          return slot;
+        }
+
+        const now = Date.now();
+        const last = lastSlotStateUpdateAt.get(slot.id) ?? 0;
+        const stateFlip = slot.available !== !update.occupied || slot.cameraOnline !== update.cameraOnline;
+        if (stateFlip && now - last < STATE_STABILITY_WINDOW_MS) {
+          return slot;
+        }
+
+        const merged: Slot = {
+          ...slot,
+          status: update.status ?? (!update.occupied ? "free" : update.soon ? "reserved" : "occupied"),
+          available: !update.occupied,
+          soon: update.soon,
+          predictedFreeMin: update.predictedFreeMin,
+          cameraOnline: update.cameraOnline,
+          distanceM: update.distanceM,
+          updatedAt: update.updatedAt
+        };
+
+        if (slotChanged(slot, merged)) {
+          hasChanges = true;
+          lastSlotStateUpdateAt.set(slot.id, now);
+        }
+        return merged;
+      });
+
+      if (!hasChanges) {
+        return state;
+      }
+
+      return { slots: nextSlots };
     })
 }));

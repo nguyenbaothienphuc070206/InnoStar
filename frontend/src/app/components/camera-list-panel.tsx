@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { FixedSizeList, ListChildComponentProps } from "react-window";
 import { Slot } from "./types";
 
@@ -32,7 +32,7 @@ function CameraRow({ index, style, data }: ListChildComponentProps<RowData>) {
   );
 }
 
-export default function CameraListPanel({ slots, searchTerm }: CameraListPanelProps) {
+function CameraListPanel({ slots, searchTerm }: CameraListPanelProps) {
   const items = useMemo<CameraRowItem[]>(() => {
     const lowered = searchTerm.trim().toLowerCase();
 
@@ -65,3 +65,5 @@ export default function CameraListPanel({ slots, searchTerm }: CameraListPanelPr
     </FixedSizeList>
   );
 }
+
+export default memo(CameraListPanel);

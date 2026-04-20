@@ -21,6 +21,7 @@ type MapPluginContext = {
   onSlotClick: (slot: Slot) => void;
   toLatLng: (slot: Slot) => [number, number];
   markerIcon: (slot: Slot, isSelected: boolean) => L.DivIcon;
+  viewportBounds: { north: number; south: number; east: number; west: number } | null;
 };
 
 type RouteAutoFitProps = {
@@ -54,6 +55,24 @@ type MapLayerPlugin = {
 };
 
 export function createMapPlugins(): MapLayerPlugin[] {
+  function isVisible(
+    lat: number,
+    lng: number,
+    bounds: { north: number; south: number; east: number; west: number } | null,
+    margin = 0.0015
+  ) {
+    if (!bounds) {
+      return true;
+    }
+
+    return (
+      lat <= bounds.north + margin &&
+      lat >= bounds.south - margin &&
+      lng <= bounds.east + margin &&
+      lng >= bounds.west - margin
+    );
+  }
+
   return [
     {
       id: "traffic",
@@ -185,13 +204,18 @@ export function createMapPlugins(): MapLayerPlugin[] {
     },
     {
       id: "parking",
-      render: ({ layers, slots, markerIcon, selectedSlotId, onSlotClick, toLatLng }) => {
+      render: ({ layers, slots, markerIcon, selectedSlotId, onSlotClick, toLatLng, viewportBounds }) => {
         if (!layers.parking) {
           return null;
         }
 
-        const shouldCluster = slots.length > 100;
-        const markers = slots.map((slot) => (
+        const visibleSlots = slots.filter((slot) => {
+          const [lat, lng] = toLatLng(slot);
+          return isVisible(lat, lng, viewportBounds);
+        });
+
+        const shouldCluster = visibleSlots.length > 80;
+        const markers = visibleSlots.map((slot) => (
           <Marker
             key={slot.id}
             position={toLatLng(slot)}
@@ -209,13 +233,20 @@ export function createMapPlugins(): MapLayerPlugin[] {
     },
     {
       id: "camera",
-      render: ({ layers, slots, toLatLng }) => {
+      render: ({ layers, slots, toLatLng, viewportBounds }) => {
         if (!layers.camera) {
           return null;
         }
 
-        const cameraSlots = slots.filter((slot) => slot.cameraOnline);
-        const shouldCluster = cameraSlots.length > 100;
+        const cameraSlots = slots.filter((slot) => {
+          if (!slot.cameraOnline) {
+            return false;
+          }
+
+          const [lat, lng] = toLatLng(slot);
+          return isVisible(lat, lng, viewportBounds);
+        });
+        const shouldCluster = cameraSlots.length > 80;
         const markers = cameraSlots.map((slot) => (
           <Marker key={`camera-${slot.id}`} position={toLatLng(slot)} icon={L.divIcon({ className: "cameraMarker", html: "<span>CAM</span>" })}>
             <Popup>Live camera near S{slot.id}</Popup>

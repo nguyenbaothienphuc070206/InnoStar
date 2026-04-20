@@ -1,21 +1,26 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { ParkingAnalytics, RouteResult, Slot, SlotPrediction, ZoneHeat } from "./parking.types";
+import {
+  HistoryPoint,
+  ParkingAnalytics,
+  ParkingStreamPayload,
+  RouteResult,
+  Slot,
+  SlotDiff,
+  SlotPrediction
+} from "./parking.types";
 import { SlotEventEntity } from "./entities/slot-event.entity";
 import { Repository } from "typeorm";
+import { SlotService } from "./services/slot.service";
+import { CameraService } from "./services/camera.service";
+import { RouteService } from "./services/route.service";
+import { SimulationEngineService } from "./services/simulation-engine.service";
 
 @Injectable()
 export class ParkingService {
-  private slots: Slot[] = [
-    { id: 1, type: "car", zone: "green", available: true, x: 20, y: 22 },
-    { id: 2, type: "car", zone: "standard", available: false, x: 34, y: 38 },
-    { id: 3, type: "bike", zone: "green", available: true, x: 58, y: 31 },
-    { id: 4, type: "bike", zone: "standard", available: false, x: 67, y: 64 },
-    { id: 5, type: "car", zone: "green", available: true, x: 79, y: 44 }
-  ];
-
   private reports: Array<{ user: string; message: string; createdAt: string }> = [];
-  private history: Array<{ timestamp: string; slots: Slot[] }> = [];
+  private streamHistory: HistoryPoint[] = [];
+  private incidents: ParkingStreamPayload["incidents"] = [];
   private ecoPoints: Record<string, number> = {
     "Eco Traveler": 240,
     Minh: 180,
@@ -24,39 +29,78 @@ export class ParkingService {
 
   constructor(
     @InjectRepository(SlotEventEntity)
-    private readonly slotEventsRepo: Repository<SlotEventEntity>
+    private readonly slotEventsRepo: Repository<SlotEventEntity>,
+    private readonly slotService: SlotService,
+    private readonly cameraService: CameraService,
+    private readonly routeService: RouteService,
+    private readonly simulationEngine: SimulationEngineService
   ) {
-    this.pushSnapshot(this.slots);
+    const linked = this.cameraService.applyToSlots(this.slotService.getAll());
+    this.slotService.setAll(linked);
   }
 
   getAll(): Slot[] {
-    return this.slots;
+    return this.slotService.getAll();
   }
 
-  update(newSlots: Slot[]): Slot[] {
-    this.slots = newSlots.map((slot) => ({ ...slot, updatedAt: new Date().toISOString() }));
-    this.pushSnapshot(this.slots);
-    this.persistSlotEvents(this.slots).catch(() => null);
-    return this.slots;
+  update(newSlots: Slot[]): { slots: Slot[]; diff: SlotDiff[] } {
+    const prev = this.slotService.getAll();
+    const linked = this.cameraService.applyToSlots(newSlots);
+    const next = this.slotService.setAll(linked);
+    const diff = this.slotService.computeDiff(prev, next);
+    this.persistSlotEvents(next).catch(() => null);
+    return { slots: next, diff };
+  }
+
+  simulateTick(): { payload: ParkingStreamPayload; diff: SlotDiff[] } {
+    const now = new Date().toISOString();
+    const traffic = this.simulationEngine.simulateTraffic();
+    const prev = this.slotService.getAll();
+
+    const slotResult = this.simulationEngine.simulateSlots(prev, now, traffic);
+    this.cameraService.simulate(now);
+    const linkedSlots = this.cameraService.applyToSlots(slotResult.slots);
+    const slots = this.slotService.setSimulated(linkedSlots, now);
+    const diff = this.slotService.computeDiff(prev, slots);
+
+    const users = this.simulationEngine.simulateUsers();
+    const cameras = this.cameraService.getAll();
+    const metrics = this.simulationEngine.getMetrics(slots, traffic);
+
+    this.streamHistory.push({
+      time: now,
+      availability: metrics.availability,
+      traffic
+    });
+    this.streamHistory = this.streamHistory.slice(-120);
+
+    this.incidents = this.simulationEngine.detectIncidents(now, metrics, cameras, slotResult.events);
+
+    this.persistSlotEvents(slots).catch(() => null);
+
+    return {
+      payload: {
+        event: "CITY_TICK",
+        timestamp: now,
+        slots,
+        users,
+        cameras,
+        metrics,
+        incidents: this.incidents,
+        history: this.streamHistory,
+        events: slotResult.events
+      },
+      diff
+    };
+  }
+
+  getRouteOptions(fromLat: number, fromLng: number, toLat: number, toLng: number) {
+    const traffic = this.simulationEngine.simulateTraffic();
+    return this.routeService.getRouteOptions(fromLat, fromLng, toLat, toLng, traffic);
   }
 
   getGreenRoute(destination: string): RouteResult {
-    const availableGreenSlots = this.slots.filter((slot) => slot.available && slot.zone === "green").length;
-    const score = Math.min(99, 72 + availableGreenSlots * 4);
-
-    return {
-      destination,
-      distance: Number((4.1 + availableGreenSlots * 0.3).toFixed(1)),
-      emission: availableGreenSlots >= 2 ? "low" : "medium",
-      score,
-      etaMinutes: Math.max(8, 20 - availableGreenSlots * 2),
-      path: [
-        [10.7732, 106.698],
-        [10.7744, 106.7015],
-        [10.7758, 106.7042],
-        [10.7768, 106.7071]
-      ]
-    };
+    return this.routeService.getGreenRoute(destination, this.slotService.getAll());
   }
 
   addReport(user: string, message: string): void {
@@ -130,70 +174,17 @@ export class ParkingService {
   }
 
   getAnalytics(): ParkingAnalytics {
-    const total = this.slots.length || 1;
-    const occupied = this.slots.filter((slot) => !slot.available).length;
-    const greenTotal = this.slots.filter((slot) => slot.zone === "green").length || 1;
-    const greenAvailable = this.slots.filter((slot) => slot.zone === "green" && slot.available).length;
-
-    const heatmap: ZoneHeat[] = ["green", "standard"].map((zone) => {
-      const zoneSlots = this.slots.filter((slot) => slot.zone === zone);
-      const zoneOccupied = zoneSlots.filter((slot) => !slot.available).length;
-      const zoneRate = zoneSlots.length === 0 ? 0 : Number(((zoneOccupied / zoneSlots.length) * 100).toFixed(2));
-      return { zone, occupancyRate: zoneRate };
-    }) as ZoneHeat[];
-
     return {
-      occupancyRate: Number(((occupied / total) * 100).toFixed(2)),
-      greenAvailabilityRate: Number(((greenAvailable / greenTotal) * 100).toFixed(2)),
+      occupancyRate: this.slotService.getOccupancyRate(),
+      greenAvailabilityRate: this.slotService.getGreenAvailabilityRate(),
       totalReports: this.reports.length,
-      eventsInMemory: this.history.length,
-      heatmap
+      eventsInMemory: this.slotService.getHistoryCount(),
+      heatmap: this.slotService.getZoneHeat()
     };
   }
 
   getPredictions(): SlotPrediction[] {
-    const now = Date.now();
-
-    return this.slots.map((slot) => {
-      const averageBusyMs = this.getAverageBusyWindow(slot.id);
-      const waitMs = slot.available ? 0 : averageBusyMs;
-
-      return {
-        slotId: slot.id,
-        currentlyAvailable: slot.available,
-        predictedAvailableAt: new Date(now + waitMs).toISOString(),
-        confidence: slot.available ? 0.93 : 0.75
-      };
-    });
-  }
-
-  private getAverageBusyWindow(slotId: number): number {
-    const windows = this.history
-      .map((item) => item.slots.find((slot) => slot.id === slotId))
-      .filter((slot): slot is Slot => Boolean(slot));
-
-    if (windows.length < 2) {
-      return 12 * 60 * 1000;
-    }
-
-    let busyEvents = 0;
-    for (let i = 1; i < windows.length; i += 1) {
-      if (!windows[i].available && windows[i - 1].available) {
-        busyEvents += 1;
-      }
-    }
-
-    const baselineMs = 8 * 60 * 1000;
-    return baselineMs + busyEvents * 2 * 60 * 1000;
-  }
-
-  private pushSnapshot(snapshot: Slot[]): void {
-    this.history.push({
-      timestamp: new Date().toISOString(),
-      slots: snapshot.map((slot) => ({ ...slot }))
-    });
-
-    this.history = this.history.slice(-500);
+    return this.slotService.getPredictions();
   }
 
   private async persistSlotEvents(slots: Slot[]) {

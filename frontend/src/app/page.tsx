@@ -12,7 +12,7 @@ import LayerControl from "./components/layer-control";
 import SlotMiniDashboard from "./components/slot-mini-dashboard";
 import StoryBubble from "./components/story-bubble";
 import TopBar from "./components/top-bar";
-import { Slot, ZonePoint } from "./components/types";
+import { Slot, SlotDiff, ZonePoint } from "./components/types";
 import { useDebouncedValue } from "./hooks/use-debounced-value";
 import { useMapStore } from "./store/use-map-store";
 
@@ -65,6 +65,32 @@ type OpsIncident = {
   source: string;
   status: "investigating" | "resolved";
   detectedAt: number;
+};
+
+type StreamTraffic = "LOW" | "MEDIUM" | "HIGH";
+
+type ParkingStreamPayload = {
+  event: "CITY_TICK";
+  timestamp: string;
+  slots: Slot[];
+  metrics: {
+    availability: number;
+    traffic: StreamTraffic;
+    apiLatency: number;
+    uptime: number;
+    co2ReductionKg: number;
+  };
+  incidents: Array<{
+    id: string;
+    level: "critical" | "warning" | "info";
+    message: string;
+    source: string;
+    createdAt: string;
+  }>;
+  cameras: Array<{
+    id: string;
+    status: "online" | "offline";
+  }>;
 };
 
 type StoryContext = "find" | "route" | "inspect" | "available" | "soon" | "full";
@@ -282,6 +308,8 @@ export default function Home() {
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [routeLoading, setRouteLoading] = useState(false);
   const [cameraOffline, setCameraOffline] = useState(false);
+  const [trafficLevel, setTrafficLevel] = useState<StreamTraffic>("LOW");
+  const [behaviorHint, setBehaviorHint] = useState<string>("");
   const [routeFocusToken, setRouteFocusToken] = useState(0);
   const [routes, setRoutes] = useState<RouteOption[]>([]);
   const [activeRoute, setActiveRoute] = useState(0);
@@ -303,6 +331,7 @@ export default function Home() {
   });
   const [opsUpdatedAt, setOpsUpdatedAt] = useState<number>(Date.now());
   const [opsIncidents, setOpsIncidents] = useState<OpsIncident[]>([]);
+  const [hasRealtimeStream, setHasRealtimeStream] = useState(false);
   const zoneRegenerationTokenRef = useRef(0);
   const storyLayerHydratedRef = useRef(false);
   const storyVoiceHydratedRef = useRef(false);
@@ -332,7 +361,8 @@ export default function Home() {
     setSelectedSlot,
     toggleLayer,
     bumpEco,
-    mergeRealtimeSlots
+    mergeRealtimeSlots,
+    applyRealtimeDiff
   } = useMapStore();
 
   const debouncedQuery = useDebouncedValue(query, 280);
@@ -389,6 +419,12 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    if (isMobileViewport && adminMode !== "closed") {
+      setAdminMode("closed");
+    }
+  }, [adminMode, isMobileViewport]);
+
+  useEffect(() => {
     if (!adminResizing) {
       return;
     }
@@ -423,7 +459,10 @@ export default function Home() {
       socket = io(backendWsUrl, { transports: ["websocket"] });
 
       socket.on("connect", () => setStatusMessage("Realtime online"));
-      socket.on("disconnect", () => setStatusMessage("Realtime disconnected"));
+      socket.on("disconnect", () => {
+        setHasRealtimeStream(false);
+        setStatusMessage("Realtime disconnected");
+      });
       socket.on("parking-update", (data: Slot[]) => {
         if (Array.isArray(data)) {
           requestAnimationFrame(() => {
@@ -431,14 +470,71 @@ export default function Home() {
           });
         }
       });
+      socket.on("parking-diff", (diff: SlotDiff[]) => {
+        if (!Array.isArray(diff) || diff.length === 0) {
+          return;
+        }
+
+        requestAnimationFrame(() => {
+          applyRealtimeDiff(diff);
+        });
+      });
+      socket.on("parking-stream", (payload: ParkingStreamPayload) => {
+        if (!payload || payload.event !== "CITY_TICK" || !Array.isArray(payload.slots)) {
+          return;
+        }
+
+        setHasRealtimeStream(true);
+        requestAnimationFrame(() => {
+          mergeRealtimeSlots(payload.slots);
+        });
+
+        const availabilityPctFromStream = Number(clamp(payload.metrics.availability * 100, 0, 100).toFixed(0));
+        setOpsMetrics({
+          rtt: payload.metrics.apiLatency,
+          uptime: payload.metrics.uptime,
+          availability: availabilityPctFromStream
+        });
+        setPredictedAvailabilityPct(availabilityPctFromStream);
+        setOpsUpdatedAt(Date.parse(payload.timestamp) || Date.now());
+        setTrafficLevel(payload.metrics.traffic);
+
+        const mappedIncidents: OpsIncident[] = (payload.incidents || []).map((incident) => ({
+          id: incident.id,
+          severity: incident.level === "critical" ? "SEV1" : incident.level === "warning" ? "SEV2" : "SEV3",
+          source: incident.source,
+          message: incident.message,
+          status: incident.level === "info" ? "resolved" : "investigating",
+          detectedAt: Date.parse(incident.createdAt) || Date.now()
+        }));
+        setOpsIncidents(mappedIncidents.slice(0, 10));
+
+        const offlineCount = (payload.cameras || []).filter((camera) => camera.status === "offline").length;
+        setCameraOffline(offlineCount > 0);
+
+        if (mappedIncidents.some((incident) => incident.severity === "SEV1" && incident.status === "investigating")) {
+          setStatusMessage("Realtime critical alert");
+        } else if (payload.metrics.traffic === "HIGH") {
+          setStatusMessage("Realtime online - heavy traffic");
+        } else {
+          setStatusMessage("Realtime online");
+        }
+
+        if (payload.metrics.traffic === "HIGH") {
+          setBehaviorHint("Ban dang vao khu dong. Thu gui xe xa hon 150m de giam ~30% CO2.");
+        } else {
+          setBehaviorHint("Tuyen hien tai on dinh. Uu tien slot xanh de toi uu CO2.");
+        }
+      });
     } catch {
+      setHasRealtimeStream(false);
       setStatusMessage("Realtime unavailable");
     }
 
     return () => {
       socket?.disconnect();
     };
-  }, [mergeRealtimeSlots, setStatusMessage]);
+  }, [applyRealtimeDiff, mergeRealtimeSlots, setStatusMessage]);
 
   function cancelVoicePlayback() {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
@@ -588,6 +684,10 @@ export default function Home() {
   }, [story, storyVoiceEnabled]);
 
   useEffect(() => {
+    if (hasRealtimeStream) {
+      return;
+    }
+
     const interval = window.setInterval(() => {
       setOpsMetrics((current) => ({
         rtt: Number(clamp(current.rtt + (Math.random() - 0.5) * 24, 80, 200).toFixed(0)),
@@ -598,9 +698,13 @@ export default function Home() {
     }, 2000);
 
     return () => window.clearInterval(interval);
-  }, []);
+  }, [hasRealtimeStream]);
 
   useEffect(() => {
+    if (hasRealtimeStream) {
+      return;
+    }
+
     const interval = window.setInterval(() => {
       const chance = Math.random();
       if (chance <= 0.72) {
@@ -634,7 +738,7 @@ export default function Home() {
     }, 8000);
 
     return () => window.clearInterval(interval);
-  }, []);
+  }, [hasRealtimeStream]);
 
   useEffect(() => {
     const active = opsIncidents.filter((incident) => incident.status === "investigating");
@@ -648,6 +752,26 @@ export default function Home() {
     }
     setSystemState("healthy");
   }, [opsIncidents, routeLoading, opsMetrics.rtt]);
+
+  useEffect(() => {
+    if (!selectedSlot || routeLoading || routes.length === 0) {
+      return;
+    }
+
+    const latest = slots.find((slot) => slot.id === selectedSlot.id);
+    if (!latest) {
+      return;
+    }
+
+    const nowUnavailable = !latest.available && !latest.soon;
+    if (!nowUnavailable) {
+      return;
+    }
+
+    setStatusMessage(`S${latest.id} just occupied. Auto re-routing...`);
+    emitStory("driver", "full", 250);
+    void requestOsrmRoutes();
+  }, [routeLoading, routes.length, selectedSlot, slots]);
 
   function generateSmartZones(center: { lat: number; lng: number }, sourceSlots: Slot[]) {
     const token = ++zoneRegenerationTokenRef.current;
@@ -1075,7 +1199,11 @@ export default function Home() {
       bumpEco(16, 0.35);
       generateSmartZones(mapCenter, slots);
       setStatusMessage(`Route ready: ${scored[bestRouteIndex].smartEtaMin} min • ${scored[bestRouteIndex].distanceKm} km`);
-      if (scored[bestRouteIndex].penaltyScore > 15) {
+      if (trafficLevel === "HIGH") {
+        emitStory("driver", "route", 700);
+      } else if (resolveAreaName(selectedSlot).includes("Bến Thành")) {
+        emitStory("coba", "route", 700);
+      } else if (scored[bestRouteIndex].penaltyScore > 15) {
         emitStory("driver", "route", 800);
       } else {
         emitStory("coba", "route", selectedSlot.zone === "green" ? 600 : 800);
@@ -1174,6 +1302,8 @@ export default function Home() {
         profileName={profileName}
         onProfileNameChange={setProfileName}
       />
+
+      {behaviorHint ? <div className="behaviorHintBanner">{behaviorHint}</div> : null}
 
       <button
         className="adminToggle"

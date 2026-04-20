@@ -2,6 +2,7 @@ export type Slot = {
   id: number;
   type: "car" | "bike";
   zone: "green" | "standard";
+  status?: "free" | "reserved" | "occupied" | "leaving";
   available: boolean;
   soon?: boolean;
   predictedFreeMin?: number;
@@ -12,6 +13,18 @@ export type Slot = {
   lng?: number;
   updatedAt?: string;
   cameraOnline?: boolean;
+};
+
+export type SlotDiff = {
+  type: "slot_update";
+  id: string;
+  status?: "free" | "reserved" | "occupied" | "leaving";
+  occupied: boolean;
+  soon: boolean;
+  predictedFreeMin: number;
+  cameraOnline: boolean;
+  distanceM: number;
+  updatedAt: string;
 };
 
 export type RouteSuggestion = {

@@ -56,5 +56,5 @@ export function getSuggestion(state: CityState): string {
   if (state.intent === "HURRY") {
     return "Ban dang voi, chon duong nhanh nhat";
   }
-  return "Tan huong hanh trinh xanh";
+  return "";
 }

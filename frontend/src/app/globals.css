@@ -115,10 +115,10 @@ body {
   right: 14px;
   z-index: 51;
   border-radius: 12px;
-  border: 1px solid color-mix(in srgb, var(--city-tone) 45%, white);
-  background: linear-gradient(92deg, color-mix(in srgb, var(--city-tone) 22%, transparent), rgba(99, 201, 211, 0.08));
+  border: none;
+  background: transparent;
   color: #eaf6ef;
-  padding: 9px 12px;
+  padding: 0;
   font-size: 0.75rem;
   letter-spacing: 0.01em;
   animation: behaviorHintIn calc(0.36s / var(--als-speed, 1)) ease;

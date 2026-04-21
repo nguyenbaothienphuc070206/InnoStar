@@ -136,7 +136,6 @@ export default function EcoPanel({
       const mini = 84;
       const half = Math.round(nextViewport * 0.4);
       const full = Math.round(nextViewport * 0.75);
-      const fallback = window.innerWidth < 640 ? half : mini;
       setSheetHeight((current) => {
         if (current <= mini + 4) {
           return mini;
@@ -144,7 +143,7 @@ export default function EcoPanel({
         if (current >= full - 4) {
           return full;
         }
-        return Math.max(mini, Math.min(full, fallback));
+        return Math.max(mini, Math.min(full, half));
       });
     };
 

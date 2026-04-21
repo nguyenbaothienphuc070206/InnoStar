@@ -305,7 +305,6 @@ export default function Home() {
   const [adminMode, setAdminMode] = useState<AdminMode>("closed");
   const [adminWidth, setAdminWidth] = useState(340);
   const [adminResizing, setAdminResizing] = useState(false);
-  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [routeLoading, setRouteLoading] = useState(false);
   const [cameraOffline, setCameraOffline] = useState(false);
   const [trafficLevel, setTrafficLevel] = useState<StreamTraffic>("LOW");
@@ -403,26 +402,6 @@ export default function Home() {
 
     setAdminMode("full");
   }
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const applyViewport = () => {
-      setIsMobileViewport(window.innerWidth < 768);
-    };
-
-    applyViewport();
-    window.addEventListener("resize", applyViewport);
-    return () => window.removeEventListener("resize", applyViewport);
-  }, []);
-
-  useEffect(() => {
-    if (isMobileViewport && adminMode !== "closed") {
-      setAdminMode("closed");
-    }
-  }, [adminMode, isMobileViewport]);
 
   useEffect(() => {
     if (!adminResizing) {
@@ -1314,10 +1293,10 @@ export default function Home() {
       </button>
 
       <aside
-        className={`enterpriseDock ${adminMode !== "closed" ? "open" : ""} ${isMobileViewport ? "mobile" : ""} mode-${adminMode} ${adminResizing ? "resizing" : ""}`}
+        className={`enterpriseDock ${adminMode !== "closed" ? "open" : ""} mode-${adminMode} ${adminResizing ? "resizing" : ""}`}
         style={{ width: adminMode === "full" ? adminWidth : adminMode === "compact" ? 88 : 0 }}
       >
-        {adminMode !== "closed" && !isMobileViewport ? (
+        {adminMode !== "closed" ? (
           <div
             className="enterpriseDockResizer"
             onMouseDown={(event) => {

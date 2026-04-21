@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { io, Socket } from "socket.io-client";
 import CameraListPanel from "./components/camera-list-panel";
@@ -13,7 +13,10 @@ import SlotMiniDashboard from "./components/slot-mini-dashboard";
 import StoryBubble from "./components/story-bubble";
 import TopBar from "./components/top-bar";
 import { Slot, SlotDiff, ZonePoint } from "./components/types";
+import { CityState, EngineStep, RouteType, VoiceType, getSuggestion } from "./engine/cityEngine";
+import { useCityEngine } from "./engine/useCityEngine";
 import { useDebouncedValue } from "./hooks/use-debounced-value";
+import { useNavigation } from "./navigation/useNavigation";
 import { useMapStore } from "./store/use-map-store";
 
 const MapView = dynamic(() => import("./components/map-view"), { ssr: false });
@@ -27,6 +30,11 @@ type RouteOption = {
   coords: Array<[number, number]>;
   durationMin: number;
   smartEtaMin: number;
+  etaMin?: number;
+  etaMax?: number;
+  traffic?: StreamTraffic;
+  confidence?: "HIGH" | "MEDIUM" | "LOW";
+  reason?: string[];
   penaltyScore: number;
   distanceKm: number;
   steps: string[];
@@ -238,6 +246,37 @@ function distance(a: [number, number], b: [number, number]): number {
   return Math.hypot(a[0] - b[0], a[1] - b[1]);
 }
 
+function calcDistanceKm(a: [number, number], b: [number, number]): number {
+  const dx = a[0] - b[0];
+  const dy = a[1] - b[1];
+  return Math.sqrt(dx * dx + dy * dy) * 111;
+}
+
+function speedByTraffic(traffic: StreamTraffic): number {
+  if (traffic === "HIGH") {
+    return 12;
+  }
+  if (traffic === "MEDIUM") {
+    return 22;
+  }
+  return 35;
+}
+
+function getDirection(from: [number, number], to: [number, number]): string {
+  if (Math.abs(to[0] - from[0]) > Math.abs(to[1] - from[1])) {
+    return to[0] > from[0] ? "⬆️ Đi thẳng" : "⬇️ Đi xuống";
+  }
+
+  return to[1] > from[1] ? "➡️ Rẽ phải" : "⬅️ Rẽ trái";
+}
+
+function interpolatePoint(p1: [number, number], p2: [number, number], t: number): [number, number] {
+  return [
+    p1[0] + (p2[0] - p1[0]) * t,
+    p1[1] + (p2[1] - p1[1]) * t
+  ];
+}
+
 function voiceProfileForCharacter(character: StoryCharacter): StoryVoiceProfile {
   if (character === "coba") {
     return { rate: 0.94, pitch: 0.88, volume: 0.9 };
@@ -246,6 +285,16 @@ function voiceProfileForCharacter(character: StoryCharacter): StoryVoiceProfile 
     return { rate: 1.03, pitch: 1.0, volume: 0.92 };
   }
   return { rate: 1.08, pitch: 1.08, volume: 0.9 };
+}
+
+function voiceProfileForType(voice: VoiceType): StoryVoiceProfile {
+  if (voice === "coba") {
+    return { rate: 0.9, pitch: 1.2, volume: 0.9 };
+  }
+  if (voice === "driver") {
+    return { rate: 1.15, pitch: 1.05, volume: 0.92 };
+  }
+  return { rate: 1, pitch: 1, volume: 0.9 };
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -331,6 +380,30 @@ export default function Home() {
   const [opsUpdatedAt, setOpsUpdatedAt] = useState<number>(Date.now());
   const [opsIncidents, setOpsIncidents] = useState<OpsIncident[]>([]);
   const [hasRealtimeStream, setHasRealtimeStream] = useState(false);
+  const [demoRunning, setDemoRunning] = useState(false);
+  const [logs, setLogs] = useState<string[]>([]);
+  const [carPosition, setCarPosition] = useState<[number, number] | null>(null);
+  const [carAngle, setCarAngle] = useState(0);
+  const [routeIndex, setRouteIndex] = useState(0);
+  const [instruction, setInstruction] = useState("");
+  const [distanceLeftKm, setDistanceLeftKm] = useState(0);
+  const [navigationActive, setNavigationActive] = useState(false);
+  const [cityMood, setCityMood] = useState<"CALM" | "CHAOTIC" | "STRESSED">("CALM");
+  const [cityNarration, setCityNarration] = useState("");
+  const [selectedDebate, setSelectedDebate] = useState<"driver" | "coba" | "youth" | null>(null);
+  const [memoryHint, setMemoryHint] = useState("");
+  const [moralFeedback, setMoralFeedback] = useState("");
+  const [centerPressure, setCenterPressure] = useState(0);
+  const [cityEvent, setCityEvent] = useState("");
+  const [intentHint, setIntentHint] = useState("");
+  const [cinematicMode, setCinematicMode] = useState(false);
+  const [routeConfidence, setRouteConfidence] = useState<"HIGH" | "MEDIUM" | "LOW">("HIGH");
+  const [engineRouteType, setEngineRouteType] = useState<RouteType>("balanced");
+  const [engineVoice, setEngineVoice] = useState<VoiceType>("neutral");
+  const [uiMode, setUiMode] = useState<"compact" | "relaxed">("relaxed");
+  const [animationSpeed, setAnimationSpeed] = useState(1);
+  const [cityTone, setCityTone] = useState("#5DFF34");
+  const [autoPilot, setAutoPilot] = useState(false);
   const zoneRegenerationTokenRef = useRef(0);
   const storyLayerHydratedRef = useRef(false);
   const storyVoiceHydratedRef = useRef(false);
@@ -339,6 +412,10 @@ export default function Home() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const requestIdRef = useRef(0);
+  const lastFindTriggerRef = useRef(0);
+  const routeBusyRef = useRef(false);
+  const cinematicTimerRef = useRef<number | null>(null);
+  const nextEngineActionRef = useRef(0);
   const adminResizeStartXRef = useRef(0);
   const adminResizeStartWidthRef = useRef(340);
 
@@ -365,6 +442,195 @@ export default function Home() {
   } = useMapStore();
 
   const debouncedQuery = useDebouncedValue(query, 280);
+
+  const activeRouteMeta = routes[activeRoute] ?? null;
+
+  const cityState = useMemo<CityState>(() => {
+    const availabilityRatio = clamp(opsMetrics.availability / 100, 0, 1);
+    const mood: CityState["mood"] =
+      trafficLevel === "HIGH" || availabilityRatio < 0.28
+        ? "CHAOTIC"
+        : trafficLevel === "MEDIUM" || availabilityRatio < 0.45
+          ? "STRESSED"
+          : "CALM";
+
+    const intent: CityState["intent"] =
+      selectedDebate === "driver" || routeLoading || finding
+        ? "HURRY"
+        : selectedDebate === "coba" || trafficLevel === "HIGH"
+          ? "ECO"
+          : "EXPLORE";
+
+    return {
+      traffic: trafficLevel,
+      availability: availabilityRatio,
+      mood,
+      intent,
+      hasSlot: Boolean(selectedSlot),
+      hasRoute: routes.length > 0 || Boolean(route?.path?.length),
+      navigating: navigationActive
+    };
+  }, [finding, navigationActive, opsMetrics.availability, route?.path?.length, routeLoading, routes.length, selectedDebate, selectedSlot, trafficLevel]);
+
+  useEffect(() => {
+    if (cityState.mood === "CHAOTIC") {
+      setCityMood("CHAOTIC");
+      setCityNarration("Thanh pho dang hon loan, uu tien dieu huong thich nghi.");
+      return;
+    }
+    if (cityState.mood === "STRESSED") {
+      setCityMood("STRESSED");
+      setCityNarration("Thanh pho dang cang thang, nen giam ap luc trung tam.");
+      return;
+    }
+    setCityMood("CALM");
+    setCityNarration("Thanh pho dang em, co the uu tien hanh trinh xanh.");
+  }, [cityState.mood]);
+
+  useCityEngine({
+    state: cityState,
+    tickMs: 1000,
+    onExperience: (exp) => {
+      setEngineRouteType(exp.routeType);
+      setEngineVoice(exp.voice);
+      setUiMode(exp.uiMode);
+      setAnimationSpeed(exp.animationSpeed);
+      setCityTone(exp.color);
+      setBehaviorHint(getSuggestion(cityState));
+      if (typeof document !== "undefined") {
+        document.documentElement.style.setProperty("--city-tone", exp.color);
+        document.documentElement.style.setProperty("--als-speed", String(exp.animationSpeed));
+      }
+    },
+    onStep: (step: EngineStep) => {
+      if (!autoPilot || demoRunning) {
+        return;
+      }
+
+      const now = Date.now();
+      if (now - nextEngineActionRef.current < 1200) {
+        return;
+      }
+
+      nextEngineActionRef.current = now;
+      if (step === "find") {
+        handleFindNearest();
+      } else if (step === "route") {
+        void requestOsrmRoutes();
+      } else if (step === "navigate") {
+        setNavigationActive(true);
+      }
+    }
+  });
+
+  useEffect(() => {
+    const raw = window.localStorage.getItem("greenpark-last-slot");
+    if (!raw) {
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as { slotId: number; at: string };
+      setMemoryHint(`👀 Hôm trước bạn đỗ S${parsed.slotId} lúc ${new Date(parsed.at).toLocaleString("vi-VN")}`);
+    } catch {
+      setMemoryHint("");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!selectedSlot || !navigationActive) {
+      return;
+    }
+
+    window.localStorage.setItem(
+      "greenpark-last-slot",
+      JSON.stringify({ slotId: selectedSlot.id, at: new Date().toISOString() })
+    );
+  }, [navigationActive, selectedSlot]);
+
+  useEffect(() => {
+    if (selectedSlot || routeLoading || finding) {
+      setIntentHint("");
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setIntentHint("🧠 Bạn đang tìm chỗ đỗ xe phải không? Bấm Find để tôi hỗ trợ ngay.");
+    }, 9000);
+
+    return () => window.clearTimeout(timer);
+  }, [selectedSlot, routeLoading, finding]);
+
+  useEffect(() => {
+    const events = [
+      "🎉 Lễ hội trung tâm: mật độ xe tăng 18%",
+      "🌧 Mưa nhẹ: nhu cầu đỗ xe tăng",
+      "🚧 Một tuyến phố đóng tạm, ETA có thể tăng"
+    ];
+
+    const timer = window.setInterval(() => {
+      if (Math.random() < 0.4) {
+        const event = events[Math.floor(Math.random() * events.length)];
+        setCityEvent(event);
+        addLog(`City event: ${event}`);
+      }
+    }, 30000);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
+  function addLog(message: string) {
+    const stamp = new Date().toLocaleTimeString("vi-VN");
+    setLogs((current) => [...current.slice(-14), `[${stamp}] ${message}`]);
+  }
+
+  function speakText(text: string) {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "vi-VN";
+    const profile = voiceProfileForType(engineVoice);
+    utterance.rate = profile.rate;
+    utterance.pitch = profile.pitch;
+    utterance.volume = profile.volume;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function wait(ms: number) {
+    return new Promise<void>((resolve) => {
+      window.setTimeout(() => resolve(), ms);
+    });
+  }
+
+  async function fetchWithRetry(url: string, init?: RequestInit, attempts = 3, timeoutMs = 5000): Promise<Response> {
+    let lastError: unknown;
+
+    for (let i = 0; i < attempts; i += 1) {
+      const controller = new AbortController();
+      const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+
+      try {
+        const response = await fetch(url, {
+          ...init,
+          signal: controller.signal
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        window.clearTimeout(timer);
+        return response;
+      } catch (error) {
+        window.clearTimeout(timer);
+        lastError = error;
+      }
+    }
+
+    throw lastError;
+  }
 
   const clampAdminWidth = (value: number) => Math.max(220, Math.min(520, value));
 
@@ -435,12 +701,23 @@ export default function Home() {
     let socket: Socket | undefined;
 
     try {
-      socket = io(backendWsUrl, { transports: ["websocket"] });
+      socket = io(backendWsUrl, {
+        transports: ["websocket"],
+        reconnection: true,
+        reconnectionAttempts: Infinity,
+        reconnectionDelay: 800,
+        reconnectionDelayMax: 3000,
+        timeout: 5000
+      });
 
-      socket.on("connect", () => setStatusMessage("Realtime online"));
+      socket.on("connect", () => {
+        setStatusMessage("Realtime online");
+        addLog("Realtime connected");
+      });
       socket.on("disconnect", () => {
         setHasRealtimeStream(false);
         setStatusMessage("Realtime disconnected");
+        addLog("Realtime disconnected, waiting for reconnect");
       });
       socket.on("parking-update", (data: Slot[]) => {
         if (Array.isArray(data)) {
@@ -508,6 +785,7 @@ export default function Home() {
     } catch {
       setHasRealtimeStream(false);
       setStatusMessage("Realtime unavailable");
+      addLog("Realtime unavailable");
     }
 
     return () => {
@@ -1006,6 +1284,51 @@ export default function Home() {
 
   const routePath = activeRoutePath?.length ? activeRoutePath : route?.path?.length ? route.path : [];
 
+  useNavigation({
+    route: routePath,
+    navigating: navigationActive,
+    speedMs: Math.max(80, Math.round(160 / animationSpeed)),
+    onPosition: (point, index) => {
+      setCarPosition(point);
+      setRouteIndex(index);
+
+      const from = routePath[Math.max(0, index - 1)] ?? point;
+      const to = routePath[Math.min(index + 1, routePath.length - 1)] ?? point;
+      const angle = Math.atan2(to[0] - from[0], to[1] - from[1]) * (180 / Math.PI);
+      setCarAngle(angle);
+
+      const remainingPath = routePath.slice(index);
+      let remaining = 0;
+      for (let i = 0; i < remainingPath.length - 1; i += 1) {
+        remaining += calcDistanceKm(remainingPath[i], remainingPath[i + 1]);
+      }
+      setDistanceLeftKm(Number(remaining.toFixed(2)));
+      setEtaMinutes(Math.max(1, Math.round((remaining / speedByTraffic(trafficLevel)) * 60)));
+    },
+    onComplete: () => {
+      setNavigationActive(false);
+      setInstruction("Ban da den noi");
+      speakText("Ban da den noi");
+      addLog("Navigation completed");
+    }
+  });
+
+  useEffect(() => {
+    if (!navigationActive || routePath.length < 2) {
+      return;
+    }
+
+    const from = routePath[Math.min(routeIndex, routePath.length - 2)];
+    const to = routePath[Math.min(routeIndex + 1, routePath.length - 1)];
+    if (!from || !to) {
+      return;
+    }
+
+    const text = getDirection(from, to);
+    setInstruction(text);
+    speakText(text);
+  }, [navigationActive, routeIndex, routePath]);
+
   const routeSegments = useMemo<RouteSegment[]>(() => {
     if (!layers.traffic || !displayRoute || displayRoute.length < 2) {
       return [];
@@ -1044,6 +1367,12 @@ export default function Home() {
   }
 
   function handleFindNearest() {
+    const now = Date.now();
+    if (now - lastFindTriggerRef.current < 900) {
+      return;
+    }
+    lastFindTriggerRef.current = now;
+
     if (abortRef.current) {
       abortRef.current.abort();
     }
@@ -1091,6 +1420,11 @@ export default function Home() {
       return;
     }
 
+    if (routeBusyRef.current) {
+      return;
+    }
+    routeBusyRef.current = true;
+
     if (abortRef.current) {
       abortRef.current.abort();
     }
@@ -1115,12 +1449,72 @@ export default function Home() {
     setRouteLoading(true);
     try {
       setStatusMessage("Finding best route...");
+      addLog("Route request started");
+
+      const backendRouteUrl =
+        `${backendUrl}/parking/route-options?fromLat=${userLocation[0]}&fromLng=${userLocation[1]}&toLat=${selectedSlot.lat}&toLng=${selectedSlot.lng}`;
+
+      const backendResponse = await fetchWithRetry(backendRouteUrl, undefined, 2, 4500);
+      const backendRoutes = (await backendResponse.json()) as Array<{
+        profile?: "fastest" | "eco" | "chill";
+        distance: number;
+        etaMinutes: number;
+        etaMin?: number;
+        etaMax?: number;
+        traffic?: StreamTraffic;
+        confidence?: "HIGH" | "MEDIUM" | "LOW";
+        reason?: string[];
+        path: Array<[number, number]>;
+      }>;
+
+      if (Array.isArray(backendRoutes) && backendRoutes.length > 0) {
+        const mappedRoutes: RouteOption[] = backendRoutes.map((item, index) => ({
+          coords: item.path,
+          durationMin: item.etaMinutes,
+          smartEtaMin: item.etaMinutes,
+          etaMin: item.etaMin,
+          etaMax: item.etaMax,
+          traffic: item.traffic,
+          confidence: item.confidence,
+          reason: item.reason,
+          penaltyScore: item.profile === "eco" ? 4 : item.profile === "chill" ? 7 : 12,
+          distanceKm: Math.max(1, Number((item.distance / 1000).toFixed(1))),
+          steps: [
+            "Đi theo trục chính",
+            item.profile === "eco" ? "Rẽ sang tuyến xanh" : "Rẽ theo tuyến nhanh",
+            "Đến bãi mục tiêu"
+          ]
+        }));
+
+        const preferredProfile = engineRouteType === "eco" ? "eco" : engineRouteType === "fastest" ? "fastest" : "chill";
+        const preferredIndex = Math.max(
+          0,
+          mappedRoutes.findIndex((item) => item.reason?.some((line) => line.toLowerCase().includes(preferredProfile)) ?? false)
+        );
+        const safeIndex = Math.min(preferredIndex, mappedRoutes.length - 1);
+
+        setRoutes(mappedRoutes);
+        setActiveRoute(safeIndex);
+        setTurnSteps(mappedRoutes[safeIndex].steps);
+        setEtaMinutes(mappedRoutes[safeIndex].smartEtaMin);
+        setRouteConfidence(mappedRoutes[safeIndex].confidence ?? "MEDIUM");
+        setRouteFocusToken((value) => value + 1);
+        setNavigationActive(true);
+        setRouteIndex(0);
+        setCarPosition(mappedRoutes[safeIndex].coords[0] ?? null);
+        setDistanceLeftKm(mappedRoutes[safeIndex].distanceKm);
+        setStatusMessage(`Route ready: ${mappedRoutes[safeIndex].smartEtaMin} min • ${mappedRoutes[safeIndex].distanceKm} km`);
+        addLog("Route computed via backend route-options");
+        bumpEco(selectedDebate === "coba" ? 18 : 12, selectedDebate === "coba" ? 0.42 : 0.28);
+
+        return;
+      }
 
       const osrmUrl =
         `https://router.project-osrm.org/route/v1/driving/${userLocation[1]},${userLocation[0]};` +
         `${selectedSlot.lng},${selectedSlot.lat}?overview=full&geometries=geojson&alternatives=true&steps=true`;
 
-      const response = await fetch(osrmUrl, { signal: controller.signal });
+      const response = await fetchWithRetry(osrmUrl, { signal: controller.signal }, 2, 6000);
       const data = (await response.json()) as {
         routes?: Array<{
           duration: number;
@@ -1142,8 +1536,40 @@ export default function Home() {
         })) ?? [];
 
       if (!parsedRoutes.length) {
-        setStatusMessage("No route found from routing engine");
-        throw new Error("OSRM route not found");
+        const basicDistanceKm = calcDistanceKm(userLocation, [selectedSlot.lat, selectedSlot.lng]);
+        const basicSpeed = speedByTraffic(trafficLevel);
+        const basicEta = Math.max(1, Math.round((basicDistanceKm / basicSpeed) * 60));
+        const basicRoute: RouteOption = {
+          coords: [
+            userLocation,
+            [selectedSlot.lat, userLocation[1]],
+            [selectedSlot.lat, selectedSlot.lng]
+          ],
+          durationMin: basicEta,
+          smartEtaMin: basicEta,
+          etaMin: Math.max(1, basicEta - 1),
+          etaMax: basicEta + 2,
+          traffic: trafficLevel,
+          confidence: "LOW",
+          reason: ["Fallback basic route", "Network degraded"],
+          penaltyScore: 8,
+          distanceKm: Number(basicDistanceKm.toFixed(2)),
+          steps: ["Đi thẳng", "Rẽ theo trục phụ", "Đến nơi"]
+        };
+
+        setRoutes([basicRoute]);
+        setActiveRoute(0);
+        setTurnSteps(basicRoute.steps);
+        setEtaMinutes(basicRoute.smartEtaMin);
+        setRouteConfidence("LOW");
+        setRouteFocusToken((value) => value + 1);
+        setNavigationActive(true);
+        setRouteIndex(0);
+        setCarPosition(basicRoute.coords[0]);
+        setDistanceLeftKm(basicRoute.distanceKm);
+        setStatusMessage("Routing degraded mode active");
+        addLog("Fallback basic route activated");
+        return;
       }
 
       if (requestId !== requestIdRef.current) {
@@ -1175,9 +1601,15 @@ export default function Home() {
       setEtaMinutes(scored[bestRouteIndex].smartEtaMin);
       setRoute(null);
       setRouteFocusToken((value) => value + 1);
+      setNavigationActive(true);
+      setRouteIndex(0);
+      setCarPosition(scored[bestRouteIndex].coords[0] ?? null);
+      setDistanceLeftKm(scored[bestRouteIndex].distanceKm);
+      setRouteConfidence("MEDIUM");
       bumpEco(16, 0.35);
       generateSmartZones(mapCenter, slots);
       setStatusMessage(`Route ready: ${scored[bestRouteIndex].smartEtaMin} min • ${scored[bestRouteIndex].distanceKm} km`);
+      addLog("Route computed via OSRM");
       if (trafficLevel === "HIGH") {
         emitStory("driver", "route", 700);
       } else if (resolveAreaName(selectedSlot).includes("Bến Thành")) {
@@ -1199,16 +1631,120 @@ export default function Home() {
       setRoutes([]);
       setDisplayRoute([]);
       setTurnSteps([]);
-      setStatusMessage("Routing engine unavailable");
+      const basicDistanceKm = calcDistanceKm(userLocation, [selectedSlot.lat, selectedSlot.lng]);
+      const basicSpeed = speedByTraffic(trafficLevel);
+      const basicEta = Math.max(1, Math.round((basicDistanceKm / basicSpeed) * 60));
+      const basicRoute: RouteOption = {
+        coords: [
+          userLocation,
+          [selectedSlot.lat, userLocation[1]],
+          [selectedSlot.lat, selectedSlot.lng]
+        ],
+        durationMin: basicEta,
+        smartEtaMin: basicEta,
+        etaMin: Math.max(1, basicEta - 1),
+        etaMax: basicEta + 2,
+        traffic: trafficLevel,
+        confidence: "LOW",
+        reason: ["Degraded network fallback", "Using deterministic city grid route"],
+        penaltyScore: 10,
+        distanceKm: Number(basicDistanceKm.toFixed(2)),
+        steps: ["Đi thẳng", "Rẽ phải", "Đến nơi"]
+      };
+      setRoutes([basicRoute]);
+      setActiveRoute(0);
+      setTurnSteps(basicRoute.steps);
+      setEtaMinutes(basicRoute.smartEtaMin);
+      setRouteFocusToken((value) => value + 1);
+      setNavigationActive(true);
+      setRouteIndex(0);
+      setCarPosition(basicRoute.coords[0]);
+      setDistanceLeftKm(basicRoute.distanceKm);
+      setRouteConfidence("LOW");
+      setStatusMessage("Routing degraded mode active");
+      addLog("Routing fallback after failure");
     } finally {
       if (requestId === requestIdRef.current) {
         setRouteLoading(false);
       }
+      routeBusyRef.current = false;
     }
   }
 
   function handleDrawRoute() {
     void requestOsrmRoutes();
+  }
+
+  async function startDemoMode() {
+    if (demoRunning) {
+      return;
+    }
+
+    setDemoRunning(true);
+    setAutoPilot(true);
+    addLog("Demo mode started");
+    speakText("Bắt đầu trải nghiệm thành phố thông minh");
+
+    setBehaviorHint("Demo mode: engine dang tu dieu phoi Find -> Route -> Navigation");
+    addLog("Demo flow executed");
+    window.setTimeout(() => {
+      setDemoRunning(false);
+    }, 2200);
+  }
+
+  function chooseDebate(character: "driver" | "coba" | "youth") {
+    setSelectedDebate(character);
+    if (character === "driver") {
+      setBehaviorHint("🚕 Tài xế chọn tuyến nhanh để vào trung tâm.");
+      setCenterPressure((value) => value + 1);
+      setMoralFeedback("Bạn vừa chọn nhanh hơn, nhưng tạo thêm khoảng 0.8kg CO2 😢");
+      speakText("Đi nhanh thì vào trung tâm thôi");
+      return;
+    }
+
+    if (character === "coba") {
+      setBehaviorHint("👩 Cô Ba đề xuất tuyến vòng nhẹ để giảm ùn tắc và CO2.");
+      setMoralFeedback("Lựa chọn xanh giúp giảm tải trung tâm và tiết kiệm CO2 🌱");
+      bumpEco(8, 0.2);
+      speakText("Đi thong thả một chút sẽ dễ thở hơn");
+      return;
+    }
+
+    setBehaviorHint("🧑 Thanh niên gợi ý tuyến hẻm ít người biết.");
+    setMoralFeedback("Bạn chọn trải nghiệm cân bằng giữa tốc độ và phát thải.");
+    speakText("Đi hẻm này, ít người biết nhưng ổn áp lắm");
+  }
+
+  function startCinematicMode() {
+    setCinematicMode(true);
+    addLog("Cinematic explore started");
+    const shots: Array<{ lat: number; lng: number; line: string }> = [
+      { lat: 10.772, lng: 106.698, line: "Thành phố bắt đầu một nhịp ngày mới" },
+      { lat: 10.7768, lng: 106.701, line: "Khu trung tâm đang nóng dần" },
+      { lat: 10.7698, lng: 106.706, line: "Các tuyến xanh mở ra nhịp thở mới" }
+    ];
+
+    let idx = 0;
+    setMapCenter({ lat: shots[0].lat, lng: shots[0].lng });
+    setCityNarration(shots[0].line);
+
+    if (cinematicTimerRef.current) {
+      window.clearInterval(cinematicTimerRef.current);
+    }
+
+    cinematicTimerRef.current = window.setInterval(() => {
+      idx += 1;
+      if (idx >= shots.length) {
+        if (cinematicTimerRef.current) {
+          window.clearInterval(cinematicTimerRef.current);
+        }
+        setCinematicMode(false);
+        return;
+      }
+      setMapCenter({ lat: shots[idx].lat, lng: shots[idx].lng });
+      setCityNarration(shots[idx].line);
+      speakText(shots[idx].line);
+    }, 3500);
   }
 
   function openSelectedLiveView() {
@@ -1228,7 +1764,7 @@ export default function Home() {
     : "Tap a slot marker to inspect";
 
   return (
-    <main className="platformShell pt-safe pb-safe">
+    <main className={`platformShell pt-safe pb-safe als-ui-${uiMode}`} style={{ "--city-tone": cityTone } as CSSProperties}>
       <MapView
         slots={slots}
         zones={zones}
@@ -1241,6 +1777,9 @@ export default function Home() {
         routeOpacity={fadingRoute ? 0 : 1}
         activeRoutePenalty={activeRoutePenalty}
         activeRouteIsEco={activeRouteIsEco}
+        carPosition={carPosition}
+        carAngle={carAngle}
+        navigationActive={navigationActive}
         onViewportCenterChange={(center) => {
           setMapCenter(center);
         }}
@@ -1282,7 +1821,31 @@ export default function Home() {
         onProfileNameChange={setProfileName}
       />
 
+      <div className={`cityMoodBanner mood-${cityMood.toLowerCase()}`}>
+        <strong>City Mood: {cityMood}</strong> • {cityNarration}
+      </div>
+
+      <div className="cityActionsBar">
+        <button className="demoLaunchBtn" disabled={demoRunning} onClick={() => void startDemoMode()}>
+          {demoRunning ? "Running Demo..." : "🎬 Start Demo"}
+        </button>
+        <button className="demoLaunchBtn" disabled={cinematicMode} onClick={startCinematicMode}>
+          {cinematicMode ? "Exploring..." : "🎥 Explore City"}
+        </button>
+      </div>
+
+      <div className="debatePanel" data-testid="city-debate">
+        <p>🎭 City Debate</p>
+        <button className={selectedDebate === "driver" ? "active" : ""} onClick={() => chooseDebate("driver")}>🚕 Tài xế</button>
+        <button className={selectedDebate === "coba" ? "active" : ""} onClick={() => chooseDebate("coba")}>👩 Cô Ba</button>
+        <button className={selectedDebate === "youth" ? "active" : ""} onClick={() => chooseDebate("youth")}>🧑 Thanh niên</button>
+      </div>
+
       {behaviorHint ? <div className="behaviorHintBanner">{behaviorHint}</div> : null}
+      {memoryHint ? <div className="memoryHintBanner">{memoryHint}</div> : null}
+      {intentHint ? <div className="intentHintBanner">{intentHint}</div> : null}
+      {cityEvent ? <div className="cityEventBanner">{cityEvent}</div> : null}
+      {moralFeedback ? <div className="moralBanner">{moralFeedback}</div> : null}
 
       <button
         className="adminToggle"
@@ -1389,6 +1952,27 @@ export default function Home() {
           </ul>
         </aside>
       ) : null}
+
+      {navigationActive ? (
+        <aside className="navPanel" data-testid="nav-panel">
+          <div>🚗 Đang di chuyển</div>
+          <div>🧭 {instruction || "Đang cập nhật hướng..."}</div>
+          <div>📍 {distanceLeftKm.toFixed(2)} km</div>
+          <div>⏱ ETA: {etaMinutes ?? "..."} phút</div>
+          <div>🎯 Route accuracy: {routeConfidence}</div>
+          <div>🌀 Center pressure: {centerPressure}</div>
+          {activeRouteMeta?.reason?.length ? <small>{activeRouteMeta.reason[0]}</small> : null}
+        </aside>
+      ) : null}
+
+      <aside className="cityLogPanel" data-testid="city-log-panel">
+        <h4>System Log</h4>
+        <div>
+          {logs.slice().reverse().map((entry) => (
+            <p key={entry}>{entry}</p>
+          ))}
+        </div>
+      </aside>
 
       <GlassCard className="liveCameraCard">
         <h3>Live View</h3>

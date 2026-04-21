@@ -6,27 +6,55 @@ export class RouteService {
   getRouteOptions(fromLat: number, fromLng: number, toLat: number, toLng: number, traffic: TrafficLevel): RouteOption[] {
     const from: [number, number] = [fromLat, fromLng];
     const to: [number, number] = [toLat, toLng];
+    const distanceKm = this.calcDistanceKm(from, to);
 
-    const profiles: Array<{ profile: RouteProfile; label: string; speedKmh: number; jitter: number; co2Factor: number }> = [
-      { profile: "fastest", label: "Fastest", speedKmh: 34, jitter: 0.00013, co2Factor: 1.2 },
-      { profile: "eco", label: "Eco", speedKmh: 28, jitter: 0.0001, co2Factor: 0.8 },
-      { profile: "chill", label: "Chill", speedKmh: 24, jitter: 0.00016, co2Factor: 1.0 }
+    const profiles: Array<{ profile: RouteProfile; label: string; profileFactor: number; co2Factor: number }> = [
+      { profile: "fastest", label: "Fastest", profileFactor: 1.1, co2Factor: 1.15 },
+      { profile: "eco", label: "Eco", profileFactor: 0.9, co2Factor: 0.8 },
+      { profile: "chill", label: "Chill", profileFactor: 0.78, co2Factor: 0.95 }
     ];
 
     return profiles.map((item) => {
-      const path = this.generateFakePath(from, to, item.jitter);
-      const distance = this.computeDistanceMeters(from, to);
-      const congestionBase = traffic === "HIGH" ? 0.85 : traffic === "MEDIUM" ? 0.55 : 0.25;
-      const profilePenalty = item.profile === "fastest" ? 0.12 : item.profile === "eco" ? -0.06 : 0.0;
-      const congestion = Number(this.clamp(congestionBase + profilePenalty, 0.05, 0.98).toFixed(2));
-      const etaMinutes = Math.max(2, Math.round(distance / (item.speedKmh * 1000 / 60) * (1 + congestion * 0.42)));
-      const co2EstimateKg = Number(((distance / 1000) * 0.09 * item.co2Factor * (1 + congestion * 0.25)).toFixed(3));
+      const path = this.generateGridPath(from, to, item.profile);
+      let speed = this.getBaseSpeedKmh(traffic) * item.profileFactor;
+
+      const downtown = from[0] > 10.775 || to[0] > 10.775;
+      if (downtown) {
+        speed *= 0.7;
+      }
+
+      const hour = new Date().getHours();
+      if ((hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 19)) {
+        speed *= 0.6;
+      }
+
+      const noise = 0.9 + Math.random() * 0.2;
+      const etaMinutes = Math.max(1, Math.round((distanceKm / Math.max(6, speed)) * 60 * noise));
+      const etaMin = Math.max(1, etaMinutes - 1);
+      const etaMax = Math.max(etaMin + 1, etaMinutes + 2);
+      const congestion = Number(
+        this.clamp(
+          traffic === "HIGH" ? 0.78 : traffic === "MEDIUM" ? 0.52 : 0.28,
+          0.05,
+          0.98
+        ).toFixed(2)
+      );
+      const co2EstimateKg = Number((distanceKm * 0.09 * item.co2Factor).toFixed(3));
 
       return {
         profile: item.profile,
         label: item.label,
-        distance: Number(distance.toFixed(0)),
+        distance: Number((distanceKm * 1000).toFixed(0)),
         etaMinutes,
+        etaMin,
+        etaMax,
+        traffic,
+        confidence: traffic === "LOW" ? "HIGH" : traffic === "MEDIUM" ? "MEDIUM" : "LOW",
+        reason: [
+          `Traffic ${traffic.toLowerCase()} with average speed ${Math.round(speed)} km/h`,
+          `Estimated CO2 ${co2EstimateKg} kg`,
+          downtown ? "Downtown slowdown applied" : "No downtown penalty"
+        ],
         congestion,
         co2EstimateKg,
         path
@@ -50,24 +78,45 @@ export class RouteService {
     };
   }
 
-  private generateFakePath(from: [number, number], to: [number, number], jitter = 0.00014): Array<[number, number]> {
-    const steps = 20;
+  private generateGridPath(from: [number, number], to: [number, number], profile: RouteProfile): Array<[number, number]> {
+    const midLngBias = profile === "eco" ? -0.00035 : profile === "chill" ? 0.00025 : 0;
+    const mid: [number, number] = [to[0], from[1] + midLngBias];
+
+    return [
+      [Number(from[0].toFixed(6)), Number(from[1].toFixed(6))],
+      [Number(mid[0].toFixed(6)), Number(mid[1].toFixed(6))],
+      [Number(to[0].toFixed(6)), Number(to[1].toFixed(6))]
+    ];
+  }
+
+  private generateFakePath(from: [number, number], to: [number, number], wobble: number): Array<[number, number]> {
     const points: Array<[number, number]> = [];
+    const steps = 14;
 
     for (let i = 0; i <= steps; i += 1) {
       const t = i / steps;
-      const lat = from[0] + (to[0] - from[0]) * t + (Math.random() - 0.5) * jitter;
-      const lng = from[1] + (to[1] - from[1]) * t + (Math.random() - 0.5) * jitter;
+      const lat = from[0] + (to[0] - from[0]) * t + Math.sin(t * Math.PI) * wobble;
+      const lng = from[1] + (to[1] - from[1]) * t + Math.cos(t * Math.PI) * wobble * 0.6;
       points.push([Number(lat.toFixed(6)), Number(lng.toFixed(6))]);
     }
 
     return points;
   }
 
-  private computeDistanceMeters(a: [number, number], b: [number, number]): number {
-    const latDiff = (a[0] - b[0]) * 111_000;
-    const lngDiff = (a[1] - b[1]) * 111_000;
-    return Math.hypot(latDiff, lngDiff);
+  private calcDistanceKm(a: [number, number], b: [number, number]): number {
+    const dx = a[0] - b[0];
+    const dy = a[1] - b[1];
+    return Math.sqrt(dx * dx + dy * dy) * 111;
+  }
+
+  private getBaseSpeedKmh(traffic: TrafficLevel): number {
+    if (traffic === "HIGH") {
+      return 12;
+    }
+    if (traffic === "MEDIUM") {
+      return 22;
+    }
+    return 35;
   }
 
   private clamp(value: number, min: number, max: number): number {

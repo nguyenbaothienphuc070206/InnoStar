@@ -3,6 +3,8 @@
   --cyan: #63c9d3;
   --earth: #753309;
   --bg: #0b0f14;
+  --city-tone: #5dff34;
+  --als-speed: 1;
   --panel: rgba(9, 20, 29, 0.78);
   --glass-bg: rgba(0, 0, 0, 0.7);
   --glass-border: rgba(255, 255, 255, 0.1);
@@ -29,6 +31,15 @@ body {
   height: 100vh;
   width: 100%;
   overflow: hidden;
+  font-size: 12px;
+  transition: filter calc(320ms / var(--als-speed, 1)) ease, padding calc(280ms / var(--als-speed, 1)) ease;
+}
+
+.platformShell.als-ui-compact {
+  font-size: 11px;
+}
+
+.platformShell.als-ui-relaxed {
   font-size: 12px;
 }
 
@@ -104,13 +115,13 @@ body {
   right: 14px;
   z-index: 51;
   border-radius: 12px;
-  border: 1px solid rgba(127, 216, 106, 0.4);
-  background: linear-gradient(92deg, rgba(127, 216, 106, 0.16), rgba(99, 201, 211, 0.08));
+  border: 1px solid color-mix(in srgb, var(--city-tone) 45%, white);
+  background: linear-gradient(92deg, color-mix(in srgb, var(--city-tone) 22%, transparent), rgba(99, 201, 211, 0.08));
   color: #eaf6ef;
   padding: 9px 12px;
   font-size: 0.75rem;
   letter-spacing: 0.01em;
-  animation: behaviorHintIn 0.36s ease;
+  animation: behaviorHintIn calc(0.36s / var(--als-speed, 1)) ease;
 }
 
 @keyframes behaviorHintIn {
@@ -863,7 +874,16 @@ body {
 }
 
 .routePulse {
-  animation: routeDash 1.4s linear infinite;
+  animation: routeDash calc(1.4s / var(--als-speed, 1)) linear infinite;
+}
+
+.cityMoodBanner {
+  border-color: color-mix(in srgb, var(--city-tone) 48%, white);
+}
+
+.routeOptionItem.active {
+  border-color: color-mix(in srgb, var(--city-tone) 64%, white);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--city-tone) 35%, transparent);
 }
 
 .routeGlow {

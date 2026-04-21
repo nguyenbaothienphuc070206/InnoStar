@@ -130,6 +130,11 @@ export type RouteOption = {
   label: string;
   distance: number;
   etaMinutes: number;
+  etaMin?: number;
+  etaMax?: number;
+  traffic?: TrafficLevel;
+  confidence?: "HIGH" | "MEDIUM" | "LOW";
+  reason?: string[];
   congestion: number;
   co2EstimateKg: number;
   path: Array<[number, number]>;

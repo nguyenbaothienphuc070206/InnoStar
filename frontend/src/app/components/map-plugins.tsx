@@ -18,6 +18,9 @@ type MapPluginContext = {
   routePath: Array<[number, number]>;
   activeRoutePenalty: number;
   activeRouteIsEco: boolean;
+  carPosition: [number, number] | null;
+  carAngle: number;
+  navigationActive: boolean;
   onSlotClick: (slot: Slot) => void;
   toLatLng: (slot: Slot) => [number, number];
   markerIcon: (slot: Slot, isSelected: boolean) => L.DivIcon;
@@ -45,6 +48,23 @@ function RouteAutoFit({ routePath, routeFocusToken }: RouteAutoFitProps) {
       duration: 0.8
     });
   }, [map, routeFocusToken, routePath]);
+
+  return null;
+}
+
+function CarFollow({ carPosition, navigationActive }: { carPosition: [number, number] | null; navigationActive: boolean }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!carPosition || !navigationActive) {
+      return;
+    }
+
+    map.flyTo(carPosition, Math.max(map.getZoom(), 16), {
+      animate: true,
+      duration: 0.4
+    });
+  }, [carPosition, map, navigationActive]);
 
   return null;
 }
@@ -125,10 +145,11 @@ export function createMapPlugins(): MapLayerPlugin[] {
     },
     {
       id: "route",
-      render: ({ layers, routePath, routeFocusToken, routeSegments, routeOpacity, activeRoutePenalty, activeRouteIsEco }) =>
+      render: ({ layers, routePath, routeFocusToken, routeSegments, routeOpacity, activeRoutePenalty, activeRouteIsEco, carPosition, carAngle, navigationActive }) =>
         layers.route && routePath.length > 1 ? (
           <>
             <RouteAutoFit routePath={routePath} routeFocusToken={routeFocusToken} />
+            <CarFollow carPosition={carPosition} navigationActive={navigationActive} />
 
             <Polyline
               positions={routePath}
@@ -188,6 +209,18 @@ export function createMapPlugins(): MapLayerPlugin[] {
               position={routePath[routePath.length - 1]}
               icon={L.divIcon({ className: "routeEndpoint routeEnd", html: "<span>🎯 Destination</span>", iconSize: [86, 22], iconAnchor: [24, 12] })}
             />
+
+            {carPosition ? (
+              <Marker
+                position={carPosition}
+                icon={L.divIcon({
+                  className: "carMarker",
+                  html: `<span style="display:inline-block;transform:rotate(${carAngle.toFixed(1)}deg);font-size:20px;">🚗</span>`,
+                  iconSize: [24, 24],
+                  iconAnchor: [12, 12]
+                })}
+              />
+            ) : null}
           </>
         ) : null
     },

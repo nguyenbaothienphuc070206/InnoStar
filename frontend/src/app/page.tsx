@@ -118,6 +118,11 @@ type LandmarkJourney = {
   etaMin: number;
 };
 
+type LandmarkPreview = {
+  guide: StoryCharacter;
+  landmark: GuideLandmark;
+};
+
 type GuideProfile = {
   label: string;
   vibe: string;
@@ -553,6 +558,7 @@ export default function Home() {
   const [guideSubtitle, setGuideSubtitle] = useState("Mình đang sẵn sàng dẫn bạn đi.");
   const [activeLandmarkId, setActiveLandmarkId] = useState<string | null>(null);
   const [landmarkJourney, setLandmarkJourney] = useState<LandmarkJourney | null>(null);
+  const [landmarkPreview, setLandmarkPreview] = useState<LandmarkPreview | null>(null);
   const [guidePanelMinimized, setGuidePanelMinimized] = useState(false);
   const zoneRegenerationTokenRef = useRef(0);
   const storyLayerHydratedRef = useRef(false);
@@ -1929,13 +1935,19 @@ export default function Home() {
     speakText("Đi hẻm này, ít người biết nhưng ổn áp lắm", character);
   }
 
-  async function handleLandmarkClick(guide: StoryCharacter, landmark: GuideLandmark) {
+  async function handleLandmarkClick(guide: StoryCharacter, landmark: GuideLandmark, buildRoute = true) {
     setSelectedDebate(guide);
     setActiveLandmarkId(landmark.id);
+    setLandmarkPreview({ guide, landmark });
     setMapCenter({ lat: landmark.lat, lng: landmark.lng });
-    setGuideSubtitle(`Đang tính đường tới ${landmark.name}...`);
+    setGuideSubtitle(buildRoute ? `Đang tính đường tới ${landmark.name}...` : `${landmark.name}: ${landmark.description}`);
     setCityNarration(`📍 ${landmark.name} - ${landmark.description}`);
     setBehaviorHint(`🧭 ${guideProfiles[guide].label} đang dẫn bạn tới ${landmark.name}. Đồng thời gợi ý bãi đỗ xe hợp lý gần điểm này.`);
+
+    if (!buildRoute) {
+      speakText(`Đây là ${landmark.name}. ${landmark.description}`, guide);
+      return;
+    }
 
     const target: [number, number] = [landmark.lat, landmark.lng];
     const directDistanceKm = calcDistanceKm(userLocation, target);
@@ -2203,17 +2215,26 @@ export default function Home() {
               <h5>Địa danh theo {activeGuide.label}</h5>
               <div className="guideLandmarkList">
                 {guideLandmarks[selectedDebate].map((landmark) => (
-                  <button
+                  <article
                     key={landmark.id}
                     className={`guideLandmarkItem ${activeLandmarkId === landmark.id ? "active" : ""}`}
-                      onClick={() => {
-                        void handleLandmarkClick(selectedDebate, landmark);
-                      }}
+                    onClick={() => {
+                      void handleLandmarkClick(selectedDebate, landmark, false);
+                    }}
                   >
                     <span className="guideLandmarkDot" />
                     <strong>{landmark.name}</strong>
                     <small>{landmark.description}</small>
-                  </button>
+                    <button
+                      className="guideNavigateBtn"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void handleLandmarkClick(selectedDebate, landmark, true);
+                      }}
+                    >
+                      Dẫn tôi tới bản đồ
+                    </button>
+                  </article>
                 ))}
               </div>
             </section>
@@ -2232,6 +2253,13 @@ export default function Home() {
               <p>{landmarkJourney.description}</p>
               <span>Quãng đường: {landmarkJourney.distanceKm.toFixed(2)} km</span>
               <span>Dự kiến: {landmarkJourney.etaMin} phút</span>
+            </div>
+          ) : null}
+          {landmarkPreview && landmarkPreview.guide === selectedDebate ? (
+            <div className="landmarkPreviewCard">
+              <strong>{landmarkPreview.landmark.name}</strong>
+              <p>{landmarkPreview.landmark.description}</p>
+              <span>Nhấn "Dẫn tôi tới bản đồ" để mở chỉ đường và ETA.</span>
             </div>
           ) : null}
             </div>

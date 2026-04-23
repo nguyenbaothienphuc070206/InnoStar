@@ -1138,6 +1138,33 @@ body {
   color: #b8d0d9;
 }
 
+.landmarkPreviewCard {
+  margin-top: 6px;
+  border-radius: 8px;
+  border: 1px dashed rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 7px;
+  display: grid;
+  gap: 3px;
+}
+
+.landmarkPreviewCard strong {
+  font-size: 0.66rem;
+  color: #eef8fd;
+}
+
+.landmarkPreviewCard p {
+  margin: 0;
+  font-size: 0.62rem;
+  color: #c6dae2;
+  line-height: 1.35;
+}
+
+.landmarkPreviewCard span {
+  font-size: 0.61rem;
+  color: #aecad4;
+}
+
 .guideSections {
   margin-top: 4px;
   display: grid;
@@ -1171,6 +1198,7 @@ body {
   padding: 5px 6px;
   display: grid;
   gap: 1px;
+  cursor: pointer;
 }
 
 .guideLandmarkItem strong {
@@ -1187,6 +1215,14 @@ body {
 .guideLandmarkItem.active {
   border-color: var(--city-tone);
   box-shadow: 0 0 10px color-mix(in srgb, var(--city-tone) 25%, transparent);
+}
+
+.guideNavigateBtn {
+  margin-top: 4px;
+  justify-self: start;
+  padding: 4px 7px;
+  border-radius: 7px;
+  font-size: 0.6rem;
 }
 
 .guideLandmarkDot {

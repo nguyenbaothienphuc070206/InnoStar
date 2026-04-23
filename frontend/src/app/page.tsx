@@ -106,28 +106,28 @@ type StoryContext = "find" | "route" | "inspect" | "available" | "soon" | "full"
 type GuideProfile = {
   label: string;
   vibe: string;
-  routeBias: "Nhanh" | "Xanh" | "Can bang";
+  routeBias: "Nhanh" | "Xanh" | "Cân bằng";
   intro: string;
 };
 
 const guideProfiles: Record<StoryCharacter, GuideProfile> = {
   driver: {
-    label: "Tai xe",
-    vibe: "Nhanh, quyet, practical",
+    label: "Tài xế",
+    vibe: "Nhanh, quyết, thực dụng",
     routeBias: "Nhanh",
-    intro: "Uu tien den noi som, cat goc tap trung."
+    intro: "Ưu tiên đến nơi sớm, cắt góc tập trung."
   },
   coba: {
-    label: "Co Ba",
-    vibe: "Am, cham, xanh",
+    label: "Cô Ba",
+    vibe: "Ấm, chậm, xanh",
     routeBias: "Xanh",
-    intro: "Uu tien tuyen thoang, giam ap luc trung tam."
+    intro: "Ưu tiên tuyến thoáng, giảm áp lực trung tâm."
   },
   youth: {
-    label: "Thanh nien",
-    vibe: "Kham pha, local, can bang",
-    routeBias: "Can bang",
-    intro: "Can bang toc do va trai nghiem khu pho."
+    label: "Thanh niên",
+    vibe: "Khám phá, local, cân bằng",
+    routeBias: "Cân bằng",
+    intro: "Cân bằng tốc độ và trải nghiệm khu phố."
   }
 };
 
@@ -504,16 +504,16 @@ export default function Home() {
   useEffect(() => {
     if (cityState.mood === "CHAOTIC") {
       setCityMood("CHAOTIC");
-      setCityNarration("Thanh pho dang hon loan, uu tien dieu huong thich nghi.");
+      setCityNarration("Thành phố đang hỗn loạn, ưu tiên điều hướng thích nghi.");
       return;
     }
     if (cityState.mood === "STRESSED") {
       setCityMood("STRESSED");
-      setCityNarration("Thanh pho dang cang thang, nen giam ap luc trung tam.");
+      setCityNarration("Thành phố đang căng thẳng, nên giảm áp lực trung tâm.");
       return;
     }
     setCityMood("CALM");
-    setCityNarration("Thanh pho dang em, co the uu tien hanh trinh xanh.");
+    setCityNarration("Thành phố đang êm, có thể ưu tiên hành trình xanh.");
   }, [cityState.mood]);
 
   useCityEngine({
@@ -1714,7 +1714,7 @@ export default function Home() {
     addLog("Demo mode started");
     speakText("Bắt đầu trải nghiệm thành phố thông minh");
 
-    setBehaviorHint("Demo mode: engine dang tu dieu phoi Find -> Route -> Navigation");
+    setBehaviorHint("Demo mode: engine đang tự điều phối Find -> Route -> Navigation");
     addLog("Demo flow executed");
     window.setTimeout(() => {
       setDemoRunning(false);
@@ -1725,24 +1725,24 @@ export default function Home() {
     setSelectedDebate(character);
     const profile = guideProfiles[character];
     if (character === "driver") {
-      setBehaviorHint(`🚕 ${profile.label}: uu tien tuyen nhanh.`);
+      setBehaviorHint(`🚕 ${profile.label}: ưu tiên tuyến nhanh.`);
       setCenterPressure((value) => value + 1);
       setMoralFeedback("Bạn vừa chọn nhanh hơn, nhưng tạo thêm khoảng 0.8kg CO2 😢");
-      speakText("Di nhanh thi vao trung tam thoi", character);
+      speakText("Đi nhanh thì vào trung tâm thôi", character);
       return;
     }
 
     if (character === "coba") {
-      setBehaviorHint(`👩 ${profile.label}: uu tien tuyen xanh giam un tac.`);
+      setBehaviorHint(`👩 ${profile.label}: ưu tiên tuyến xanh giảm ùn tắc.`);
       setMoralFeedback("Lựa chọn xanh giúp giảm tải trung tâm và tiết kiệm CO2 🌱");
       bumpEco(8, 0.2);
-      speakText("Di thong tha mot chut se de tho hon", character);
+      speakText("Đi thong thả một chút sẽ dễ thở hơn", character);
       return;
     }
 
-    setBehaviorHint(`🧑 ${profile.label}: goi y lo trinh can bang va local.`);
+    setBehaviorHint(`🧑 ${profile.label}: gợi ý lộ trình cân bằng và local.`);
     setMoralFeedback("Bạn chọn trải nghiệm cân bằng giữa tốc độ và phát thải.");
-    speakText("Di hem nay, it nguoi biet nhung on ap lam", character);
+    speakText("Đi hẻm này, ít người biết nhưng ổn áp lắm", character);
   }
 
   function startCinematicMode() {
@@ -1882,7 +1882,7 @@ export default function Home() {
           })}
         </div>
         <div className="guideCurrent">
-          <strong>Dang dan: {activeGuide.label}</strong>
+          <strong>Đang dẫn: {activeGuide.label}</strong>
           <span>{activeGuide.intro}</span>
         </div>
       </section>

@@ -103,6 +103,34 @@ type ParkingStreamPayload = {
 
 type StoryContext = "find" | "route" | "inspect" | "available" | "soon" | "full";
 
+type GuideProfile = {
+  label: string;
+  vibe: string;
+  routeBias: "Nhanh" | "Xanh" | "Can bang";
+  intro: string;
+};
+
+const guideProfiles: Record<StoryCharacter, GuideProfile> = {
+  driver: {
+    label: "Tai xe",
+    vibe: "Nhanh, quyet, practical",
+    routeBias: "Nhanh",
+    intro: "Uu tien den noi som, cat goc tap trung."
+  },
+  coba: {
+    label: "Co Ba",
+    vibe: "Am, cham, xanh",
+    routeBias: "Xanh",
+    intro: "Uu tien tuyen thoang, giam ap luc trung tam."
+  },
+  youth: {
+    label: "Thanh nien",
+    vibe: "Kham pha, local, can bang",
+    routeBias: "Can bang",
+    intro: "Can bang toc do va trai nghiem khu pho."
+  }
+};
+
 const storybook: Record<StoryCharacter, Record<StoryContext, string[]>> = {
   coba: {
     find: [
@@ -390,7 +418,7 @@ export default function Home() {
   const [navigationActive, setNavigationActive] = useState(false);
   const [cityMood, setCityMood] = useState<"CALM" | "CHAOTIC" | "STRESSED">("CALM");
   const [cityNarration, setCityNarration] = useState("");
-  const [selectedDebate, setSelectedDebate] = useState<"driver" | "coba" | "youth" | null>(null);
+  const [selectedDebate, setSelectedDebate] = useState<"driver" | "coba" | "youth">("coba");
   const [memoryHint, setMemoryHint] = useState("");
   const [moralFeedback, setMoralFeedback] = useState("");
   const [centerPressure, setCenterPressure] = useState(0);
@@ -444,6 +472,7 @@ export default function Home() {
   const debouncedQuery = useDebouncedValue(query, 280);
 
   const activeRouteMeta = routes[activeRoute] ?? null;
+  const activeGuide = guideProfiles[selectedDebate];
 
   const cityState = useMemo<CityState>(() => {
     const availabilityRatio = clamp(opsMetrics.availability / 100, 0, 1);
@@ -584,14 +613,14 @@ export default function Home() {
     setLogs((current) => [...current.slice(-14), `[${stamp}] ${message}`]);
   }
 
-  function speakText(text: string) {
+  function speakText(text: string, guide?: StoryCharacter) {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
       return;
     }
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "vi-VN";
-    const profile = voiceProfileForType(engineVoice);
+    const profile = guide ? voiceProfileForCharacter(guide) : voiceProfileForType(engineVoice);
     utterance.rate = profile.rate;
     utterance.pitch = profile.pitch;
     utterance.volume = profile.volume;
@@ -1694,25 +1723,26 @@ export default function Home() {
 
   function chooseDebate(character: "driver" | "coba" | "youth") {
     setSelectedDebate(character);
+    const profile = guideProfiles[character];
     if (character === "driver") {
-      setBehaviorHint("🚕 Tài xế chọn tuyến nhanh để vào trung tâm.");
+      setBehaviorHint(`🚕 ${profile.label}: uu tien tuyen nhanh.`);
       setCenterPressure((value) => value + 1);
       setMoralFeedback("Bạn vừa chọn nhanh hơn, nhưng tạo thêm khoảng 0.8kg CO2 😢");
-      speakText("Đi nhanh thì vào trung tâm thôi");
+      speakText("Di nhanh thi vao trung tam thoi", character);
       return;
     }
 
     if (character === "coba") {
-      setBehaviorHint("👩 Cô Ba đề xuất tuyến vòng nhẹ để giảm ùn tắc và CO2.");
+      setBehaviorHint(`👩 ${profile.label}: uu tien tuyen xanh giam un tac.`);
       setMoralFeedback("Lựa chọn xanh giúp giảm tải trung tâm và tiết kiệm CO2 🌱");
       bumpEco(8, 0.2);
-      speakText("Đi thong thả một chút sẽ dễ thở hơn");
+      speakText("Di thong tha mot chut se de tho hon", character);
       return;
     }
 
-    setBehaviorHint("🧑 Thanh niên gợi ý tuyến hẻm ít người biết.");
+    setBehaviorHint(`🧑 ${profile.label}: goi y lo trinh can bang va local.`);
     setMoralFeedback("Bạn chọn trải nghiệm cân bằng giữa tốc độ và phát thải.");
-    speakText("Đi hẻm này, ít người biết nhưng ổn áp lắm");
+    speakText("Di hem nay, it nguoi biet nhung on ap lam", character);
   }
 
   function startCinematicMode() {
@@ -1834,12 +1864,28 @@ export default function Home() {
         </button>
       </div>
 
-      <div className="debatePanel" data-testid="city-debate">
-        <p>🎭 City Debate</p>
-        <button className={selectedDebate === "driver" ? "active" : ""} onClick={() => chooseDebate("driver")}>🚕 Tài xế</button>
-        <button className={selectedDebate === "coba" ? "active" : ""} onClick={() => chooseDebate("coba")}>👩 Cô Ba</button>
-        <button className={selectedDebate === "youth" ? "active" : ""} onClick={() => chooseDebate("youth")}>🧑 Thanh niên</button>
-      </div>
+      <section className="guidePanel" data-testid="ai-tour-guides">
+        <p>AI Tour Guides</p>
+        <div className="guideGrid">
+          {(Object.keys(guideProfiles) as StoryCharacter[]).map((key) => {
+            const profile = guideProfiles[key];
+            const active = selectedDebate === key;
+            const icon = key === "driver" ? "🚕" : key === "coba" ? "👩" : "🧑";
+
+            return (
+              <button key={key} className={`guideItem ${active ? "active" : ""}`} onClick={() => chooseDebate(key)}>
+                <strong>{icon} {profile.label}</strong>
+                <span>{profile.vibe}</span>
+                <small>Route: {profile.routeBias}</small>
+              </button>
+            );
+          })}
+        </div>
+        <div className="guideCurrent">
+          <strong>Dang dan: {activeGuide.label}</strong>
+          <span>{activeGuide.intro}</span>
+        </div>
+      </section>
 
       {behaviorHint ? <div className="behaviorHintBanner">{behaviorHint}</div> : null}
       {memoryHint ? <div className="memoryHintBanner">{memoryHint}</div> : null}

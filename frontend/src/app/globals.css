@@ -940,6 +940,82 @@ body {
   font-size: 0.78rem;
 }
 
+.guidePanel {
+  position: absolute;
+  top: 118px;
+  left: 14px;
+  z-index: 52;
+  width: min(94vw, 360px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(4, 10, 14, 0.76);
+  backdrop-filter: blur(12px);
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.guidePanel p {
+  margin: 0;
+  font-size: 0.72rem;
+  color: #bdeaf5;
+  letter-spacing: 0.03em;
+}
+
+.guideGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+
+.guideItem {
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 7px 8px;
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+}
+
+.guideItem strong {
+  font-size: 0.72rem;
+  color: #e7f7ff;
+}
+
+.guideItem span {
+  font-size: 0.64rem;
+  color: #b4cad3;
+}
+
+.guideItem small {
+  font-size: 0.62rem;
+  color: #95b7c3;
+}
+
+.guideItem.active {
+  border-color: var(--city-tone);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--city-tone) 25%, transparent);
+}
+
+.guideCurrent {
+  border-radius: 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.24);
+  padding: 7px 8px;
+  display: grid;
+  gap: 2px;
+}
+
+.guideCurrent strong {
+  font-size: 0.68rem;
+  color: #e6fcff;
+}
+
+.guideCurrent span {
+  font-size: 0.65rem;
+  color: #bdd3da;
+}
+
 .storyBubble {
   position: absolute;
   left: 50%;
@@ -1437,6 +1513,16 @@ button:active {
     font-size: 0.86rem;
   }
 
+  .guidePanel {
+    top: 126px;
+    left: 16px;
+    width: 370px;
+  }
+
+  .guideGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .routeOptionsBar {
     bottom: 132px;
   }
@@ -1475,6 +1561,17 @@ button:active {
   .topSearch {
     padding: 8px 10px;
     font-size: 0.78rem;
+  }
+
+  .guidePanel {
+    top: 62px;
+    left: 8px;
+    width: min(96vw, 360px);
+    padding: 8px;
+  }
+
+  .guideGrid {
+    grid-template-columns: 1fr;
   }
 
   .adminToggle {

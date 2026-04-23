@@ -545,6 +545,7 @@ export default function Home() {
   const [guideMotionFrame, setGuideMotionFrame] = useState<GuideMotionFrame>("idle");
   const [guideSubtitle, setGuideSubtitle] = useState("Mình đang sẵn sàng dẫn bạn đi.");
   const [activeLandmarkId, setActiveLandmarkId] = useState<string | null>(null);
+  const [guidePanelMinimized, setGuidePanelMinimized] = useState(false);
   const zoneRegenerationTokenRef = useRef(0);
   const storyLayerHydratedRef = useRef(false);
   const storyVoiceHydratedRef = useRef(false);
@@ -591,27 +592,24 @@ export default function Home() {
     () => (Object.keys(guideLandmarks) as StoryCharacter[]).flatMap((guide) => guideLandmarks[guide].map((item) => ({ ...item, guide }))),
     []
   );
-  const guideParkingRecommendations = useMemo(() => {
+  const guideParkingRecommendationsByGuide = useMemo(() => {
     const available = slots
       .filter((slot) => slot.available || slot.soon)
       .sort((a, b) => (a.distanceM ?? 9999) - (b.distanceM ?? 9999));
 
-    if (selectedDebate === "coba") {
-      return available
+    return {
+      coba: available
         .filter((slot) => slot.zone === "green")
-        .slice(0, 3);
-    }
-
-    if (selectedDebate === "driver") {
-      return available
-        .filter((slot) => slot.zone === "standard")
-        .slice(0, 3);
-    }
-
-    return available
-      .filter((slot) => (slot.distanceM ?? 9999) >= 140)
-      .slice(0, 3);
-  }, [selectedDebate, slots]);
+        .slice(0, 3),
+      driver: available
+        .filter((slot) => slot.zone === "standard" && (slot.distanceM ?? 9999) <= 320)
+        .slice(0, 3),
+      youth: available
+        .filter((slot) => (slot.distanceM ?? 0) >= 180)
+        .slice(0, 3)
+    } as Record<StoryCharacter, Slot[]>;
+  }, [slots]);
+  const activeGuideParkingRecommendations = guideParkingRecommendationsByGuide[selectedDebate];
 
   const cityState = useMemo<CityState>(() => {
     const availabilityRatio = clamp(opsMetrics.availability / 100, 0, 1);
@@ -2055,24 +2053,32 @@ export default function Home() {
         </button>
       </div>
 
-      <section className="guidePanel" data-testid="ai-tour-guides">
-        <p>AI Tour Guides</p>
-        <div className="guideGrid">
-          {(Object.keys(guideProfiles) as StoryCharacter[]).map((key) => {
-            const profile = guideProfiles[key];
-            const active = selectedDebate === key;
-            const icon = key === "driver" ? "🚕" : key === "coba" ? "👩" : "🧑";
-
-            return (
-              <button key={key} className={`guideItem ${active ? "active" : ""}`} onClick={() => chooseDebate(key)}>
-                <strong>{icon} {profile.label}</strong>
-                <span>{profile.vibe}</span>
-                <small>Route: {profile.routeBias}</small>
-              </button>
-            );
-          })}
+      <section className={`guidePanel ${guidePanelMinimized ? "minimized" : ""}`} data-testid="ai-tour-guides">
+        <div className="guidePanelHeader">
+          <p>AI Tour Guides</p>
+          <button className="guidePanelToggle" onClick={() => setGuidePanelMinimized((value) => !value)}>
+            {guidePanelMinimized ? "Mở" : "Thu gọn"}
+          </button>
         </div>
-        <div className="guideCurrent">
+
+        {!guidePanelMinimized ? (
+          <div className="guidePanelBody">
+            <div className="guideGrid">
+              {(Object.keys(guideProfiles) as StoryCharacter[]).map((key) => {
+                const profile = guideProfiles[key];
+                const active = selectedDebate === key;
+                const icon = key === "driver" ? "🚕" : key === "coba" ? "👩" : "🧑";
+
+                return (
+                  <button key={key} className={`guideItem ${active ? "active" : ""}`} onClick={() => chooseDebate(key)}>
+                    <strong>{icon} {profile.label}</strong>
+                    <span>{profile.vibe}</span>
+                    <small>Route: {profile.routeBias}</small>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="guideCurrent">
           <strong>Đang dẫn: {activeGuide.label}</strong>
           <div className="guideAvatarStage">
             <img
@@ -2091,34 +2097,34 @@ export default function Home() {
             ))}
           </ul>
           <div className="guideSections">
-            {(Object.keys(guideLandmarks) as StoryCharacter[]).map((guide) => (
-              <section key={guide} className="guideSection">
-                <h5>{guideProfiles[guide].label}</h5>
-                <div className="guideLandmarkList">
-                  {guideLandmarks[guide].map((landmark) => (
-                    <button
-                      key={landmark.id}
-                      className={`guideLandmarkItem ${activeLandmarkId === landmark.id ? "active" : ""}`}
-                      onClick={() => handleLandmarkClick(guide, landmark)}
-                    >
-                      <span className="guideLandmarkDot" />
-                      <strong>{landmark.name}</strong>
-                      <small>{landmark.description}</small>
-                    </button>
-                  ))}
-                </div>
-              </section>
-            ))}
+            <section className="guideSection">
+              <h5>Địa danh theo {activeGuide.label}</h5>
+              <div className="guideLandmarkList">
+                {guideLandmarks[selectedDebate].map((landmark) => (
+                  <button
+                    key={landmark.id}
+                    className={`guideLandmarkItem ${activeLandmarkId === landmark.id ? "active" : ""}`}
+                    onClick={() => handleLandmarkClick(selectedDebate, landmark)}
+                  >
+                    <span className="guideLandmarkDot" />
+                    <strong>{landmark.name}</strong>
+                    <small>{landmark.description}</small>
+                  </button>
+                ))}
+              </div>
+            </section>
           </div>
           <div className="guideParkingTips">
             <strong>Gợi ý chỗ đỗ hợp lý:</strong>
-            {guideParkingRecommendations.length > 0 ? (
-              <span>{guideParkingRecommendations.map((slot) => `S${slot.id}`).join(" • ")} ({activeGuide.routeBias})</span>
+            {activeGuideParkingRecommendations.length > 0 ? (
+              <span>{activeGuideParkingRecommendations.map((slot) => `S${slot.id}`).join(" • ")} ({activeGuide.routeBias})</span>
             ) : (
               <span>Đang cập nhật bãi phù hợp...</span>
             )}
           </div>
-        </div>
+            </div>
+          </div>
+        ) : null}
       </section>
 
       {behaviorHint ? <div className="behaviorHintBanner">{behaviorHint}</div> : null}

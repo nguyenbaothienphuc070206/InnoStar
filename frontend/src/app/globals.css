@@ -955,6 +955,31 @@ body {
   gap: 8px;
 }
 
+.guidePanel.minimized {
+  width: min(78vw, 260px);
+}
+
+.guidePanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.guidePanelToggle {
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 0.64rem;
+}
+
+.guidePanelBody {
+  max-height: min(52vh, 420px);
+  overflow-y: auto;
+  padding-right: 4px;
+  display: grid;
+  gap: 8px;
+}
+
 .guidePanel p {
   margin: 0;
   font-size: 0.72rem;

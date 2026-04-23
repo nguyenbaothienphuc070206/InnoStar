@@ -102,11 +102,15 @@ type ParkingStreamPayload = {
 };
 
 type StoryContext = "find" | "route" | "inspect" | "available" | "soon" | "full";
+type GuideMotionFrame = "idle" | "up" | "down";
 
 type GuideProfile = {
   label: string;
   vibe: string;
   routeBias: "Nhanh" | "Xanh" | "Cân bằng";
+  theme: string;
+  places: string[];
+  parkingStrategy: string;
   intro: string;
 };
 
@@ -115,19 +119,28 @@ const guideProfiles: Record<StoryCharacter, GuideProfile> = {
     label: "Tài xế",
     vibe: "Nhanh, quyết, thực dụng",
     routeBias: "Nhanh",
-    intro: "Ưu tiên đến nơi sớm, cắt góc tập trung."
+    theme: "Đời thường bản địa",
+    places: ["Công viên 23/9", "Nhà Văn hóa Thanh Niên", "Công viên Lê Văn Tám"],
+    parkingStrategy: "Ưu tiên bãi gần trục đông người, vào ra nhanh",
+    intro: "Dẫn bạn đến các điểm đời sống bản địa, dễ hòa vào nhịp sống thành phố."
   },
   coba: {
     label: "Cô Ba",
     vibe: "Ấm, chậm, xanh",
     routeBias: "Xanh",
-    intro: "Ưu tiên tuyến thoáng, giảm áp lực trung tâm."
+    theme: "Tham quan lịch sử",
+    places: ["Bảo tàng Chứng tích Chiến tranh", "Bảo tàng TP.HCM", "Dinh Độc Lập"],
+    parkingStrategy: "Ưu tiên bãi xanh và đi bộ 200-400m để thoáng khu trung tâm",
+    intro: "Dẫn bạn đi các điểm lịch sử tiêu biểu vì Sài Gòn chứng kiến nhiều cột mốc quan trọng."
   },
   youth: {
     label: "Thanh niên",
     vibe: "Khám phá, local, cân bằng",
     routeBias: "Cân bằng",
-    intro: "Cân bằng tốc độ và trải nghiệm khu phố."
+    theme: "Khám phá local ít người biết",
+    places: ["Quán cà phê hẻm Cô Giang", "Tiệm ăn local khu Bàn Cờ", "Rooftop nhỏ khu Nguyễn Trãi"],
+    parkingStrategy: "Ưu tiên bãi rìa khu hẻm để khám phá đi bộ thuận tiện",
+    intro: "Dẫn bạn săn quán local ít review, thiên về trải nghiệm và khám phá."
   }
 };
 
@@ -216,6 +229,24 @@ const storyIcon: Record<StoryCharacter, string> = {
   coba: "🎭",
   driver: "🚕",
   youth: "🧢"
+};
+
+const guideMotionImageMap: Record<StoryCharacter, Record<GuideMotionFrame, string>> = {
+  driver: {
+    idle: "/guides/driver-idle.svg",
+    up: "/guides/driver-up.svg",
+    down: "/guides/driver-down.svg"
+  },
+  coba: {
+    idle: "/guides/coba-idle.svg",
+    up: "/guides/coba-up.svg",
+    down: "/guides/coba-down.svg"
+  },
+  youth: {
+    idle: "/guides/youth-idle.svg",
+    up: "/guides/youth-up.svg",
+    down: "/guides/youth-down.svg"
+  }
 };
 
 function pickStory(character: StoryCharacter, context: StoryContext): StoryMessage {
@@ -432,6 +463,8 @@ export default function Home() {
   const [animationSpeed, setAnimationSpeed] = useState(1);
   const [cityTone, setCityTone] = useState("#5DFF34");
   const [autoPilot, setAutoPilot] = useState(false);
+  const [guideMotionFrame, setGuideMotionFrame] = useState<GuideMotionFrame>("idle");
+  const [guideSubtitle, setGuideSubtitle] = useState("Mình đang sẵn sàng dẫn bạn đi.");
   const zoneRegenerationTokenRef = useRef(0);
   const storyLayerHydratedRef = useRef(false);
   const storyVoiceHydratedRef = useRef(false);
@@ -444,6 +477,7 @@ export default function Home() {
   const routeBusyRef = useRef(false);
   const cinematicTimerRef = useRef<number | null>(null);
   const nextEngineActionRef = useRef(0);
+  const guideMotionTimerRef = useRef<number | null>(null);
   const adminResizeStartXRef = useRef(0);
   const adminResizeStartWidthRef = useRef(340);
 
@@ -473,6 +507,27 @@ export default function Home() {
 
   const activeRouteMeta = routes[activeRoute] ?? null;
   const activeGuide = guideProfiles[selectedDebate];
+  const guideParkingRecommendations = useMemo(() => {
+    const available = slots
+      .filter((slot) => slot.available || slot.soon)
+      .sort((a, b) => (a.distanceM ?? 9999) - (b.distanceM ?? 9999));
+
+    if (selectedDebate === "coba") {
+      return available
+        .filter((slot) => slot.zone === "green")
+        .slice(0, 3);
+    }
+
+    if (selectedDebate === "driver") {
+      return available
+        .filter((slot) => slot.zone === "standard")
+        .slice(0, 3);
+    }
+
+    return available
+      .filter((slot) => (slot.distanceM ?? 9999) >= 140)
+      .slice(0, 3);
+  }, [selectedDebate, slots]);
 
   const cityState = useMemo<CityState>(() => {
     const availabilityRatio = clamp(opsMetrics.availability / 100, 0, 1);
@@ -613,10 +668,42 @@ export default function Home() {
     setLogs((current) => [...current.slice(-14), `[${stamp}] ${message}`]);
   }
 
+  function clearGuideMotionTimer() {
+    if (guideMotionTimerRef.current) {
+      window.clearInterval(guideMotionTimerRef.current);
+      guideMotionTimerRef.current = null;
+    }
+  }
+
+  function animateGuideSpeech(text: string, guide: StoryCharacter) {
+    clearGuideMotionTimer();
+    setGuideSubtitle(text);
+    setGuideMotionFrame("up");
+
+    let toggle = false;
+    const cycleMs = Math.max(220, Math.round(420 / animationSpeed));
+    const durationMs = Math.min(6400, Math.max(1200, text.length * 75));
+    const startedAt = Date.now();
+
+    guideMotionTimerRef.current = window.setInterval(() => {
+      toggle = !toggle;
+      setGuideMotionFrame(toggle ? "up" : "down");
+
+      if (Date.now() - startedAt >= durationMs) {
+        clearGuideMotionTimer();
+        setGuideMotionFrame("idle");
+      }
+    }, cycleMs);
+  }
+
   function speakText(text: string, guide?: StoryCharacter) {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
       return;
     }
+
+    const activeGuide = guide ?? selectedDebate;
+    animateGuideSpeech(text, activeGuide);
+    window.speechSynthesis.cancel();
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "vi-VN";
@@ -624,6 +711,10 @@ export default function Home() {
     utterance.rate = profile.rate;
     utterance.pitch = profile.pitch;
     utterance.volume = profile.volume;
+    utterance.onend = () => {
+      clearGuideMotionTimer();
+      setGuideMotionFrame("idle");
+    };
     window.speechSynthesis.speak(utterance);
   }
 
@@ -878,6 +969,7 @@ export default function Home() {
       if (voiceTimerRef.current) {
         window.clearTimeout(voiceTimerRef.current);
       }
+      clearGuideMotionTimer();
       audioContextRef.current?.close().catch(() => undefined);
       cancelVoicePlayback();
     };
@@ -1724,8 +1816,10 @@ export default function Home() {
   function chooseDebate(character: "driver" | "coba" | "youth") {
     setSelectedDebate(character);
     const profile = guideProfiles[character];
+    setQuery(profile.places[0]);
+    setGuideSubtitle(`Đã chọn ${profile.label}. ${profile.intro}`);
     if (character === "driver") {
-      setBehaviorHint(`🚕 ${profile.label}: ưu tiên tuyến nhanh.`);
+      setBehaviorHint(`🚕 ${profile.label}: tập trung điểm đời thường, dễ trải nghiệm nhịp sống bản địa.`);
       setCenterPressure((value) => value + 1);
       setMoralFeedback("Bạn vừa chọn nhanh hơn, nhưng tạo thêm khoảng 0.8kg CO2 😢");
       speakText("Đi nhanh thì vào trung tâm thôi", character);
@@ -1733,14 +1827,14 @@ export default function Home() {
     }
 
     if (character === "coba") {
-      setBehaviorHint(`👩 ${profile.label}: ưu tiên tuyến xanh giảm ùn tắc.`);
+      setBehaviorHint(`👩 ${profile.label}: dẫn đi bảo tàng và điểm lịch sử, ưu tiên tuyến xanh giảm ùn tắc.`);
       setMoralFeedback("Lựa chọn xanh giúp giảm tải trung tâm và tiết kiệm CO2 🌱");
       bumpEco(8, 0.2);
       speakText("Đi thong thả một chút sẽ dễ thở hơn", character);
       return;
     }
 
-    setBehaviorHint(`🧑 ${profile.label}: gợi ý lộ trình cân bằng và local.`);
+    setBehaviorHint(`🧑 ${profile.label}: dẫn bạn khám phá quán local ít người biết, thiên về trải nghiệm.`);
     setMoralFeedback("Bạn chọn trải nghiệm cân bằng giữa tốc độ và phát thải.");
     speakText("Đi hẻm này, ít người biết nhưng ổn áp lắm", character);
   }
@@ -1883,7 +1977,30 @@ export default function Home() {
         </div>
         <div className="guideCurrent">
           <strong>Đang dẫn: {activeGuide.label}</strong>
+          <div className="guideAvatarStage">
+            <img
+              src={guideMotionImageMap[selectedDebate][guideMotionFrame]}
+              alt={`Hướng dẫn viên ${activeGuide.label}`}
+              className={`guideAvatar guideAvatar-${guideMotionFrame}`}
+            />
+          </div>
+          <em className="guideSubtitle">{guideSubtitle}</em>
           <span>{activeGuide.intro}</span>
+          <small>Phong cách tour: {activeGuide.theme}</small>
+          <small>Chiến lược đỗ xe: {activeGuide.parkingStrategy}</small>
+          <ul className="guidePlaces">
+            {activeGuide.places.map((place) => (
+              <li key={place}>{place}</li>
+            ))}
+          </ul>
+          <div className="guideParkingTips">
+            <strong>Gợi ý chỗ đỗ hợp lý:</strong>
+            {guideParkingRecommendations.length > 0 ? (
+              <span>{guideParkingRecommendations.map((slot) => `S${slot.id}`).join(" • ")} ({activeGuide.routeBias})</span>
+            ) : (
+              <span>Đang cập nhật bãi phù hợp...</span>
+            )}
+          </div>
         </div>
       </section>
 

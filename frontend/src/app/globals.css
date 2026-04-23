@@ -1006,6 +1006,39 @@ body {
   gap: 2px;
 }
 
+.guideAvatarStage {
+  margin-top: 4px;
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.03);
+  display: flex;
+  justify-content: center;
+  padding: 6px;
+}
+
+.guideAvatar {
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
+  transition: transform 120ms ease;
+}
+
+.guideAvatar-up {
+  transform: translateY(-1px) scale(1.02);
+}
+
+.guideAvatar-down {
+  transform: translateY(1px) scale(0.99);
+}
+
+.guideSubtitle {
+  margin-top: 4px;
+  font-size: 0.63rem;
+  color: #dbf0f6;
+  line-height: 1.35;
+}
+
 .guideCurrent strong {
   font-size: 0.68rem;
   color: #e6fcff;
@@ -1014,6 +1047,43 @@ body {
 .guideCurrent span {
   font-size: 0.65rem;
   color: #bdd3da;
+}
+
+.guideCurrent small {
+  font-size: 0.63rem;
+  color: #a8c5cf;
+}
+
+.guidePlaces {
+  margin: 4px 0 0;
+  padding-left: 16px;
+  display: grid;
+  gap: 2px;
+}
+
+.guidePlaces li {
+  font-size: 0.63rem;
+  color: #d7ebf1;
+}
+
+.guideParkingTips {
+  margin-top: 4px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 6px;
+  display: grid;
+  gap: 2px;
+}
+
+.guideParkingTips strong {
+  font-size: 0.63rem;
+  color: #ecf7ff;
+}
+
+.guideParkingTips span {
+  font-size: 0.63rem;
+  color: #bcd3dc;
 }
 
 .storyBubble {

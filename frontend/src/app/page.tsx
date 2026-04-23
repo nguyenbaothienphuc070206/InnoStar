@@ -110,6 +110,13 @@ type GuideLandmark = {
   lat: number;
   lng: number;
 };
+type LandmarkJourney = {
+  guide: StoryCharacter;
+  name: string;
+  description: string;
+  distanceKm: number;
+  etaMin: number;
+};
 
 type GuideProfile = {
   label: string;
@@ -545,6 +552,7 @@ export default function Home() {
   const [guideMotionFrame, setGuideMotionFrame] = useState<GuideMotionFrame>("idle");
   const [guideSubtitle, setGuideSubtitle] = useState("Mình đang sẵn sàng dẫn bạn đi.");
   const [activeLandmarkId, setActiveLandmarkId] = useState<string | null>(null);
+  const [landmarkJourney, setLandmarkJourney] = useState<LandmarkJourney | null>(null);
   const [guidePanelMinimized, setGuidePanelMinimized] = useState(false);
   const zoneRegenerationTokenRef = useRef(0);
   const storyLayerHydratedRef = useRef(false);
@@ -1921,13 +1929,105 @@ export default function Home() {
     speakText("Đi hẻm này, ít người biết nhưng ổn áp lắm", character);
   }
 
-  function handleLandmarkClick(guide: StoryCharacter, landmark: GuideLandmark) {
+  async function handleLandmarkClick(guide: StoryCharacter, landmark: GuideLandmark) {
     setSelectedDebate(guide);
     setActiveLandmarkId(landmark.id);
     setMapCenter({ lat: landmark.lat, lng: landmark.lng });
-    setGuideSubtitle(`${landmark.name}: ${landmark.description}`);
+    setGuideSubtitle(`Đang tính đường tới ${landmark.name}...`);
     setCityNarration(`📍 ${landmark.name} - ${landmark.description}`);
     setBehaviorHint(`🧭 ${guideProfiles[guide].label} đang dẫn bạn tới ${landmark.name}. Đồng thời gợi ý bãi đỗ xe hợp lý gần điểm này.`);
+
+    const target: [number, number] = [landmark.lat, landmark.lng];
+    const directDistanceKm = calcDistanceKm(userLocation, target);
+    const fallbackEta = Math.max(3, Math.round((directDistanceKm / speedByTraffic(trafficLevel)) * 60));
+
+    let nextRoutes: RouteOption[] = [];
+    let bestIndex = 0;
+
+    try {
+      const routeUrl =
+        `${backendUrl}/parking/route-options?fromLat=${userLocation[0]}&fromLng=${userLocation[1]}&toLat=${target[0]}&toLng=${target[1]}`;
+      const response = await fetchWithRetry(routeUrl, undefined, 2, 4500);
+      const backendRoutes = (await response.json()) as Array<{
+        profile?: "fastest" | "eco" | "chill";
+        distance: number;
+        etaMinutes: number;
+        etaMin?: number;
+        etaMax?: number;
+        traffic?: StreamTraffic;
+        confidence?: "HIGH" | "MEDIUM" | "LOW";
+        reason?: string[];
+        path: Array<[number, number]>;
+      }>;
+
+      if (Array.isArray(backendRoutes) && backendRoutes.length > 0) {
+        nextRoutes = backendRoutes.map((item) => ({
+          coords: item.path,
+          durationMin: item.etaMinutes,
+          smartEtaMin: item.etaMinutes,
+          etaMin: item.etaMin,
+          etaMax: item.etaMax,
+          traffic: item.traffic,
+          confidence: item.confidence,
+          reason: item.reason,
+          penaltyScore: item.profile === "eco" ? 4 : item.profile === "chill" ? 7 : 12,
+          distanceKm: Math.max(0.2, Number((item.distance / 1000).toFixed(2))),
+          steps: [
+            `Xuất phát đến ${landmark.name}`,
+            guide === "coba" ? "Ưu tiên tuyến xanh" : guide === "driver" ? "Ưu tiên tuyến nhanh" : "Ưu tiên tuyến khám phá cân bằng",
+            `Đến ${landmark.name}`
+          ]
+        }));
+
+        const preferredProfile = guide === "coba" ? "eco" : guide === "driver" ? "fastest" : "chill";
+        bestIndex = Math.max(0, backendRoutes.findIndex((item) => item.profile === preferredProfile));
+      }
+    } catch {
+      // Fallback route below keeps flow stable.
+    }
+
+    if (!nextRoutes.length) {
+      nextRoutes = [
+        {
+          coords: [
+            userLocation,
+            [target[0], userLocation[1]],
+            target
+          ],
+          durationMin: fallbackEta,
+          smartEtaMin: fallbackEta,
+          etaMin: Math.max(2, fallbackEta - 2),
+          etaMax: fallbackEta + 3,
+          traffic: trafficLevel,
+          confidence: "LOW",
+          reason: ["Fallback route", "Network degraded"],
+          penaltyScore: 9,
+          distanceKm: Number(directDistanceKm.toFixed(2)),
+          steps: [`Xuất phát đến ${landmark.name}`, "Đi theo trục chính", `Đến ${landmark.name}`]
+        }
+      ];
+      bestIndex = 0;
+    }
+
+    const active = nextRoutes[bestIndex];
+    setRoutes(nextRoutes);
+    setActiveRoute(bestIndex);
+    setTurnSteps(active.steps);
+    setEtaMinutes(active.smartEtaMin);
+    setDistanceLeftKm(active.distanceKm);
+    setRouteConfidence(active.confidence ?? "MEDIUM");
+    setRouteFocusToken((value) => value + 1);
+    setNavigationActive(false);
+
+    setLandmarkJourney({
+      guide,
+      name: landmark.name,
+      description: landmark.description,
+      distanceKm: active.distanceKm,
+      etaMin: active.smartEtaMin
+    });
+    setGuideSubtitle(`📌 ${landmark.name} • ${active.distanceKm} km • ${active.smartEtaMin} phút`);
+    setStatusMessage(`Lộ trình đến ${landmark.name}: ${active.smartEtaMin} phút, ${active.distanceKm} km`);
     speakText(`Đây là ${landmark.name}. ${landmark.description}`, guide);
   }
 
@@ -2001,7 +2101,9 @@ export default function Home() {
         onViewportCenterChange={(center) => {
           setMapCenter(center);
         }}
-        onLandmarkClick={(landmark) => handleLandmarkClick(landmark.guide, landmark)}
+        onLandmarkClick={(landmark) => {
+          void handleLandmarkClick(landmark.guide, landmark);
+        }}
         onSlotClick={(slot) => {
           if (adminMode === "full") {
             setAdminMode("compact");
@@ -2104,7 +2206,9 @@ export default function Home() {
                   <button
                     key={landmark.id}
                     className={`guideLandmarkItem ${activeLandmarkId === landmark.id ? "active" : ""}`}
-                    onClick={() => handleLandmarkClick(selectedDebate, landmark)}
+                      onClick={() => {
+                        void handleLandmarkClick(selectedDebate, landmark);
+                      }}
                   >
                     <span className="guideLandmarkDot" />
                     <strong>{landmark.name}</strong>
@@ -2122,6 +2226,14 @@ export default function Home() {
               <span>Đang cập nhật bãi phù hợp...</span>
             )}
           </div>
+          {landmarkJourney && landmarkJourney.guide === selectedDebate ? (
+            <div className="landmarkJourneyCard">
+              <strong>{landmarkJourney.name}</strong>
+              <p>{landmarkJourney.description}</p>
+              <span>Quãng đường: {landmarkJourney.distanceKm.toFixed(2)} km</span>
+              <span>Dự kiến: {landmarkJourney.etaMin} phút</span>
+            </div>
+          ) : null}
             </div>
           </div>
         ) : null}

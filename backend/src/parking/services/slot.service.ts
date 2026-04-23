@@ -4,7 +4,7 @@ import { Slot, SlotPrediction, ZoneHeat } from "../parking.types";
 @Injectable()
 export class SlotService {
   private readonly center = { lat: 10.772, lng: 106.698 };
-  private slots: Slot[] = this.generateInitialSlots(60);
+  private slots: Slot[] = this.generateInitialSlots(160);
   private history: Array<{ timestamp: string; slots: Slot[] }> = [];
 
   constructor() {
@@ -113,9 +113,28 @@ export class SlotService {
   }
 
   private generateInitialSlots(count: number): Slot[] {
+    const hubs: Array<{ lat: number; lng: number; spread: number; region: "vn" | "global" }> = [
+      { lat: 10.7769, lng: 106.7009, spread: 0.02, region: "vn" }, // Ho Chi Minh City
+      { lat: 21.0278, lng: 105.8342, spread: 0.02, region: "vn" }, // Ha Noi
+      { lat: 16.0544, lng: 108.2022, spread: 0.018, region: "vn" }, // Da Nang
+      { lat: 12.2388, lng: 109.1967, spread: 0.016, region: "vn" }, // Nha Trang
+      { lat: 10.0452, lng: 105.7469, spread: 0.016, region: "vn" }, // Can Tho
+      { lat: 10.4114, lng: 107.1362, spread: 0.014, region: "vn" }, // Vung Tau
+      { lat: 1.3521, lng: 103.8198, spread: 0.02, region: "global" }, // Singapore
+      { lat: 13.7563, lng: 100.5018, spread: 0.02, region: "global" }, // Bangkok
+      { lat: 35.6762, lng: 139.6503, spread: 0.018, region: "global" }, // Tokyo
+      { lat: 37.5665, lng: 126.978, spread: 0.018, region: "global" }, // Seoul
+      { lat: 48.8566, lng: 2.3522, spread: 0.02, region: "global" }, // Paris
+      { lat: 51.5072, lng: -0.1276, spread: 0.02, region: "global" }, // London
+      { lat: 40.7128, lng: -74.006, spread: 0.022, region: "global" }, // New York
+      { lat: 34.0522, lng: -118.2437, spread: 0.024, region: "global" }, // Los Angeles
+      { lat: -33.8688, lng: 151.2093, spread: 0.022, region: "global" } // Sydney
+    ];
+
     return Array.from({ length: count }, (_, index) => {
-      const lat = this.center.lat + (Math.random() - 0.5) * 0.014;
-      const lng = this.center.lng + (Math.random() - 0.5) * 0.015;
+      const hub = hubs[index % hubs.length];
+      const lat = hub.lat + (Math.random() - 0.5) * hub.spread;
+      const lng = hub.lng + (Math.random() - 0.5) * hub.spread;
       const available = Math.random() > 0.52;
       const soon = !available && Math.random() > 0.48;
       const x = Math.round(this.clamp(((lng - (this.center.lng - 0.0075)) / 0.015) * 100, 0, 100));
@@ -124,7 +143,7 @@ export class SlotService {
       return {
         id: index + 1,
         type: Math.random() > 0.28 ? "car" : "bike",
-        zone: Math.random() > 0.46 ? "green" : "standard",
+        zone: hub.region === "global" ? (Math.random() > 0.58 ? "green" : "standard") : Math.random() > 0.46 ? "green" : "standard",
         status: available ? "free" : soon ? "reserved" : "occupied",
         available,
         soon,

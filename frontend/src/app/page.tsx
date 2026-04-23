@@ -103,6 +103,13 @@ type ParkingStreamPayload = {
 
 type StoryContext = "find" | "route" | "inspect" | "available" | "soon" | "full";
 type GuideMotionFrame = "idle" | "up" | "down";
+type GuideLandmark = {
+  id: string;
+  name: string;
+  description: string;
+  lat: number;
+  lng: number;
+};
 
 type GuideProfile = {
   label: string;
@@ -142,6 +149,78 @@ const guideProfiles: Record<StoryCharacter, GuideProfile> = {
     parkingStrategy: "Ưu tiên bãi rìa khu hẻm để khám phá đi bộ thuận tiện",
     intro: "Dẫn bạn săn quán local ít review, thiên về trải nghiệm và khám phá."
   }
+};
+
+const guideLandmarks: Record<StoryCharacter, GuideLandmark[]> = {
+  coba: [
+    {
+      id: "coba-war-remnants",
+      name: "Bảo tàng Chứng tích Chiến tranh",
+      description: "Không gian tư liệu về các giai đoạn chiến tranh, giúp hiểu bối cảnh lịch sử đô thị Sài Gòn.",
+      lat: 10.7798,
+      lng: 106.6922
+    },
+    {
+      id: "coba-city-museum",
+      name: "Bảo tàng TP.HCM",
+      description: "Nơi lưu giữ nhiều hiện vật về quá trình hình thành và phát triển của thành phố.",
+      lat: 10.7765,
+      lng: 106.7011
+    },
+    {
+      id: "coba-reunification",
+      name: "Dinh Độc Lập",
+      description: "Biểu tượng quan trọng của lịch sử hiện đại Việt Nam, phù hợp cho tuyến tham quan chiều sâu.",
+      lat: 10.7781,
+      lng: 106.6953
+    }
+  ],
+  driver: [
+    {
+      id: "driver-park-239",
+      name: "Công viên 23/9",
+      description: "Điểm sinh hoạt phổ biến, gần nhiều tuyến xe và khu thương mại đời thường.",
+      lat: 10.7689,
+      lng: 106.6937
+    },
+    {
+      id: "driver-youth-house",
+      name: "Nhà Văn hóa Thanh Niên",
+      description: "Không gian cộng đồng quen thuộc, dễ bắt nhịp đời sống bản địa.",
+      lat: 10.7834,
+      lng: 106.7008
+    },
+    {
+      id: "driver-le-van-tam",
+      name: "Công viên Lê Văn Tám",
+      description: "Địa điểm sinh hoạt và vận động thường nhật, phù hợp trải nghiệm nhịp sống dân cư.",
+      lat: 10.7862,
+      lng: 106.6977
+    }
+  ],
+  youth: [
+    {
+      id: "youth-co-giang",
+      name: "Cà phê hẻm Cô Giang",
+      description: "Góc local ít quảng bá, phù hợp khám phá trải nghiệm chân thực.",
+      lat: 10.7642,
+      lng: 106.6923
+    },
+    {
+      id: "youth-ban-co",
+      name: "Tiệm ăn local khu Bàn Cờ",
+      description: "Khu ăn uống bản địa đậm chất dân cư, nhiều món ít người review.",
+      lat: 10.7729,
+      lng: 106.6821
+    },
+    {
+      id: "youth-nguyen-trai-rooftop",
+      name: "Rooftop nhỏ khu Nguyễn Trãi",
+      description: "Điểm nhìn thành phố theo góc local, thiên về trải nghiệm khám phá.",
+      lat: 10.7666,
+      lng: 106.6846
+    }
+  ]
 };
 
 const storybook: Record<StoryCharacter, Record<StoryContext, string[]>> = {
@@ -465,6 +544,7 @@ export default function Home() {
   const [autoPilot, setAutoPilot] = useState(false);
   const [guideMotionFrame, setGuideMotionFrame] = useState<GuideMotionFrame>("idle");
   const [guideSubtitle, setGuideSubtitle] = useState("Mình đang sẵn sàng dẫn bạn đi.");
+  const [activeLandmarkId, setActiveLandmarkId] = useState<string | null>(null);
   const zoneRegenerationTokenRef = useRef(0);
   const storyLayerHydratedRef = useRef(false);
   const storyVoiceHydratedRef = useRef(false);
@@ -507,6 +587,10 @@ export default function Home() {
 
   const activeRouteMeta = routes[activeRoute] ?? null;
   const activeGuide = guideProfiles[selectedDebate];
+  const allGuideLandmarks = useMemo(
+    () => (Object.keys(guideLandmarks) as StoryCharacter[]).flatMap((guide) => guideLandmarks[guide].map((item) => ({ ...item, guide }))),
+    []
+  );
   const guideParkingRecommendations = useMemo(() => {
     const available = slots
       .filter((slot) => slot.available || slot.soon)
@@ -1839,6 +1923,16 @@ export default function Home() {
     speakText("Đi hẻm này, ít người biết nhưng ổn áp lắm", character);
   }
 
+  function handleLandmarkClick(guide: StoryCharacter, landmark: GuideLandmark) {
+    setSelectedDebate(guide);
+    setActiveLandmarkId(landmark.id);
+    setMapCenter({ lat: landmark.lat, lng: landmark.lng });
+    setGuideSubtitle(`${landmark.name}: ${landmark.description}`);
+    setCityNarration(`📍 ${landmark.name} - ${landmark.description}`);
+    setBehaviorHint(`🧭 ${guideProfiles[guide].label} đang dẫn bạn tới ${landmark.name}. Đồng thời gợi ý bãi đỗ xe hợp lý gần điểm này.`);
+    speakText(`Đây là ${landmark.name}. ${landmark.description}`, guide);
+  }
+
   function startCinematicMode() {
     setCinematicMode(true);
     addLog("Cinematic explore started");
@@ -1904,9 +1998,12 @@ export default function Home() {
         carPosition={carPosition}
         carAngle={carAngle}
         navigationActive={navigationActive}
+        landmarks={allGuideLandmarks}
+        activeLandmarkId={activeLandmarkId}
         onViewportCenterChange={(center) => {
           setMapCenter(center);
         }}
+        onLandmarkClick={(landmark) => handleLandmarkClick(landmark.guide, landmark)}
         onSlotClick={(slot) => {
           if (adminMode === "full") {
             setAdminMode("compact");
@@ -1993,6 +2090,26 @@ export default function Home() {
               <li key={place}>{place}</li>
             ))}
           </ul>
+          <div className="guideSections">
+            {(Object.keys(guideLandmarks) as StoryCharacter[]).map((guide) => (
+              <section key={guide} className="guideSection">
+                <h5>{guideProfiles[guide].label}</h5>
+                <div className="guideLandmarkList">
+                  {guideLandmarks[guide].map((landmark) => (
+                    <button
+                      key={landmark.id}
+                      className={`guideLandmarkItem ${activeLandmarkId === landmark.id ? "active" : ""}`}
+                      onClick={() => handleLandmarkClick(guide, landmark)}
+                    >
+                      <span className="guideLandmarkDot" />
+                      <strong>{landmark.name}</strong>
+                      <small>{landmark.description}</small>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
           <div className="guideParkingTips">
             <strong>Gợi ý chỗ đỗ hợp lý:</strong>
             {guideParkingRecommendations.length > 0 ? (

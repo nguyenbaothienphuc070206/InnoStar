@@ -21,7 +21,10 @@ type MapPluginContext = {
   carPosition: [number, number] | null;
   carAngle: number;
   navigationActive: boolean;
+  landmarks: Array<{ id: string; name: string; description: string; lat: number; lng: number; guide: "coba" | "driver" | "youth" }>;
+  activeLandmarkId: string | null;
   onSlotClick: (slot: Slot) => void;
+  onLandmarkClick: (landmark: { id: string; name: string; description: string; lat: number; lng: number; guide: "coba" | "driver" | "youth" }) => void;
   toLatLng: (slot: Slot) => [number, number];
   markerIcon: (slot: Slot, isSelected: boolean) => L.DivIcon;
   viewportBounds: { north: number; south: number; east: number; west: number } | null;
@@ -223,6 +226,32 @@ export function createMapPlugins(): MapLayerPlugin[] {
             ) : null}
           </>
         ) : null
+    },
+    {
+      id: "landmarks",
+      render: ({ landmarks, activeLandmarkId, onLandmarkClick, viewportBounds }) => {
+        const visible = landmarks.filter((item) => isVisible(item.lat, item.lng, viewportBounds, 0.003));
+
+        return visible.map((item) => (
+          <Marker
+            key={item.id}
+            position={[item.lat, item.lng]}
+            eventHandlers={{ click: () => onLandmarkClick(item) }}
+            icon={L.divIcon({
+              className: "landmarkDotHost",
+              html: `<span class="landmarkDotMarker ${activeLandmarkId === item.id ? "active" : ""}"></span>`,
+              iconSize: [14, 14],
+              iconAnchor: [7, 7]
+            })}
+          >
+            <Popup>
+              <strong>{item.name}</strong>
+              <br />
+              {item.description}
+            </Popup>
+          </Marker>
+        ));
+      }
     },
     {
       id: "user-location",

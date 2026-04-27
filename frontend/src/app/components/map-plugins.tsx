@@ -4,6 +4,7 @@ import L from "leaflet";
 import { ReactNode, useEffect } from "react";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import { Circle, Marker, Polyline, Popup, TileLayer, useMap } from "react-leaflet";
+import CameraPopup from "./camera-popup";
 import { LayersState, Slot, ZonePoint } from "./types";
 
 type MapPluginContext = {
@@ -25,7 +26,7 @@ type MapPluginContext = {
   activeLandmarkId: string | null;
   aiSlots: Array<{ id: number; lat: number; lng: number; capacity: number; available: number }>;
   aiTrafficZones: Array<{ zone: string; lat: number; lng: number; level: "LOW" | "MEDIUM" | "HIGH" }>;
-  aiCameraSlots: Array<{ id: string; lat: number; lng: number; occupied: boolean }>;
+  aiCameraSlots: Array<{ id: string; lat: number; lng: number; occupied: boolean; images: string[] }>;
   aiPlaces: Array<{ id: number; name: string; type: "history" | "daily" | "local"; persona: "COBA" | "DRIVER" | "YOUTH"; lat: number; lng: number; desc: string }>;
   onSlotClick: (slot: Slot) => void;
   onLandmarkClick: (landmark: { id: string; name: string; description: string; lat: number; lng: number; guide: "coba" | "driver" | "youth" }) => void;
@@ -199,7 +200,9 @@ export function createMapPlugins(): MapLayerPlugin[] {
               position={[cam.lat, cam.lng]}
               icon={L.divIcon({ className: "cameraMarker", html: `<span>${cam.occupied ? "BUSY" : "FREE"}</span>` })}
             >
-              <Popup>AI Camera {cam.id}: {cam.occupied ? "Occupied" : "Available"}</Popup>
+              <Popup>
+                <CameraPopup cam={cam} />
+              </Popup>
             </Marker>
           ));
       }

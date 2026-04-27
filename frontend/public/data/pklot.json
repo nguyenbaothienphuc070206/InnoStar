@@ -1,7 +1,37 @@
 [
-  { "id": "C1", "lat": 10.7721, "lng": 106.6982, "occupied": false },
-  { "id": "C2", "lat": 10.7723, "lng": 106.6988, "occupied": true },
-  { "id": "C3", "lat": 10.7728, "lng": 106.6992, "occupied": false },
-  { "id": "C4", "lat": 10.7732, "lng": 106.7001, "occupied": true },
-  { "id": "C5", "lat": 10.7717, "lng": 106.6974, "occupied": false }
+  {
+    "id": "C1",
+    "lat": 10.7721,
+    "lng": 106.6982,
+    "occupied": false,
+    "images": ["/camera/cam1.svg", "/camera/cam2.svg", "/camera/cam3.svg"]
+  },
+  {
+    "id": "C2",
+    "lat": 10.7723,
+    "lng": 106.6988,
+    "occupied": true,
+    "images": ["/camera/cam2.svg", "/camera/cam4.svg", "/camera/cam5.svg"]
+  },
+  {
+    "id": "C3",
+    "lat": 10.7728,
+    "lng": 106.6992,
+    "occupied": false,
+    "images": ["/camera/cam3.svg", "/camera/cam5.svg", "/camera/cam6.svg"]
+  },
+  {
+    "id": "C4",
+    "lat": 10.7732,
+    "lng": 106.7001,
+    "occupied": true,
+    "images": ["/camera/cam4.svg", "/camera/cam1.svg", "/camera/cam6.svg"]
+  },
+  {
+    "id": "C5",
+    "lat": 10.7717,
+    "lng": 106.6974,
+    "occupied": false,
+    "images": ["/camera/cam5.svg", "/camera/cam2.svg", "/camera/cam6.svg"]
+  }
 ]

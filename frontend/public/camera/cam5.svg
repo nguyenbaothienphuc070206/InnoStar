@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+  <defs>
+    <linearGradient id="bg5" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#18240f"/>
+      <stop offset="100%" stop-color="#455f2d"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" fill="url(#bg5)"/>
+  <rect x="0" y="214" width="640" height="146" fill="#3d5531"/>
+  <rect x="58" y="236" width="120" height="54" rx="8" fill="#93c47d"/>
+  <rect x="222" y="236" width="140" height="54" rx="8" fill="#76a5af"/>
+  <rect x="404" y="236" width="124" height="54" rx="8" fill="#d5a6bd"/>
+  <text x="18" y="28" font-size="18" fill="#dcffb2" font-family="Segoe UI, sans-serif">CAM-5 LOBBY VIEW</text>
+  <text x="500" y="28" font-size="16" fill="#f1ffe5" font-family="Segoe UI, sans-serif">22:14:13</text>
+</svg>

@@ -590,6 +590,8 @@ export default function Home() {
   const adminResizeStartXRef = useRef(0);
   const adminResizeStartWidthRef = useRef(340);
   const visitedPlacesRef = useRef<Set<number>>(new Set());
+  const cameraStateRef = useRef<Record<string, boolean>>({});
+  const lastCameraNarrationAtRef = useRef(0);
 
   const {
     slots: aiSlots,
@@ -811,6 +813,44 @@ export default function Home() {
     addLog(`Story trigger near ${nearby.name}`);
     speakText(text, guide);
   }, [activePersona, aiPlaces, carPosition]);
+
+  useEffect(() => {
+    if (aiCameraSlots.length === 0) {
+      return;
+    }
+
+    const changed = aiCameraSlots.find((cam) => {
+      const prev = cameraStateRef.current[cam.id];
+      return typeof prev === "boolean" && prev !== cam.occupied;
+    });
+
+    for (const cam of aiCameraSlots) {
+      cameraStateRef.current[cam.id] = cam.occupied;
+    }
+
+    if (!changed) {
+      return;
+    }
+
+    const now = Date.now();
+    if (now - lastCameraNarrationAtRef.current < 7000) {
+      return;
+    }
+
+    lastCameraNarrationAtRef.current = now;
+    if (changed.occupied) {
+      const line = `Camera ${changed.id} báo khu này đầy rồi, mình né ra cho nhanh.`;
+      setStory({ character: "driver", text: line });
+      speakText(line, "driver");
+      addLog(`Camera ${changed.id} detected occupied`);
+      return;
+    }
+
+    const line = `Camera ${changed.id} báo chỗ này đang trống, mình ghé vào được nè.`;
+    setStory({ character: "coba", text: line });
+    speakText(line, "coba");
+    addLog(`Camera ${changed.id} detected empty`);
+  }, [aiCameraSlots]);
 
   function addLog(message: string) {
     const stamp = new Date().toLocaleTimeString("vi-VN");

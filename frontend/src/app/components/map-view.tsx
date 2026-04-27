@@ -26,7 +26,7 @@ type MapViewProps = {
   activeLandmarkId: string | null;
   aiSlots: Array<{ id: number; lat: number; lng: number; capacity: number; available: number }>;
   aiTrafficZones: Array<{ zone: string; lat: number; lng: number; level: "LOW" | "MEDIUM" | "HIGH" }>;
-  aiCameraSlots: Array<{ id: string; lat: number; lng: number; occupied: boolean }>;
+  aiCameraSlots: Array<{ id: string; lat: number; lng: number; occupied: boolean; images: string[] }>;
   aiPlaces: Array<{ id: number; name: string; type: "history" | "daily" | "local"; persona: "COBA" | "DRIVER" | "YOUTH"; lat: number; lng: number; desc: string }>;
   onSlotClick: (slot: Slot) => void;
   onLandmarkClick: (landmark: { id: string; name: string; description: string; lat: number; lng: number; guide: "coba" | "driver" | "youth" }) => void;

@@ -23,6 +23,15 @@ export type AICameraSlot = {
   images: string[];
 };
 
+type RawAICameraSlot = {
+  id: string;
+  lat: number;
+  lng: number;
+  occupied: boolean;
+  image?: string;
+  images?: string[];
+};
+
 export type AIPlace = {
   id: number;
   name: string;
@@ -75,7 +84,24 @@ export function useAICity() {
   useEffect(() => {
     fetch("/data/parking.json").then((r) => r.json()).then(setSlots).catch(() => setSlots([]));
     fetch("/data/traffic.json").then((r) => r.json()).then(setTraffic).catch(() => setTraffic([]));
-    fetch("/data/pklot.json").then((r) => r.json()).then(setCamera).catch(() => setCamera([]));
+    fetch("/data/pklot.json")
+      .then((r) => r.json())
+      .then((raw: RawAICameraSlot[]) => {
+        const mapped = raw.map((item) => ({
+          id: item.id,
+          lat: item.lat,
+          lng: item.lng,
+          occupied: item.occupied,
+          images:
+            item.images && item.images.length > 0
+              ? item.images
+              : item.image
+                ? [item.image]
+                : ["/camera/cam1.jpg"]
+        }));
+        setCamera(mapped);
+      })
+      .catch(() => setCamera([]));
     fetch("/data/places.json").then((r) => r.json()).then(setPlaces).catch(() => setPlaces([]));
   }, []);
 

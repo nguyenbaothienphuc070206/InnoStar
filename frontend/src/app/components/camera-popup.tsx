@@ -39,7 +39,7 @@ export default function CameraPopup({ cam }: CameraPopupProps) {
   const [frame, setFrame] = useState(0);
   const lastStateRef = useRef(cam.occupied);
 
-  const frames = useMemo(() => (cam.images.length > 0 ? cam.images : ["/camera/cam1.svg"]), [cam.images]);
+  const frames = useMemo(() => (cam.images.length > 0 ? cam.images : ["/camera/cam1.jpg"]), [cam.images]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {

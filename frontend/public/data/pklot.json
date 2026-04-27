@@ -4,34 +4,34 @@
     "lat": 10.7721,
     "lng": 106.6982,
     "occupied": false,
-    "images": ["/camera/cam1.svg", "/camera/cam2.svg", "/camera/cam3.svg"]
+    "images": ["/camera/cam1.jpg", "/camera/cam2.jpg", "/camera/cam3.jpg"]
   },
   {
     "id": "C2",
     "lat": 10.7723,
     "lng": 106.6988,
     "occupied": true,
-    "images": ["/camera/cam2.svg", "/camera/cam4.svg", "/camera/cam5.svg"]
+    "images": ["/camera/cam2.jpg", "/camera/cam4.jpg", "/camera/cam5.jpg"]
   },
   {
     "id": "C3",
     "lat": 10.7728,
     "lng": 106.6992,
     "occupied": false,
-    "images": ["/camera/cam3.svg", "/camera/cam5.svg", "/camera/cam6.svg"]
+    "images": ["/camera/cam3.jpg", "/camera/cam5.jpg", "/camera/cam6.jpg"]
   },
   {
     "id": "C4",
     "lat": 10.7732,
     "lng": 106.7001,
     "occupied": true,
-    "images": ["/camera/cam4.svg", "/camera/cam1.svg", "/camera/cam6.svg"]
+    "images": ["/camera/cam4.jpg", "/camera/cam1.jpg", "/camera/cam6.jpg"]
   },
   {
     "id": "C5",
     "lat": 10.7717,
     "lng": 106.6974,
     "occupied": false,
-    "images": ["/camera/cam5.svg", "/camera/cam2.svg", "/camera/cam6.svg"]
+    "images": ["/camera/cam5.jpg", "/camera/cam2.jpg", "/camera/cam6.jpg"]
   }
 ]

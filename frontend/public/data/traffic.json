@@ -1,0 +1,5 @@
+[
+  { "zone": "center", "lat": 10.7725, "lng": 106.6988, "level": "MEDIUM" },
+  { "zone": "west", "lat": 10.7710, "lng": 106.6965, "level": "LOW" },
+  { "zone": "east", "lat": 10.7735, "lng": 106.7005, "level": "HIGH" }
+]

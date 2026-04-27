@@ -14,6 +14,10 @@ import StoryBubble from "./components/story-bubble";
 import TopBar from "./components/top-bar";
 import { Slot, SlotDiff, ZonePoint } from "./components/types";
 import { CityState, EngineStep, RouteType, VoiceType, getSuggestion } from "./engine/cityEngine";
+import { inferPersona } from "./engine/personaEngine";
+import { findBestSlot, generateRoute } from "./engine/routing";
+import { getStory } from "./engine/storytelling";
+import { AIPlace, useAICity } from "./engine/useAICity";
 import { useCityEngine } from "./engine/useCityEngine";
 import { useDebouncedValue } from "./hooks/use-debounced-value";
 import { useNavigation } from "./navigation/useNavigation";
@@ -500,6 +504,16 @@ function predictAvailability(current: number): number {
   return Number(clamp(current + (Math.random() - 0.5) * 15, 0, 100).toFixed(0));
 }
 
+function personaToGuide(persona: "COBA" | "DRIVER" | "YOUTH"): StoryCharacter {
+  if (persona === "DRIVER") {
+    return "driver";
+  }
+  if (persona === "YOUTH") {
+    return "youth";
+  }
+  return "coba";
+}
+
 export default function Home() {
   const [adminMode, setAdminMode] = useState<AdminMode>("closed");
   const [adminWidth, setAdminWidth] = useState(340);
@@ -575,6 +589,14 @@ export default function Home() {
   const guideMotionTimerRef = useRef<number | null>(null);
   const adminResizeStartXRef = useRef(0);
   const adminResizeStartWidthRef = useRef(340);
+  const visitedPlacesRef = useRef<Set<number>>(new Set());
+
+  const {
+    slots: aiSlots,
+    traffic: aiTrafficZones,
+    camera: aiCameraSlots,
+    places: aiPlaces
+  } = useAICity();
 
   const {
     slots,
@@ -651,6 +673,9 @@ export default function Home() {
       navigating: navigationActive
     };
   }, [finding, navigationActive, opsMetrics.availability, route?.path?.length, routeLoading, routes.length, selectedDebate, selectedSlot, trafficLevel]);
+
+  const activePersona = useMemo(() => inferPersona({ intent: cityState.intent }), [cityState.intent]);
+  const activePersonaGuide = useMemo(() => personaToGuide(activePersona), [activePersona]);
 
   useEffect(() => {
     if (cityState.mood === "CHAOTIC") {
@@ -758,6 +783,34 @@ export default function Home() {
 
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (!carPosition || aiPlaces.length === 0) {
+      return;
+    }
+
+    const nearby = aiPlaces.find((place) => {
+      if (visitedPlacesRef.current.has(place.id)) {
+        return false;
+      }
+
+      const d = Math.hypot(place.lat - carPosition[0], place.lng - carPosition[1]);
+      return d < 0.00125;
+    });
+
+    if (!nearby || nearby.persona !== activePersona) {
+      return;
+    }
+
+    visitedPlacesRef.current.add(nearby.id);
+    const guide = personaToGuide(nearby.persona);
+    const text = getStory(nearby.persona, nearby);
+    setSelectedDebate(guide);
+    setGuideSubtitle(text);
+    setStory({ character: guide, text });
+    addLog(`Story trigger near ${nearby.name}`);
+    speakText(text, guide);
+  }, [activePersona, aiPlaces, carPosition]);
 
   function addLog(message: string) {
     const stamp = new Date().toLocaleTimeString("vi-VN");
@@ -2082,6 +2135,107 @@ export default function Home() {
     setStatusMessage(`Live view focused on S${selectedSlot.id}`);
   }
 
+  function handleAIPlaceClick(place: AIPlace) {
+    const guide = personaToGuide(place.persona);
+    const mapped: GuideLandmark = {
+      id: `ai-place-${place.id}`,
+      name: place.name,
+      description: place.desc,
+      lat: place.lat,
+      lng: place.lng
+    };
+    void handleLandmarkClick(guide, mapped, false);
+  }
+
+  function runAICityPlanner() {
+    if (!aiSlots.length) {
+      setStatusMessage("AI dataset đang nạp, thử lại sau vài giây.");
+      return;
+    }
+
+    const best = findBestSlot(
+      { lat: userLocation[0], lng: userLocation[1] },
+      aiSlots,
+      aiTrafficZones
+    );
+
+    if (!best) {
+      setStatusMessage("Không tìm thấy bãi phù hợp từ AI planner.");
+      return;
+    }
+
+    const aiGuide = activePersonaGuide;
+    const routeCoords = generateRoute(
+      { lat: userLocation[0], lng: userLocation[1] },
+      { lat: best.lat, lng: best.lng }
+    );
+    const distanceKm = calcDistanceKm([userLocation[0], userLocation[1]], [best.lat, best.lng]);
+    const nearestTraffic = aiTrafficZones
+      .slice()
+      .sort((a, b) => Math.hypot(a.lat - best.lat, a.lng - best.lng) - Math.hypot(b.lat - best.lat, b.lng - best.lng))[0];
+    const speed = speedByTraffic(nearestTraffic?.level ?? "LOW");
+    const eta = Math.max(1, Math.round((distanceKm / speed) * 60));
+
+    setSelectedSlot({
+      id: 9000 + best.id,
+      type: "car",
+      x: 0,
+      y: 0,
+      zone: "standard",
+      available: best.available > 0,
+      soon: best.available === 0,
+      predictedFreeMin: best.available > 0 ? 0 : 6,
+      cameraOnline: true,
+      lat: best.lat,
+      lng: best.lng,
+      distanceM: Math.round(distanceKm * 1000)
+    });
+
+    setRoutes([
+      {
+        coords: routeCoords,
+        durationMin: eta,
+        smartEtaMin: eta,
+        etaMin: Math.max(1, eta - 2),
+        etaMax: eta + 4,
+        traffic: nearestTraffic?.level,
+        confidence: "MEDIUM",
+        reason: ["AI parking score", "Realtime traffic penalty"],
+        penaltyScore: nearestTraffic?.level === "HIGH" ? 40 : nearestTraffic?.level === "MEDIUM" ? 20 : 8,
+        distanceKm: Number(distanceKm.toFixed(2)),
+        steps: [
+          "Bắt đầu từ vị trí hiện tại",
+          "Đi theo tuyến AI gợi ý",
+          `Đến bãi S${best.id}`
+        ]
+      }
+    ]);
+    setActiveRoute(0);
+    setDisplayRoute(routeCoords);
+    setRouteFocusToken((token) => token + 1);
+    setTurnSteps(["AI Planner đang dẫn đường..."]);
+    setEtaMinutes(eta);
+    setStatusMessage(`AI Planner chọn S${best.id}: ${best.available}/${best.capacity} chỗ trống`);
+
+    const suggestedPlace = aiPlaces.find((place) => place.persona === activePersona);
+    if (suggestedPlace) {
+      setLandmarkPreview({
+        guide: aiGuide,
+        landmark: {
+          id: `ai-place-${suggestedPlace.id}`,
+          name: suggestedPlace.name,
+          description: suggestedPlace.desc,
+          lat: suggestedPlace.lat,
+          lng: suggestedPlace.lng
+        }
+      });
+    }
+
+    const line = `Planner đã chốt điểm gửi xe, ETA khoảng ${eta} phút. Đi theo tui nha.`;
+    setStory({ character: aiGuide, text: line });
+    speakText(line, aiGuide);
+  }
+
   const treeEquivalent = Math.max(0.1, Number((co2SavedKg / 21).toFixed(2)));
   const selectedSlotStatus = selectedSlot
     ? selectedSlot.available
@@ -2110,12 +2264,17 @@ export default function Home() {
         navigationActive={navigationActive}
         landmarks={allGuideLandmarks}
         activeLandmarkId={activeLandmarkId}
+        aiSlots={aiSlots}
+        aiTrafficZones={aiTrafficZones}
+        aiCameraSlots={aiCameraSlots}
+        aiPlaces={aiPlaces}
         onViewportCenterChange={(center) => {
           setMapCenter(center);
         }}
         onLandmarkClick={(landmark) => {
           void handleLandmarkClick(landmark.guide, landmark);
         }}
+        onAIPlaceClick={handleAIPlaceClick}
         onSlotClick={(slot) => {
           if (adminMode === "full") {
             setAdminMode("compact");
@@ -2165,6 +2324,13 @@ export default function Home() {
         <button className="demoLaunchBtn" disabled={cinematicMode} onClick={startCinematicMode}>
           {cinematicMode ? "Exploring..." : "🎥 Explore City"}
         </button>
+        <button className="demoLaunchBtn" onClick={runAICityPlanner}>
+          🤖 Run AI Planner
+        </button>
+      </div>
+
+      <div className="cityMoodBanner">
+        <strong>AI Stream:</strong> {aiSlots.length} parking • {aiTrafficZones.length} traffic zones • {aiCameraSlots.length} camera lots • {aiPlaces.length} places
       </div>
 
       <section className={`guidePanel ${guidePanelMinimized ? "minimized" : ""}`} data-testid="ai-tour-guides">

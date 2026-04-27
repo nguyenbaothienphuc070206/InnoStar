@@ -24,8 +24,13 @@ type MapViewProps = {
   navigationActive: boolean;
   landmarks: Array<{ id: string; name: string; description: string; lat: number; lng: number; guide: "coba" | "driver" | "youth" }>;
   activeLandmarkId: string | null;
+  aiSlots: Array<{ id: number; lat: number; lng: number; capacity: number; available: number }>;
+  aiTrafficZones: Array<{ zone: string; lat: number; lng: number; level: "LOW" | "MEDIUM" | "HIGH" }>;
+  aiCameraSlots: Array<{ id: string; lat: number; lng: number; occupied: boolean }>;
+  aiPlaces: Array<{ id: number; name: string; type: "history" | "daily" | "local"; persona: "COBA" | "DRIVER" | "YOUTH"; lat: number; lng: number; desc: string }>;
   onSlotClick: (slot: Slot) => void;
   onLandmarkClick: (landmark: { id: string; name: string; description: string; lat: number; lng: number; guide: "coba" | "driver" | "youth" }) => void;
+  onAIPlaceClick: (place: { id: number; name: string; type: "history" | "daily" | "local"; persona: "COBA" | "DRIVER" | "YOUTH"; lat: number; lng: number; desc: string }) => void;
   onViewportCenterChange: (center: { lat: number; lng: number }) => void;
 };
 
@@ -88,7 +93,7 @@ function markerIcon(slot: Slot, isSelected: boolean): L.DivIcon {
   });
 }
 
-export default function MapView({ slots, zones, layers, selectedSlotId, userLocation, routeFocusToken, routeSegments, routeOpacity, routePath, activeRoutePenalty, activeRouteIsEco, carPosition, carAngle, navigationActive, landmarks, activeLandmarkId, onSlotClick, onLandmarkClick, onViewportCenterChange }: MapViewProps) {
+export default function MapView({ slots, zones, layers, selectedSlotId, userLocation, routeFocusToken, routeSegments, routeOpacity, routePath, activeRoutePenalty, activeRouteIsEco, carPosition, carAngle, navigationActive, landmarks, activeLandmarkId, aiSlots, aiTrafficZones, aiCameraSlots, aiPlaces, onSlotClick, onLandmarkClick, onAIPlaceClick, onViewportCenterChange }: MapViewProps) {
   const plugins = createMapPlugins();
   const [viewportBounds, setViewportBounds] = useState<{ north: number; south: number; east: number; west: number } | null>(null);
 
@@ -102,7 +107,7 @@ export default function MapView({ slots, zones, layers, selectedSlotId, userLoca
       <ViewportTracker onViewportCenterChange={onViewportCenterChange} onBoundsChange={setViewportBounds} />
 
       {plugins.map((plugin) => (
-        <Fragment key={plugin.id}>{plugin.render({ slots, zones, layers, selectedSlotId, userLocation, routeFocusToken, routeSegments, routeOpacity, routePath, activeRoutePenalty, activeRouteIsEco, carPosition, carAngle, navigationActive, landmarks, activeLandmarkId, onSlotClick, onLandmarkClick, toLatLng, markerIcon, viewportBounds })}</Fragment>
+        <Fragment key={plugin.id}>{plugin.render({ slots, zones, layers, selectedSlotId, userLocation, routeFocusToken, routeSegments, routeOpacity, routePath, activeRoutePenalty, activeRouteIsEco, carPosition, carAngle, navigationActive, landmarks, activeLandmarkId, aiSlots, aiTrafficZones, aiCameraSlots, aiPlaces, onSlotClick, onLandmarkClick, onAIPlaceClick, toLatLng, markerIcon, viewportBounds })}</Fragment>
       ))}
     </MapContainer>
   );

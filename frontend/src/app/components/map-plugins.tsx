@@ -23,8 +23,13 @@ type MapPluginContext = {
   navigationActive: boolean;
   landmarks: Array<{ id: string; name: string; description: string; lat: number; lng: number; guide: "coba" | "driver" | "youth" }>;
   activeLandmarkId: string | null;
+  aiSlots: Array<{ id: number; lat: number; lng: number; capacity: number; available: number }>;
+  aiTrafficZones: Array<{ zone: string; lat: number; lng: number; level: "LOW" | "MEDIUM" | "HIGH" }>;
+  aiCameraSlots: Array<{ id: string; lat: number; lng: number; occupied: boolean }>;
+  aiPlaces: Array<{ id: number; name: string; type: "history" | "daily" | "local"; persona: "COBA" | "DRIVER" | "YOUTH"; lat: number; lng: number; desc: string }>;
   onSlotClick: (slot: Slot) => void;
   onLandmarkClick: (landmark: { id: string; name: string; description: string; lat: number; lng: number; guide: "coba" | "driver" | "youth" }) => void;
+  onAIPlaceClick: (place: { id: number; name: string; type: "history" | "daily" | "local"; persona: "COBA" | "DRIVER" | "YOUTH"; lat: number; lng: number; desc: string }) => void;
   toLatLng: (slot: Slot) => [number, number];
   markerIcon: (slot: Slot, isSelected: boolean) => L.DivIcon;
   viewportBounds: { north: number; south: number; east: number; west: number } | null;
@@ -97,6 +102,108 @@ export function createMapPlugins(): MapLayerPlugin[] {
   }
 
   return [
+    {
+      id: "ai-traffic",
+      render: ({ layers, aiTrafficZones, viewportBounds }) => {
+        if (!layers.traffic) {
+          return null;
+        }
+
+        return aiTrafficZones
+          .filter((item) => isVisible(item.lat, item.lng, viewportBounds, 0.003))
+          .map((item) => {
+            const color = item.level === "HIGH" ? "#ef4f53" : item.level === "MEDIUM" ? "#ffd34d" : "#59e38f";
+            const radius = item.level === "HIGH" ? 80 : item.level === "MEDIUM" ? 60 : 45;
+
+            return (
+              <Circle
+                key={`ai-traffic-${item.zone}`}
+                center={[item.lat, item.lng]}
+                radius={radius}
+                pathOptions={{ color, fillColor: color, fillOpacity: 0.16, weight: 1, opacity: 0.55 }}
+              >
+                <Popup>
+                  <strong>{item.zone}</strong>
+                  <br />
+                  Traffic: {item.level}
+                </Popup>
+              </Circle>
+            );
+          });
+      }
+    },
+    {
+      id: "ai-parking",
+      render: ({ layers, aiSlots, viewportBounds }) => {
+        if (!layers.heat) {
+          return null;
+        }
+
+        return aiSlots
+          .filter((slot) => isVisible(slot.lat, slot.lng, viewportBounds, 0.0028))
+          .map((slot) => {
+            const ratio = slot.capacity > 0 ? slot.available / slot.capacity : 0;
+            const color = ratio > 0.6 ? "#5DFF34" : ratio > 0.25 ? "#ffd34d" : "#ef4f53";
+            return (
+              <Circle
+                key={`ai-slot-${slot.id}`}
+                center={[slot.lat, slot.lng]}
+                radius={20 + Math.max(0, slot.capacity - slot.available) * 1.2}
+                pathOptions={{ color, fillColor: color, fillOpacity: 0.12, weight: 1, opacity: 0.5 }}
+              >
+                <Popup>
+                  AI S{slot.id}: {slot.available}/{slot.capacity}
+                </Popup>
+              </Circle>
+            );
+          });
+      }
+    },
+    {
+      id: "ai-places",
+      render: ({ aiPlaces, viewportBounds, onAIPlaceClick }) =>
+        aiPlaces
+          .filter((place) => isVisible(place.lat, place.lng, viewportBounds, 0.003))
+          .map((place) => (
+            <Marker
+              key={`ai-place-${place.id}`}
+              position={[place.lat, place.lng]}
+              eventHandlers={{ click: () => onAIPlaceClick(place) }}
+              icon={L.divIcon({
+                className: "landmarkDotHost",
+                html: `<span class="landmarkDotMarker"></span>`,
+                iconSize: [12, 12],
+                iconAnchor: [6, 6]
+              })}
+            >
+              <Popup>
+                <strong>{place.name}</strong>
+                <br />
+                {place.desc}
+              </Popup>
+            </Marker>
+          ))
+    },
+    {
+      id: "ai-camera",
+      render: ({ layers, aiCameraSlots, viewportBounds }) => {
+        if (!layers.camera) {
+          return null;
+        }
+
+        return aiCameraSlots
+          .filter((cam) => isVisible(cam.lat, cam.lng, viewportBounds, 0.002))
+          .map((cam) => (
+            <Marker
+              key={`ai-camera-${cam.id}`}
+              position={[cam.lat, cam.lng]}
+              icon={L.divIcon({ className: "cameraMarker", html: `<span>${cam.occupied ? "BUSY" : "FREE"}</span>` })}
+            >
+              <Popup>AI Camera {cam.id}: {cam.occupied ? "Occupied" : "Available"}</Popup>
+            </Marker>
+          ));
+      }
+    },
     {
       id: "traffic",
       render: ({ layers }) =>

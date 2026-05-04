@@ -27,7 +27,7 @@
     "zustand": "5.0.0"
   },
   "devDependencies": {
-    "@lhci/cli": "0.14.0",
+    "@lhci/cli": "0.15.1",
     "@playwright/test": "1.47.2",
     "@types/leaflet": "1.9.12",
     "@types/node": "20.16.5",

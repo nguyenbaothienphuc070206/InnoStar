@@ -438,6 +438,19 @@ body {
   font-size: 0.66rem;
 }
 
+.opsExportActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.opsExportActions button {
+  padding: 4px 8px;
+  font-size: 0.66rem;
+}
+
 .opsIncidentFeed ul {
   margin: 0;
   padding: 0;

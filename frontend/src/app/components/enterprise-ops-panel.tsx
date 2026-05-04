@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { jsPDF } from "jspdf";
 import GlassCard from "./glass-card";
 
 type SystemState = "healthy" | "degraded" | "down";
@@ -38,6 +39,17 @@ type EnterpriseOpsPanelProps = {
     burnRate1h: number;
     burnRate6h: number;
   };
+  executiveBrief: {
+    totalJourneys: number;
+    topDestinations: Array<{ name: string; count: number }>;
+    carbonSavedKg: number;
+    adoptionTrends: {
+      walkPct: number;
+      evPct: number;
+      bikePct: number;
+      motorbikePct: number;
+    };
+  };
 };
 
 function latencyClass(latencyMs: number): string {
@@ -71,7 +83,8 @@ export default function EnterpriseOpsPanel({
   incidents,
   mode,
   onModeChange,
-  slo
+  slo,
+  executiveBrief
 }: EnterpriseOpsPanelProps) {
   const [acknowledged, setAcknowledged] = useState<Record<string, boolean>>({});
 
@@ -176,6 +189,76 @@ export default function EnterpriseOpsPanel({
     window.URL.revokeObjectURL(url);
   }
 
+  function exportExecutiveBriefPdf() {
+    const report = new jsPDF({ unit: "pt", format: "a4" });
+    const left = 52;
+    let y = 62;
+
+    report.setFont("helvetica", "bold");
+    report.setFontSize(18);
+    report.text("Weekly Green Mobility Report", left, y);
+
+    y += 24;
+    report.setFont("helvetica", "normal");
+    report.setFontSize(10);
+    report.text(`Generated at: ${new Date().toLocaleString("vi-VN")}`, left, y);
+
+    y += 28;
+    report.setFont("helvetica", "bold");
+    report.setFontSize(13);
+    report.text("Executive Summary", left, y);
+
+    y += 20;
+    report.setFont("helvetica", "normal");
+    report.setFontSize(11);
+    report.text(`Total journeys: ${executiveBrief.totalJourneys}`, left, y);
+    y += 16;
+    report.text(`Carbon saved: ${executiveBrief.carbonSavedKg.toFixed(1)} kg CO2`, left, y);
+    y += 16;
+    report.text(`Congestion reduced: ${availabilityPct}% city-wide availability signal`, left, y);
+
+    y += 28;
+    report.setFont("helvetica", "bold");
+    report.setFontSize(13);
+    report.text("Top destinations", left, y);
+
+    y += 18;
+    report.setFont("helvetica", "normal");
+    report.setFontSize(11);
+    if (executiveBrief.topDestinations.length === 0) {
+      report.text("No destination activity yet.", left, y);
+      y += 16;
+    } else {
+      executiveBrief.topDestinations.slice(0, 5).forEach((item, index) => {
+        report.text(`${index + 1}. ${item.name} (${item.count} journeys)`, left, y);
+        y += 16;
+      });
+    }
+
+    y += 12;
+    report.setFont("helvetica", "bold");
+    report.setFontSize(13);
+    report.text("Adoption trends", left, y);
+
+    y += 18;
+    report.setFont("helvetica", "normal");
+    report.setFontSize(11);
+    report.text(`Walk: ${executiveBrief.adoptionTrends.walkPct}%`, left, y);
+    y += 16;
+    report.text(`EV: ${executiveBrief.adoptionTrends.evPct}%`, left, y);
+    y += 16;
+    report.text(`Bike: ${executiveBrief.adoptionTrends.bikePct}%`, left, y);
+    y += 16;
+    report.text(`Motorbike: ${executiveBrief.adoptionTrends.motorbikePct}%`, left, y);
+
+    y += 24;
+    report.setFont("helvetica", "italic");
+    report.setFontSize(10);
+    report.text("GreenPark AI - Executive Brief Mode", left, y);
+
+    report.save(`weekly-green-mobility-report-${new Date().toISOString().slice(0, 10)}.pdf`);
+  }
+
   if (mode === "compact") {
     return (
       <GlassCard className="enterpriseOps enterpriseOpsCompact">
@@ -272,9 +355,14 @@ export default function EnterpriseOpsPanel({
       <section className="opsIncidentFeed" data-testid="ops-incidents">
         <div className="opsIncidentHeader">
           <h4>Incident Feed</h4>
-          <button type="button" data-testid="ops-export-csv" onClick={exportOpsCsv}>
-            Export CSV
-          </button>
+          <div className="opsExportActions">
+            <button type="button" data-testid="ops-export-pdf" onClick={exportExecutiveBriefPdf}>
+              Executive Brief PDF
+            </button>
+            <button type="button" data-testid="ops-export-csv" onClick={exportOpsCsv}>
+              Export CSV
+            </button>
+          </div>
         </div>
         <p className={`opsSystemSummary opsText-${stateUi.className}`}>{summaryText}</p>
         <ul>

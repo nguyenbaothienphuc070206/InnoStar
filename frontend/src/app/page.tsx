@@ -12,12 +12,15 @@ import GlassCard from "./components/glass-card";
 import { useJourney } from "./components/JourneyContext";
 import JourneyPassport from "./components/journey-passport";
 import LayerControl from "./components/layer-control";
+import NarrativeFlowRail from "./components/narrative-flow-rail";
 import OnboardingFlow from "./components/onboarding-flow";
 import JourneyStoryboard from "./components/journey-storyboard";
 import PlaceStoryCard from "./components/place-story-card";
 import SlotMiniDashboard from "./components/slot-mini-dashboard";
+import SocialGreenChallenge from "./components/social-green-challenge";
 import StoryBubble from "./components/story-bubble";
 import TopBar from "./components/top-bar";
+import WhyNowCard from "./components/why-now-card";
 import { Slot, SlotDiff, ZonePoint } from "./components/types";
 import { CityState, EngineStep, RouteType, VoiceType, getSuggestion } from "./engine/cityEngine";
 import { inferPersona } from "./engine/personaEngine";
@@ -41,6 +44,7 @@ import {
   type PersonaDebateLine
 } from "./engine/journey-mode";
 import { rewardTransport, type TransportType } from "./lib/scoreEngine";
+import { estimateEtaMinutes, predictCrowd, type CrowdPrediction } from "./lib/predictive-flow-engine";
 import { AIPlace, useAICity } from "./engine/useAICity";
 import { useCityEngine } from "./engine/useCityEngine";
 import { useDebouncedValue } from "./hooks/use-debounced-value";
@@ -648,6 +652,9 @@ export default function Home() {
   const [selectedDestination, setSelectedDestination] = useState<Destination | null>(null);
   const [destinationTransport, setDestinationTransport] = useState<TransportType | null>(null);
   const [onboardingDone, setOnboardingDone] = useState(false);
+  const [predictiveForecast, setPredictiveForecast] = useState<CrowdPrediction | null>(null);
+  const [pitchRunning, setPitchRunning] = useState(false);
+  const [pitchStepIndex, setPitchStepIndex] = useState(0);
   const zoneRegenerationTokenRef = useRef(0);
   const storyLayerHydratedRef = useRef(false);
   const storyVoiceHydratedRef = useRef(false);
@@ -792,6 +799,71 @@ export default function Home() {
   const activePersonaGuide = useMemo(() => personaToGuide(activePersona), [activePersona]);
   const journeySummary = useMemo(() => buildJourneySummary(journeyVisits), [journeyVisits]);
   const campaignMissions = useMemo(() => buildCampaignMissions(journeyVisits, cityMood), [cityMood, journeyVisits]);
+  const executiveBrief = useMemo(() => {
+    const totalJourneys = journeyVisits.length;
+    const destinationCount = new Map<string, number>();
+    for (const visit of journeyVisits) {
+      destinationCount.set(visit.name, (destinationCount.get(visit.name) ?? 0) + 1);
+    }
+
+    const topDestinations = Array.from(destinationCount.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    const totalTransport = Math.max(1, transportUsed.length);
+    const walk = transportUsed.filter((item) => item === "walk").length;
+    const ev = transportUsed.filter((item) => item === "ev").length;
+    const bike = transportUsed.filter((item) => item === "bike").length;
+    const motorbike = transportUsed.filter((item) => item === "motorbike").length;
+
+    return {
+      totalJourneys,
+      topDestinations,
+      carbonSavedKg: Number((co2SavedKg + journeySummary.totalCo2SavedKg).toFixed(1)),
+      adoptionTrends: {
+        walkPct: Math.round((walk / totalTransport) * 100),
+        evPct: Math.round((ev / totalTransport) * 100),
+        bikePct: Math.round((bike / totalTransport) * 100),
+        motorbikePct: Math.round((motorbike / totalTransport) * 100)
+      }
+    };
+  }, [co2SavedKg, journeySummary.totalCo2SavedKg, journeyVisits, transportUsed]);
+  const narrativeStep = useMemo(() => {
+    const hasPersona = Boolean(selectedPersona);
+    const hasDestination = Boolean(selectedDestination || selectedPlace);
+    const hasRoute = routes.length > 0 || Boolean(route?.path?.length);
+    const hasCheckpoint = completedChallenges.length > 0;
+    const hasStoryUnlock = hasCheckpoint;
+    const hasScore = journeyGreenScore > 0;
+    const hasPassport = visitedDestinations.length > 0 && hasScore;
+
+    if (!hasPersona) {
+      return 1;
+    }
+    if (!hasDestination) {
+      return 2;
+    }
+    if (!hasRoute) {
+      return 3;
+    }
+    if (!navigationActive) {
+      return 4;
+    }
+    if (!hasCheckpoint) {
+      return 5;
+    }
+    if (!hasStoryUnlock) {
+      return 6;
+    }
+    if (!hasScore) {
+      return 7;
+    }
+    if (!hasPassport) {
+      return 8;
+    }
+    return 8;
+  }, [completedChallenges.length, journeyGreenScore, navigationActive, route?.path?.length, routes.length, selectedDestination, selectedPersona, selectedPlace, visitedDestinations.length]);
 
   useEffect(() => {
     if (cityState.mood === "CHAOTIC") {
@@ -807,6 +879,21 @@ export default function Home() {
     setCityMood("CALM");
     setCityNarration("Thành phố đang êm, có thể ưu tiên hành trình xanh.");
   }, [cityState.mood]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      const hour = new Date().getHours();
+      const trend = cityMood === "CHAOTIC" ? 18 : cityMood === "STRESSED" ? 10 : 4;
+      const forecast = predictCrowd(20, "clear", trend, "Ben Thanh Market", hour);
+      setPredictiveForecast(forecast);
+
+      if (forecast.densityIncreasePct >= 30 && selectedSlot) {
+        setBehaviorHint(`⚠️ Trong ${forecast.nextMinutes} phút nữa quanh ${forecast.area} sẽ tăng mật độ ${forecast.densityIncreasePct}%. Nên reroute sớm.`);
+      }
+    }, 9000);
+
+    return () => window.clearInterval(timer);
+  }, [cityMood, selectedSlot]);
 
   useCityEngine({
     state: cityState,
@@ -2497,8 +2584,7 @@ export default function Home() {
     const nearestTraffic = aiTrafficZones
       .slice()
       .sort((a, b) => Math.hypot(a.lat - best.lat, a.lng - best.lng) - Math.hypot(b.lat - best.lat, b.lng - best.lng))[0];
-    const speed = speedByTraffic(nearestTraffic?.level ?? "LOW");
-    const eta = Math.max(1, Math.round((distanceKm / speed) * 60));
+    const eta = estimateEtaMinutes(distanceKm, nearestTraffic?.level ?? "LOW", new Date().getHours(), cityMood);
 
     setSelectedSlot({
       id: 9000 + best.id,
@@ -2558,6 +2644,59 @@ export default function Home() {
     const line = `Planner đã chốt điểm gửi xe, ETA khoảng ${eta} phút. Đi theo tui nha.`;
     setStory({ character: aiGuide, text: line });
     speakText(line, aiGuide);
+  }
+
+  async function runPitchChoreography() {
+    if (pitchRunning) {
+      return;
+    }
+
+    const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+    setPitchRunning(true);
+    setPitchStepIndex(1);
+    setAdminMode("full");
+    setBehaviorHint("🎬 Demo: Opening city dashboard");
+    await wait(900);
+
+    setPitchStepIndex(2);
+    setMapCenter({ lat: 10.772, lng: 106.698 });
+    setBehaviorHint("🗺️ Demo: Zoom vào map");
+    await wait(900);
+
+    setPitchStepIndex(3);
+    chooseDebate("coba");
+    await wait(900);
+
+    const scriptedLandmark = guideLandmarks.coba[0];
+    if (scriptedLandmark) {
+      setPitchStepIndex(4);
+      await handleLandmarkClick("coba", scriptedLandmark, true);
+      await wait(1100);
+
+      setPitchStepIndex(5);
+      setNavigationActive(true);
+      setBehaviorHint("🚗 Demo: Route animate + car move");
+      await wait(1000);
+
+      setPitchStepIndex(6);
+      speakText(`Đây là ${scriptedLandmark.name}, tuyến này phù hợp để khám phá xanh.`, "coba");
+      await wait(900);
+
+      const destination = findDestinationByName(scriptedLandmark.name);
+      if (destination?.qrChallenges[0]) {
+        const challenge = destination.qrChallenges[0];
+        completeChallenge(challenge.id, challenge.reward);
+        setPitchStepIndex(7);
+        setBehaviorHint(`✅ QR unlock thành công: +${challenge.reward} Green Score`);
+        await wait(900);
+      }
+    }
+
+    setPitchStepIndex(8);
+    setBehaviorHint("🏁 Demo complete: Journey passport summary ready");
+    await wait(700);
+    setPitchRunning(false);
   }
 
   const treeEquivalent = Math.max(0.1, Number((co2SavedKg / 21).toFixed(2)));
@@ -2800,6 +2939,7 @@ export default function Home() {
           mode={adminMode}
           onModeChange={setAdminMode}
           slo={slo}
+          executiveBrief={executiveBrief}
         />
       </aside>
 

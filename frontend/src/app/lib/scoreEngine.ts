@@ -31,5 +31,5 @@ export function rankFromScore(score: number): string {
   if (score >= 100) {
     return "Eco Explorer";
   }
-  return "Starter";
+  return "Begin Journey";
 }

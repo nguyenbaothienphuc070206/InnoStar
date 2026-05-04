@@ -703,15 +703,29 @@ body {
 }
 
 .liveCameraCard {
-  position: absolute;
-  right: 12px;
+  position: relative;
+  right: auto;
   top: auto;
-  bottom: 96px;
-  z-index: 40;
-  width: min(84vw, 260px);
+  bottom: auto;
+  z-index: auto;
+  width: 100%;
   padding: 8px;
   background: rgba(3, 12, 18, 0.58);
   border-radius: 10px;
+}
+
+.rightSidebarStack {
+  position: absolute;
+  right: 14px;
+  top: 128px;
+  z-index: 54;
+  width: min(92vw, 360px);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: calc(100vh - 156px);
+  overflow-y: auto;
+  padding-right: 2px;
 }
 
 .mapAtmosphereOverlay {
@@ -756,14 +770,7 @@ body {
 
 .liveCameraFrame {
   position: relative;
-}
-
-.aiOverlayCanvas {
-  position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
-  height: 100%;
   pointer-events: none;
 }
 
@@ -1635,12 +1642,117 @@ body {
   font-weight: 600;
 }
 
+.predictiveBanner {
+  margin: 8px 14px 0;
+  border-radius: 12px;
+  border: 1px solid rgba(31, 244, 250, 0.22);
+  background: rgba(31, 244, 250, 0.08);
+  color: #dffcff;
+  padding: 10px 12px;
+  font-size: 0.76rem;
+}
+
+.narrativeFlowRail {
+  position: absolute;
+  left: 14px;
+  bottom: 102px;
+  z-index: 45;
+  width: min(92vw, 300px);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(4, 12, 18, 0.8);
+  backdrop-filter: blur(14px);
+  padding: 10px;
+}
+
+.narrativeFlowRail header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.narrativeFlowRail ol {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  font-size: 0.66rem;
+  color: #cfe4eb;
+}
+
+.flow-done {
+  color: #86f7a9;
+}
+
+.flow-active {
+  color: #8eefff;
+  text-shadow: 0 0 12px rgba(31, 244, 250, 0.3);
+}
+
+.flow-todo {
+  color: #90a4ad;
+}
+
+.socialChallengeCard,
+.whyNowCard {
+  position: absolute;
+  left: 14px;
+  z-index: 45;
+  width: min(92vw, 300px);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(4, 12, 18, 0.8);
+  backdrop-filter: blur(14px);
+  padding: 10px;
+}
+
+.socialChallengeCard {
+  bottom: 254px;
+}
+
+.whyNowCard {
+  bottom: 414px;
+}
+
+.socialChallengeCard ul,
+.whyNowCard ul {
+  margin: 0;
+  padding-left: 18px;
+  color: #cbdce2;
+  display: grid;
+  gap: 4px;
+}
+
+.socialChallengeCard header,
+.whyNowCard h4 {
+  margin: 0 0 8px;
+}
+
+.socialChallengeCard li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.74rem;
+}
+
+.challengeBadge {
+  margin-top: 8px;
+  display: inline-flex;
+  border-radius: 999px;
+  border: 1px solid rgba(93, 255, 52, 0.5);
+  color: #9ef780;
+  padding: 4px 10px;
+  font-size: 0.7rem;
+}
+
 .journeyPassport {
-  position: fixed;
-  right: 12px;
-  bottom: 96px;
-  z-index: 54;
-  width: min(82vw, 280px);
+  position: relative;
+  right: auto;
+  bottom: auto;
+  z-index: auto;
+  width: 100%;
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   background: rgba(3, 11, 17, 0.9);
@@ -1648,6 +1760,38 @@ body {
   padding: 10px;
   display: grid;
   gap: 8px;
+}
+
+.journeyPassportHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.passportMetricGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.passportMetricGrid article {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 8px;
+  display: grid;
+  gap: 4px;
+}
+
+.passportMetricGrid span {
+  color: #a9c4cc;
+  font-size: 0.68rem;
+}
+
+.passportMetricGrid strong {
+  color: #ebfbff;
+  font-size: 0.8rem;
 }
 
 .journeyPassport h3 {
@@ -1741,8 +1885,16 @@ body {
 .onboardingPersonaGrid button.active,
 .onboardingTransportGrid button.active {
   border-color: rgba(31, 244, 250, 0.84);
-  box-shadow: 0 0 0 1px rgba(31, 244, 250, 0.4) inset;
+  box-shadow: 0 0 0 1px rgba(31, 244, 250, 0.4) inset, 0 0 20px rgba(34, 211, 238, 0.35);
   background: rgba(31, 244, 250, 0.08);
+}
+
+.onboardingPersonaGrid button strong {
+  font-size: 0.88rem;
+}
+
+.onboardingPersonaGrid button span {
+  font-size: 0.72rem;
 }
 
 .onboardingGoalLabel {
@@ -1750,12 +1902,58 @@ body {
   color: #c7dbe6;
 }
 
-.onboardingGoalSelect {
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  background: rgba(255, 255, 255, 0.05);
-  color: #ecf8ff;
-  padding: 10px;
+.missionDropdown {
+  position: relative;
+}
+
+.onboardingGoalButton {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(31, 244, 250, 0.36);
+  background: rgba(6, 17, 28, 0.92);
+  color: #eefcff;
+  padding: 12px 14px;
+}
+
+.missionChevron {
+  color: #8eefff;
+}
+
+.onboardingGoalMenu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 2;
+  border-radius: 14px;
+  border: 1px solid rgba(31, 244, 250, 0.28);
+  background: rgba(3, 12, 18, 0.98);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.onboardingGoalOption {
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: #edf7ff;
+  padding: 12px 14px;
+}
+
+.onboardingGoalOption:hover,
+.onboardingGoalOption.active {
+  background: rgba(31, 244, 250, 0.14);
+  box-shadow: none;
+}
+
+.onboardingGoalMenu::-webkit-scrollbar,
+.onboardingGoalMenu::-webkit-scrollbar-thumb {
+  width: 6px;
 }
 
 .onboardingStartBtn {
@@ -2479,14 +2677,6 @@ button:active {
 }
 
 @media (min-width: 640px) {
-  .platformShell {
-    font-size: 14px;
-  }
-
-  .ecoPanelShell {
-    z-index: 45;
-  }
-
   .ecoPanel {
     margin-left: 16px;
     margin-bottom: 116px;
@@ -2502,10 +2692,10 @@ button:active {
     padding-top: 14px;
   }
 
-  .liveCameraCard {
+  .rightSidebarStack {
     right: 16px;
-    bottom: 116px;
-    width: 280px;
+    top: 126px;
+    width: 360px;
   }
 
   .layerControl {
@@ -2551,8 +2741,8 @@ button:active {
   }
 
   .directionsPanel {
-    right: 16px;
-    bottom: 16px;
+    right: auto;
+    bottom: auto;
   }
 }
 
@@ -2614,6 +2804,13 @@ button:active {
     max-height: calc(100vh - 16px);
   }
 
+  .rightSidebarStack {
+    right: 10px;
+    top: 120px;
+    width: min(94vw, 340px);
+    max-height: calc(100vh - 138px);
+  }
+
   .layerControl {
     right: 12px;
     top: auto;
@@ -2639,12 +2836,6 @@ button:active {
   }
 
   .liveCameraCard {
-    left: auto;
-    right: 10px;
-    width: 136px;
-    height: 92px;
-    top: auto;
-    bottom: 126px;
     overflow: hidden;
     padding: 6px;
     opacity: 0.92;
@@ -2705,24 +2896,6 @@ button:active {
 
   .ecoReportForm,
   .ecoPanelButtons {
-    grid-template-columns: 1fr;
-  }
-
-  .page {
-    grid-template-rows: auto 1fr auto auto;
-  }
-
-  .topbar {
-    grid-template-columns: 1fr;
-  }
-
-  .adminCards,
-  .adminGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .predictionItem,
-  .reportItem {
     grid-template-columns: 1fr;
   }
 }

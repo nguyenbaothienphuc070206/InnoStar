@@ -2791,6 +2791,9 @@ export default function Home() {
         <button className="demoLaunchBtn" disabled={cinematicMode} onClick={startCinematicMode}>
           {cinematicMode ? "Exploring..." : "🎥 Explore City"}
         </button>
+        <button className="demoLaunchBtn" disabled={pitchRunning} onClick={() => void runPitchChoreography()}>
+          {pitchRunning ? `Pitch Demo • Step ${pitchStepIndex}/8` : "🎞️ Run Pitch Demo"}
+        </button>
         <button className="demoLaunchBtn" onClick={runAICityPlanner}>
           🤖 Run AI Planner
         </button>
@@ -2799,6 +2802,16 @@ export default function Home() {
       <div className="cityMoodBanner">
         <strong>AI Stream:</strong> {aiSlots.length} parking • {aiTrafficZones.length} traffic zones • {aiCameraSlots.length} camera lots • {aiPlaces.length} places
       </div>
+
+      {predictiveForecast ? (
+        <div className="predictiveBanner">
+          <strong>Predictive AI Routing:</strong> {predictiveForecast.recommendation} ({predictiveForecast.densityIncreasePct}% in {predictiveForecast.nextMinutes} min)
+        </div>
+      ) : null}
+
+      <NarrativeFlowRail activeStep={pitchRunning ? pitchStepIndex : narrativeStep} score={journeyGreenScore} />
+      <SocialGreenChallenge selfName={profileName} selfScore={journeyGreenScore} visitedCount={visitedDestinations.length} />
+      <WhyNowCard />
 
       <section className={`guidePanel ${guidePanelMinimized ? "minimized" : ""}`} data-testid="ai-tour-guides">
         <div className="guidePanelHeader">
@@ -3006,17 +3019,6 @@ export default function Home() {
         </div>
       ) : null}
 
-      {turnSteps.length > 0 ? (
-        <aside className="directionsPanel" data-testid="turn-directions">
-          <h3>Directions</h3>
-          <ul>
-            {turnSteps.map((step, index) => (
-              <li key={`${step}-${index}`}>• {step}</li>
-            ))}
-          </ul>
-        </aside>
-      ) : null}
-
       {navigationActive ? (
         <aside className="navPanel" data-testid="nav-panel">
           <div>🚗 Đang di chuyển</div>
@@ -3038,7 +3040,8 @@ export default function Home() {
         </div>
       </aside>
 
-      <GlassCard className="liveCameraCard">
+      <div className="rightSidebarStack">
+        <GlassCard className="liveCameraCard">
         <h3>Live View</h3>
         {routeLoading ? <p className="loadingHint" data-testid="route-loading">Analyzing best parking...</p> : null}
         <div className="liveCameraFrame">
@@ -3086,6 +3089,28 @@ export default function Home() {
         </div>
       </GlassCard>
 
+        <JourneyPassport
+          profileName={profileName}
+          personaLabel={personaLabelFromId(selectedPersona)}
+          visitedIds={visitedDestinations}
+          transportUsed={transportUsed}
+          greenScore={journeyGreenScore}
+          rank={rank}
+        />
+
+        {turnSteps.length > 0 ? (
+          <aside className="directionsPanel directionsPanelStacked" data-testid="turn-directions">
+            <h3>Directions</h3>
+            <ul>
+              {turnSteps.map((step, index) => (
+                <li key={`${step}-${index}`}>• {step}</li>
+              ))}
+            </ul>
+          </aside>
+        ) : null}
+
+      </div>
+
       {showPlaceNarrative && selectedPlace ? (
         <PlaceStoryCard
           place={selectedPlace}
@@ -3114,15 +3139,6 @@ export default function Home() {
           setBehaviorHint(`📖 New story unlocked: ${destination.name}`);
           speakText(destination.fullStory, selectedDebate);
         }}
-      />
-
-      <JourneyPassport
-        profileName={profileName}
-        personaLabel={personaLabelFromId(selectedPersona)}
-        visitedIds={visitedDestinations}
-        transportUsed={transportUsed}
-        greenScore={journeyGreenScore}
-        rank={rank}
       />
 
       <JourneyStoryboard

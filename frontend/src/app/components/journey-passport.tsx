@@ -23,7 +23,29 @@ export default function JourneyPassport({ profileName, personaLabel, visitedIds,
 
   return (
     <aside className="journeyPassport" data-testid="journey-passport">
-      <h3>{profileName || "Traveler"}'s Eco Passport</h3>
+      <div className="journeyPassportHeader">
+        <h3>{profileName || "Traveler"}'s Eco Passport</h3>
+        <span className="passportBadge">{rank}</span>
+      </div>
+
+      <div className="passportMetricGrid">
+        <article>
+          <span>🌱 Impact</span>
+          <strong>Saved {estimatedCo2}kg CO2</strong>
+        </article>
+        <article>
+          <span>👣 Distance</span>
+          <strong>{estimatedKmWalked}km walked</strong>
+        </article>
+        <article>
+          <span>⚡ EV Trips</span>
+          <strong>{evActions}</strong>
+        </article>
+        <article>
+          <span>🎭 Persona</span>
+          <strong>{personaLabel}</strong>
+        </article>
+      </div>
 
       <section>
         <strong>Visited</strong>
@@ -34,7 +56,7 @@ export default function JourneyPassport({ profileName, personaLabel, visitedIds,
             ))}
           </ul>
         ) : (
-          <p>Chua co diem da tham quan.</p>
+          <p>Chưa có điểm đã tham quan.</p>
         )}
       </section>
 
@@ -45,16 +67,10 @@ export default function JourneyPassport({ profileName, personaLabel, visitedIds,
       </section>
 
       <section>
-        <strong>Impact</strong>
-        <p>Saved {estimatedCo2}kg CO2</p>
-      </section>
-
-      <section>
         <strong>Persona path</strong>
         <p>{personaLabel}</p>
       </section>
 
-      <span className="passportBadge">{rank}</span>
     </aside>
   );
 }

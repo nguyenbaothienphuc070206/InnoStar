@@ -15,6 +15,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const [selectedPersona, setSelectedPersona] = useState<PersonaOption | null>(null);
   const [selectedTransport, setSelectedTransport] = useState<TransportType | null>(null);
   const [journeyGoal, setJourneyGoal] = useState(goals[0]);
+  const [goalOpen, setGoalOpen] = useState(false);
 
   return (
     <div className="onboardingOverlay" data-testid="onboarding-flow">
@@ -24,15 +25,15 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
         <div className="onboardingPersonaGrid">
           <button type="button" className={selectedPersona === "coba" ? "active" : ""} onClick={() => setSelectedPersona("coba")}>
-            <strong>🌸 Co Ba</strong>
-            <span>Lich su / Nghe thuat</span>
+            <strong>🌸 Cô Ba</strong>
+            <span>Lịch sử / Nghệ thuật</span>
           </button>
           <button type="button" className={selectedPersona === "driver" ? "active" : ""} onClick={() => setSelectedPersona("driver")}>
-            <strong>🛵 Chu Tai</strong>
-            <span>Tien loi / Doi song dia phuong</span>
+            <strong>🛵 Chú Tài</strong>
+            <span>Tiện lợi / Đời sống địa phương</span>
           </button>
           <button type="button" className={selectedPersona === "youth" ? "active" : ""} onClick={() => setSelectedPersona("youth")}>
-            <strong>🎒 Ut</strong>
+            <strong>🎒 Út Local</strong>
             <span>Hidden gems</span>
           </button>
         </div>
@@ -44,12 +45,36 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           <button type="button" className={selectedTransport === "walk" ? "active" : ""} onClick={() => setSelectedTransport("walk")}>🚶 Walk</button>
         </div>
 
-        <label className="onboardingGoalLabel" htmlFor="journey-goal">Journey goal</label>
-        <select id="journey-goal" className="onboardingGoalSelect" value={journeyGoal} onChange={(event) => setJourneyGoal(event.target.value)}>
-          {goals.map((goal) => (
-            <option key={goal} value={goal}>{goal}</option>
-          ))}
-        </select>
+        <label className="onboardingGoalLabel">🌱 Select your eco mission</label>
+        <div className="missionDropdown">
+          <button
+            type="button"
+            className="onboardingGoalButton"
+            onClick={() => setGoalOpen((value) => !value)}
+            aria-expanded={goalOpen}
+            aria-haspopup="listbox"
+          >
+            <span>{journeyGoal}</span>
+            <span className="missionChevron">▾</span>
+          </button>
+          {goalOpen ? (
+            <div className="onboardingGoalMenu" role="listbox">
+              {goals.map((goal) => (
+                <button
+                  key={goal}
+                  type="button"
+                  className={`onboardingGoalOption ${journeyGoal === goal ? "active" : ""}`}
+                  onClick={() => {
+                    setJourneyGoal(goal);
+                    setGoalOpen(false);
+                  }}
+                >
+                  {goal}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
 
         <button
           type="button"

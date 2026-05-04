@@ -351,9 +351,9 @@ const guideMotionImageMap: Record<StoryCharacter, Record<GuideMotionFrame, strin
     down: "/guides/driver-down.svg"
   },
   coba: {
-    idle: "/guides/coba-idle.svg",
-    up: "/guides/coba-up.svg",
-    down: "/guides/coba-down.svg"
+    idle: "/guides/coba1.png",
+    up: "/guides/coba2.png",
+    down: "/guides/coba3.png"
   },
   youth: {
     idle: "/guides/youth-idle.svg",

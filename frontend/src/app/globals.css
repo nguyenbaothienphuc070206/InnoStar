@@ -1308,8 +1308,8 @@ body {
 }
 
 .guideAvatar {
-  width: 88px;
-  height: 88px;
+  width: 140px;
+  height: 140px;
   object-fit: contain;
   transition: transform 120ms ease;
 }
@@ -2033,8 +2033,8 @@ button:active {
 }
 
 .storyGuideAvatar {
-  width: 72px;
-  height: 72px;
+  width: 120px;
+  height: 120px;
   border-radius: 12px;
   border: 2px solid rgba(31, 244, 250, 0.35);
   background: rgba(0, 0, 0, 0.4);

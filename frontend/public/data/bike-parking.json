@@ -1,0 +1,38 @@
+[
+  {
+    "id": "bike-ben-thanh",
+    "name": "Bike Parking - Ben Thanh",
+    "lat": 10.7728,
+    "lng": 106.6981,
+    "docks": 24,
+    "available": 18,
+    "guarded": true
+  },
+  {
+    "id": "bike-park-239",
+    "name": "Bike Parking - Park 23/9",
+    "lat": 10.7707,
+    "lng": 106.6938,
+    "docks": 30,
+    "available": 12,
+    "guarded": true
+  },
+  {
+    "id": "bike-notre-dame",
+    "name": "Bike Parking - Notre Dame",
+    "lat": 10.7798,
+    "lng": 106.6999,
+    "docks": 18,
+    "available": 6,
+    "guarded": false
+  },
+  {
+    "id": "bike-nguyen-hue",
+    "name": "Bike Parking - Nguyen Hue",
+    "lat": 10.7768,
+    "lng": 106.7025,
+    "docks": 22,
+    "available": 10,
+    "guarded": true
+  }
+]

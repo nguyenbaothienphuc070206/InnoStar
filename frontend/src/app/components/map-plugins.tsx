@@ -28,6 +28,8 @@ type MapPluginContext = {
   aiTrafficZones: Array<{ zone: string; lat: number; lng: number; level: "LOW" | "MEDIUM" | "HIGH" }>;
   aiCameraSlots: Array<{ id: string; lat: number; lng: number; occupied: boolean; images: string[] }>;
   aiPlaces: Array<{ id: number; name: string; type: "history" | "daily" | "local"; persona: "COBA" | "DRIVER" | "YOUTH"; lat: number; lng: number; desc: string }>;
+  evStations: Array<{ id: string; name: string; lat: number; lng: number; plugs: number; available: number; speed: "AC" | "DC"; operator: string }>;
+  bikeParking: Array<{ id: string; name: string; lat: number; lng: number; docks: number; available: number; guarded: boolean }>;
   onSlotClick: (slot: Slot) => void;
   onLandmarkClick: (landmark: { id: string; name: string; description: string; lat: number; lng: number; guide: "coba" | "driver" | "youth" }) => void;
   onAIPlaceClick: (place: { id: number; name: string; type: "history" | "daily" | "local"; persona: "COBA" | "DRIVER" | "YOUTH"; lat: number; lng: number; desc: string }) => void;
@@ -102,6 +104,20 @@ export function createMapPlugins(): MapLayerPlugin[] {
     );
   }
 
+  function mobilityIcon(kind: "ev" | "bike", available: number, total: number): L.DivIcon {
+    const ratio = total > 0 ? available / total : 0;
+    const moodClass = ratio > 0.6 ? "good" : ratio > 0.25 ? "warn" : "bad";
+    const emoji = kind === "ev" ? "⚡" : "🚲";
+    const label = kind === "ev" ? "EV" : "BIKE";
+
+    return L.divIcon({
+      className: `mobilityMarkerHost mobility-${kind} ${moodClass}`,
+      html: `<span class="mobilityMarker mobility-${kind} ${moodClass}">${emoji}<small>${label}</small></span>`,
+      iconSize: [34, 34],
+      iconAnchor: [17, 17]
+    });
+  }
+
   return [
     {
       id: "ai-traffic",
@@ -158,6 +174,52 @@ export function createMapPlugins(): MapLayerPlugin[] {
               </Circle>
             );
           });
+      }
+    },
+    {
+      id: "mobility-hubs",
+      render: ({ layers, evStations, bikeParking, viewportBounds }) => {
+        if (!layers.parking) {
+          return null;
+        }
+
+        const evMarkers = evStations
+          .filter((item) => isVisible(item.lat, item.lng, viewportBounds, 0.0022))
+          .map((item) => (
+            <Marker
+              key={`ev-station-${item.id}`}
+              position={[item.lat, item.lng]}
+              icon={mobilityIcon("ev", item.available, item.plugs)}
+            >
+              <Popup>
+                <strong>{item.name}</strong>
+                <br />
+                EV station • {item.available}/{item.plugs} available • {item.speed}
+                <br />
+                {item.operator}
+              </Popup>
+            </Marker>
+          ));
+
+        const bikeMarkers = bikeParking
+          .filter((item) => isVisible(item.lat, item.lng, viewportBounds, 0.0022))
+          .map((item) => (
+            <Marker
+              key={`bike-hub-${item.id}`}
+              position={[item.lat, item.lng]}
+              icon={mobilityIcon("bike", item.available, item.docks)}
+            >
+              <Popup>
+                <strong>{item.name}</strong>
+                <br />
+                Public bike parking • {item.available}/{item.docks} docks free
+                <br />
+                {item.guarded ? "Guarded" : "Open access"}
+              </Popup>
+            </Marker>
+          ));
+
+        return [...evMarkers, ...bikeMarkers];
       }
     },
     {

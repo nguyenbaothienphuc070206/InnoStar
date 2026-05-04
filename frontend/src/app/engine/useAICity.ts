@@ -23,6 +23,27 @@ export type AICameraSlot = {
   images: string[];
 };
 
+export type EVChargingStation = {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  plugs: number;
+  available: number;
+  speed: "AC" | "DC";
+  operator: string;
+};
+
+export type BikeParkingHub = {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  docks: number;
+  available: number;
+  guarded: boolean;
+};
+
 type RawAICameraSlot = {
   id: string;
   lat: number;
@@ -47,6 +68,8 @@ export function useAICity() {
   const [traffic, setTraffic] = useState<AITrafficZone[]>([]);
   const [camera, setCamera] = useState<AICameraSlot[]>([]);
   const [places, setPlaces] = useState<AIPlace[]>([]);
+  const [evStations, setEvStations] = useState<EVChargingStation[]>([]);
+  const [bikeParking, setBikeParking] = useState<BikeParkingHub[]>([]);
 
   function trafficPenalty(level: AITrafficZone["level"]): number {
     if (level === "HIGH") {
@@ -103,6 +126,8 @@ export function useAICity() {
       })
       .catch(() => setCamera([]));
     fetch("/data/places.json").then((r) => r.json()).then(setPlaces).catch(() => setPlaces([]));
+    fetch("/data/ev-charging.json").then((r) => r.json()).then(setEvStations).catch(() => setEvStations([]));
+    fetch("/data/bike-parking.json").then((r) => r.json()).then(setBikeParking).catch(() => setBikeParking([]));
   }, []);
 
   useEffect(() => {
@@ -132,5 +157,5 @@ export function useAICity() {
     return () => window.clearInterval(interval);
   }, []);
 
-  return { slots, traffic, camera, places };
+  return { slots, traffic, camera, places, evStations, bikeParking };
 }

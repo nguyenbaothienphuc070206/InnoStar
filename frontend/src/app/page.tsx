@@ -634,7 +634,9 @@ export default function Home() {
     slots: aiSlots,
     traffic: aiTrafficZones,
     camera: aiCameraSlots,
-    places: aiPlaces
+    places: aiPlaces,
+    evStations,
+    bikeParking
   } = useAICity();
 
   useEffect(() => {
@@ -2468,6 +2470,8 @@ export default function Home() {
         aiTrafficZones={aiTrafficZones}
         aiCameraSlots={aiCameraSlots}
         aiPlaces={aiPlaces}
+        evStations={evStations}
+        bikeParking={bikeParking}
         onViewportCenterChange={(center) => {
           setMapCenter(center);
         }}
@@ -2686,6 +2690,10 @@ export default function Home() {
         etaMinutes={etaMinutes}
         finding={finding}
         routeLoading={routeLoading}
+        mobilityStats={{
+          evStations: evStations.length,
+          bikeParking: bikeParking.length
+        }}
         onFindNearest={handleFindNearest}
         onDrawRoute={handleDrawRoute}
       />

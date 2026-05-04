@@ -13,6 +13,10 @@ type EcoPanelProps = {
   etaMinutes: number | null;
   finding: boolean;
   routeLoading: boolean;
+  mobilityStats?: {
+    evStations: number;
+    bikeParking: number;
+  };
   onFindNearest: () => void;
   onDrawRoute: () => void;
 };
@@ -28,6 +32,7 @@ export default function EcoPanel({
   etaMinutes,
   finding,
   routeLoading,
+  mobilityStats,
   onFindNearest,
   onDrawRoute
 }: EcoPanelProps) {
@@ -291,6 +296,13 @@ export default function EcoPanel({
             </div>
 
             <div className="ecoBadge" title={`${ecoLevel} - ${ecoPoints} pts`}>{ecoLevel} • {ecoPoints} pts</div>
+
+            {mobilityStats ? (
+              <div className="ecoMobilityStats">
+                <span>⚡ EV: {mobilityStats.evStations}</span>
+                <span>🚲 Bike: {mobilityStats.bikeParking}</span>
+              </div>
+            ) : null}
 
             <div className="ecoPanelButtons">
               <button

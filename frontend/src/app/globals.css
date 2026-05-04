@@ -873,6 +873,83 @@ body {
   border: 2px solid rgba(255, 255, 255, 0.85);
 }
 
+.mobilityMarkerHost {
+  background: transparent;
+  border: none;
+}
+
+.mobilityMarker {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.08);
+}
+
+.mobilityMarker small {
+  font-size: 0.43rem;
+  line-height: 1;
+  letter-spacing: 0.08em;
+}
+
+.mobilityMarker.mobility-ev.good {
+  background: rgba(31, 244, 250, 0.18);
+  border-color: rgba(31, 244, 250, 0.72);
+  color: #d8ffff;
+}
+
+.mobilityMarker.mobility-ev.warn {
+  background: rgba(255, 195, 77, 0.16);
+  border-color: rgba(255, 195, 77, 0.72);
+  color: #fff4d8;
+}
+
+.mobilityMarker.mobility-ev.bad {
+  background: rgba(239, 79, 83, 0.18);
+  border-color: rgba(239, 79, 83, 0.75);
+  color: #ffe4e4;
+}
+
+.mobilityMarker.mobility-bike.good {
+  background: rgba(93, 255, 52, 0.16);
+  border-color: rgba(93, 255, 52, 0.72);
+  color: #ecffdf;
+}
+
+.mobilityMarker.mobility-bike.warn {
+  background: rgba(255, 195, 77, 0.16);
+  border-color: rgba(255, 195, 77, 0.72);
+  color: #fff4d8;
+}
+
+.mobilityMarker.mobility-bike.bad {
+  background: rgba(239, 79, 83, 0.18);
+  border-color: rgba(239, 79, 83, 0.75);
+  color: #ffe4e4;
+}
+
+.ecoMobilityStats {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.64rem;
+  color: #cfe4ea;
+}
+
+.ecoMobilityStats span {
+  padding: 3px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+
 .routePulse {
   animation: routeDash calc(1.4s / var(--als-speed, 1)) linear infinite;
 }

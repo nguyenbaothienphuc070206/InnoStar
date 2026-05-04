@@ -1,0 +1,42 @@
+[
+  {
+    "id": "ev-ben-thanh",
+    "name": "EV Charging - Ben Thanh",
+    "lat": 10.7722,
+    "lng": 106.6988,
+    "plugs": 8,
+    "available": 5,
+    "speed": "DC",
+    "operator": "GreenCharge"
+  },
+  {
+    "id": "ev-park-239",
+    "name": "EV Charging - Park 23/9",
+    "lat": 10.7710,
+    "lng": 106.6929,
+    "plugs": 6,
+    "available": 2,
+    "speed": "AC",
+    "operator": "Saigon EV"
+  },
+  {
+    "id": "ev-museum",
+    "name": "EV Charging - Museum District",
+    "lat": 10.7762,
+    "lng": 106.7002,
+    "plugs": 4,
+    "available": 1,
+    "speed": "DC",
+    "operator": "EcoVolt"
+  },
+  {
+    "id": "ev-nguyen-trai",
+    "name": "EV Charging - Nguyen Trai",
+    "lat": 10.7679,
+    "lng": 106.6848,
+    "plugs": 10,
+    "available": 7,
+    "speed": "AC",
+    "operator": "ChargeNow"
+  }
+]

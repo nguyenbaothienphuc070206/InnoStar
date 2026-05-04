@@ -1,0 +1,47 @@
+[
+  {
+    "id": 1,
+    "name": "Bảo tàng TP.HCM",
+    "type": "history",
+    "persona": "COBA",
+    "lat": 10.7765,
+    "lng": 106.7009,
+    "overview": "Nơi lưu giữ dấu ấn lịch sử Sài Gòn qua nhiều thế kỷ",
+    "history": "Công trình kiến trúc này từng là dinh thự quan lục của thời Pháp thuộc. Sau đó trở thành bảo tàng lưu giữ hàng ngàn hiện vật về lịch sử, văn hóa và phát triển của thành phố.",
+    "greenStoryHook": "Khu vực này có nhiều xe cộ chen chúc. Gửi xe tại bãi công viên 30/4 rồi đi bộ sẽ giúp bạn cảm nhận kiến trúc từ từ, lại giảm áp lực giao thông cho khu di tích.",
+    "walkingRoute": "Công viên 30/4 (cách 400m) → đi bộ dọc đường Lý Tự Trọng → Bảo tàng",
+    "ecoBenefit": "Giảm 120-150kg CO2/ngày trong khu vực, bảo vệ cảnh quan di tích",
+    "recommendedParking": "Bãi xe Công viên 30/4",
+    "hiddenSpot": "Khu vườn sau bảo tàng có góc im lặng giữa thành phố"
+  },
+  {
+    "id": 2,
+    "name": "Công viên 23/9",
+    "type": "daily",
+    "persona": "DRIVER",
+    "lat": 10.7712,
+    "lng": 106.6935,
+    "overview": "Không gian sinh hoạt cộng đồng, trung tâm hoạt động từ thiện và văn hóa",
+    "history": "Công viên được xây dựng để phục vụ nhu cầu giải trí công cộng, trở thành địa điểm họp mặt lâu năm của cộng đồng Sài Gòn.",
+    "greenStoryHook": "Chỗ này khách đông lắm, nhất là giờ cao điểm. Gửi xe ở bãi phía ngoài hoặc dùng bãi công viên chính thôi. Không nên chen vào trong công viên, vừa kẹt vừa ảnh hưởng tới khu vui chơi.",
+    "walkingRoute": "Bãi xe Công viên chính → đi bộ 3-5 phút vào lõi công viên",
+    "ecoBenefit": "Giảm kẹt xe, tăng không gian xanh cho cô m bộ mục tiêu giảm ô nhiễm không khí",
+    "recommendedParking": "Bãi xe Công viên 23/9 chính (rộng, miễn phí)",
+    "hiddenSpot": "Góc yên tĩnh ở phía bắc công viên, ít khách tây phương"
+  },
+  {
+    "id": 3,
+    "name": "Hẻm 127 Nguyễn Trãi (Bún mọc cô Sáu)",
+    "type": "local",
+    "persona": "YOUTH",
+    "lat": 10.7735,
+    "lng": 106.6972,
+    "overview": "Quán ăn địa phương nổi tiếng, điểm nhọn của văn hóa ẩm thực Sài Gòn thực thụ",
+    "history": "Quán được mở từ những năm 80, từ một bếp nhỏ phía sau hẻm đã trở thành huyền thoại ẩm thực local. Cô Sáu, chủ quán, vẫn còn nấu nước dùng theo cách truyền thống.",
+    "greenStoryHook": "Hẻm hẹp không có chỗ đỗ xe to. Gửi xe tại bãi phía hẻm, rồi khám phá từ từ mới thấy được những quán ăn khác, những góc ít người biết. Vừa chỗ yên, vừa cảm nhận thực đấy.",
+    "walkingRoute": "Bãi xe Nguyễn Trãi (cách 150m) → đi bộ vào hẻm 127 → quán cô Sáu",
+    "ecoBenefit": "Giảm áp lực giao thông hẻm nhỏ, khuyến khích khám phá hẻm xuyên phía kết nối cộng đồng",
+    "recommendedParking": "Bãi xe nhỏ trên Nguyễn Trãi hoặc hẻm gần đó",
+    "hiddenSpot": "Các quán ăn sáng và hàng rau quả tươi ở phía sâu hẻm, hoạt động sớm nhất 5-6h sáng"
+  }
+]

@@ -9,6 +9,7 @@ import EcoPanel from "./components/eco-panel";
 import EnterpriseOpsPanel, { AdminMode } from "./components/enterprise-ops-panel";
 import GlassCard from "./components/glass-card";
 import LayerControl from "./components/layer-control";
+import PlaceStoryCard from "./components/place-story-card";
 import SlotMiniDashboard from "./components/slot-mini-dashboard";
 import StoryBubble from "./components/story-bubble";
 import TopBar from "./components/top-bar";
@@ -17,6 +18,7 @@ import { CityState, EngineStep, RouteType, VoiceType, getSuggestion } from "./en
 import { inferPersona } from "./engine/personaEngine";
 import { findBestSlot, generateRoute } from "./engine/routing";
 import { getStory } from "./engine/storytelling";
+import { generateNarrativeScript, PlaceData } from "./engine/place-narrative";
 import { AIPlace, useAICity } from "./engine/useAICity";
 import { useCityEngine } from "./engine/useCityEngine";
 import { useDebouncedValue } from "./hooks/use-debounced-value";
@@ -574,6 +576,10 @@ export default function Home() {
   const [landmarkJourney, setLandmarkJourney] = useState<LandmarkJourney | null>(null);
   const [landmarkPreview, setLandmarkPreview] = useState<LandmarkPreview | null>(null);
   const [guidePanelMinimized, setGuidePanelMinimized] = useState(false);
+  const [selectedPlace, setSelectedPlace] = useState<PlaceData | null>(null);
+  const [showPlaceNarrative, setShowPlaceNarrative] = useState(false);
+  const [placeScript, setPlaceScript] = useState<string[]>([]);
+  const [placePersona, setPlacePersona] = useState<"coba" | "driver" | "youth">("coba");
   const zoneRegenerationTokenRef = useRef(0);
   const storyLayerHydratedRef = useRef(false);
   const storyVoiceHydratedRef = useRef(false);
@@ -2177,14 +2183,87 @@ export default function Home() {
 
   function handleAIPlaceClick(place: AIPlace) {
     const guide = personaToGuide(place.persona);
-    const mapped: GuideLandmark = {
-      id: `ai-place-${place.id}`,
-      name: place.name,
-      description: place.desc,
-      lat: place.lat,
-      lng: place.lng
-    };
-    void handleLandmarkClick(guide, mapped, false);
+    const personaUpper = guide.toUpperCase() as "COBA" | "DRIVER" | "YOUTH";
+    
+    // Load the place details from places-full.json
+    fetch("/data/places-full.json")
+      .then((res) => res.json())
+      .then((placesData: PlaceData[]) => {
+        // Find matching place by name or create from AI place
+        const fullPlace = placesData.find((p) => p.name.includes(place.name)) || {
+          id: place.id,
+          name: place.name,
+          type: place.type || "landmark" as any,
+          persona: personaUpper,
+          lat: place.lat,
+          lng: place.lng,
+          overview: place.desc,
+          history: "",
+          greenStoryHook: "",
+          walkingRoute: "",
+          ecoBenefit: "",
+          recommendedParking: "",
+          hiddenSpot: ""
+        } as PlaceData;
+
+        // Generate narrative script
+        const script = generateNarrativeScript(fullPlace, personaUpper);
+        setSelectedPlace(fullPlace);
+        setPlaceScript(script);
+        setPlacePersona(guide);
+        setShowPlaceNarrative(true);
+        
+        // Also set landmark preview for map
+        const mapped: GuideLandmark = {
+          id: `ai-place-${place.id}`,
+          name: place.name,
+          description: place.desc,
+          lat: place.lat,
+          lng: place.lng
+        };
+        setSelectedDebate(guide);
+        setActiveLandmarkId(mapped.id);
+        setLandmarkPreview({ guide, landmark: mapped });
+        setMapCenter({ lat: place.lat, lng: place.lng });
+        setBehaviorHint(`🧭 ${guideProfiles[guide].label} đang kể chuyện về ${place.name}.`);
+        setCityNarration(`📍 ${place.name} - ${place.desc}`);
+      })
+      .catch(() => {
+        // Fallback: create basic place and show narrative anyway
+        const fallbackPlace: PlaceData = {
+          id: place.id,
+          name: place.name,
+          type: "daily",
+          persona: personaUpper,
+          lat: place.lat,
+          lng: place.lng,
+          overview: place.desc,
+          history: "",
+          greenStoryHook: "",
+          walkingRoute: "",
+          ecoBenefit: "",
+          recommendedParking: "",
+          hiddenSpot: ""
+        };
+        
+        const script = generateNarrativeScript(fallbackPlace, personaUpper);
+        setSelectedPlace(fallbackPlace);
+        setPlaceScript(script);
+        setPlacePersona(guide);
+        setShowPlaceNarrative(true);
+        
+        const mapped: GuideLandmark = {
+          id: `ai-place-${place.id}`,
+          name: place.name,
+          description: place.desc,
+          lat: place.lat,
+          lng: place.lng
+        };
+        setSelectedDebate(guide);
+        setActiveLandmarkId(mapped.id);
+        setLandmarkPreview({ guide, landmark: mapped });
+        setMapCenter({ lat: place.lat, lng: place.lng });
+      });
   }
 
   function runAICityPlanner() {
@@ -2653,6 +2732,20 @@ export default function Home() {
           <span>Impact: {co2SavedKg}kg CO2 saved, equivalent to {treeEquivalent} tree-months.</span>
         </div>
       </GlassCard>
+
+      {showPlaceNarrative && selectedPlace ? (
+        <PlaceStoryCard
+          place={selectedPlace}
+          script={placeScript}
+          persona={placePersona}
+          isFinished={false}
+          onNextStep={() => {
+            // Close story after finishing
+            setShowPlaceNarrative(false);
+            setSelectedPlace(null);
+          }}
+        />
+      ) : null}
     </main>
   );
 }

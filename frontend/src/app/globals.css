@@ -1740,6 +1740,176 @@ button:active {
   }
 }
 
+.placeStoryCard {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 70;
+  width: min(92vw, 480px);
+  max-height: 80vh;
+  border-radius: 16px;
+  border: 1px solid rgba(31, 244, 250, 0.48);
+  background: rgba(1, 8, 12, 0.88);
+  backdrop-filter: blur(20px);
+  padding: 16px;
+  box-shadow: 0 0 40px rgba(31, 244, 250, 0.18), inset 0 0 60px rgba(93, 255, 52, 0.06);
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  gap: 12px;
+  overflow-y: auto;
+  animation: storyIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.storyCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.storyGuideAvatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 12px;
+  border: 2px solid rgba(31, 244, 250, 0.35);
+  background: rgba(0, 0, 0, 0.4);
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.storyPlaceName {
+  margin: 0;
+  color: #1ff4fa;
+  font-size: 1.24rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.storyNarration {
+  position: relative;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.3);
+  padding: 12px;
+  min-height: 100px;
+}
+
+.storyText {
+  margin: 0;
+  color: #e8f5ff;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  letter-spacing: 0.01em;
+}
+
+.typingCursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: var(--city-tone);
+  margin-left: 2px;
+  animation: blink 0.8s infinite;
+}
+
+@keyframes blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.greenTipsCarousel {
+  border-radius: 12px;
+  border: 1px solid rgba(93, 255, 52, 0.35);
+  background: rgba(93, 255, 52, 0.08);
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.greenTipsCarousel strong {
+  margin: 0;
+  color: var(--green);
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+}
+
+.greenTipItem {
+  border-radius: 10px;
+  border: 1px solid rgba(93, 255, 52, 0.45);
+  background: rgba(0, 0, 0, 0.2);
+  padding: 8px;
+  color: #dfffd8;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  animation: tipSlide 0.4s ease;
+}
+
+@keyframes tipSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.greenTipNav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.tipDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(93, 255, 52, 0.3);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.tipDot.active {
+  background: var(--green);
+  box-shadow: 0 0 12px rgba(93, 255, 52, 0.8);
+  transform: scale(1.3);
+}
+
+.storyControls {
+  display: flex;
+  gap: 8px;
+}
+
+.storyNextBtn {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(31, 244, 250, 0.5);
+  background: rgba(31, 244, 250, 0.2);
+  color: #1ff4fa;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.storyNextBtn:hover:not(:disabled) {
+  background: rgba(31, 244, 250, 0.35);
+  box-shadow: 0 0 16px rgba(31, 244, 250, 0.3);
+}
+
+.storyNextBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 @keyframes soonPulse {
   0% {
     transform: scale(1);

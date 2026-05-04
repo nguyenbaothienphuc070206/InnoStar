@@ -63,6 +63,16 @@ export type AIPlace = {
   desc: string;
 };
 
+type RawAIPlace = AIPlace & {
+  overview?: string;
+  history?: string;
+  greenStoryHook?: string;
+  walkingRoute?: string;
+  ecoBenefit?: string;
+  recommendedParking?: string;
+  hiddenSpot?: string;
+};
+
 export function useAICity() {
   const [slots, setSlots] = useState<AIParkingSlot[]>([]);
   const [traffic, setTraffic] = useState<AITrafficZone[]>([]);
@@ -125,7 +135,37 @@ export function useAICity() {
         setCamera(mapped);
       })
       .catch(() => setCamera([]));
-    fetch("/data/places.json").then((r) => r.json()).then(setPlaces).catch(() => setPlaces([]));
+    fetch("/data/places-full.json")
+      .then((r) => r.json())
+      .then((raw: RawAIPlace[]) => {
+        if (!Array.isArray(raw)) {
+          setPlaces([]);
+          return;
+        }
+
+        setPlaces(
+          raw.map((item) => ({
+            id: item.id,
+            name: item.name,
+            type: item.type,
+            persona: item.persona,
+            lat: item.lat,
+            lng: item.lng,
+            desc:
+              item.overview ??
+              item.history ??
+              item.greenStoryHook ??
+              item.walkingRoute ??
+              item.ecoBenefit ??
+              item.recommendedParking ??
+              item.hiddenSpot ??
+              item.name
+          }))
+        );
+      })
+      .catch(() => {
+        fetch("/data/places.json").then((r) => r.json()).then(setPlaces).catch(() => setPlaces([]));
+      });
     fetch("/data/ev-charging.json").then((r) => r.json()).then(setEvStations).catch(() => setEvStations([]));
     fetch("/data/bike-parking.json").then((r) => r.json()).then(setBikeParking).catch(() => setBikeParking([]));
   }, []);

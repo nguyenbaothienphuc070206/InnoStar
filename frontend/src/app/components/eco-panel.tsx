@@ -37,7 +37,7 @@ export default function EcoPanel({
   onDrawRoute
 }: EcoPanelProps) {
   const [viewportHeight, setViewportHeight] = useState(900);
-  const [sheetHeight, setSheetHeight] = useState(280);
+  const [sheetHeight, setSheetHeight] = useState(84);
   const [dragging, setDragging] = useState(false);
   const dragStartYRef = useRef(0);
   const dragStartHeightRef = useRef(0);
@@ -285,10 +285,7 @@ export default function EcoPanel({
 
         <div className="ecoBodyWrap">
           <div className="ecoBody">
-            <p className="ecoStatus">● {status}</p>
-
             <div className="ecoQuickStats">🌱 {co2SavedKg}kg CO2</div>
-            <div className="ecoSub">≈ {treeEquivalent} trees planted</div>
 
             <div className="ecoScoreRow">
               <span>Score</span>

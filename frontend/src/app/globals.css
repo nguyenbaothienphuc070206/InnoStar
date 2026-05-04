@@ -881,6 +881,194 @@ body {
   border-color: color-mix(in srgb, var(--city-tone) 48%, white);
 }
 
+.cityMoodBanner.mood-calm {
+  background: rgba(93, 255, 52, 0.08);
+}
+
+.cityMoodBanner.mood-stressed {
+  background: rgba(255, 195, 77, 0.08);
+}
+
+.cityMoodBanner.mood-chaotic {
+  background: rgba(239, 79, 83, 0.08);
+}
+
+.journeyStoryboard {
+  position: absolute;
+  right: 16px;
+  bottom: 320px;
+  z-index: 54;
+  width: min(92vw, 390px);
+  max-height: 64vh;
+  padding: 12px;
+  overflow-y: auto;
+  display: grid;
+  gap: 10px;
+}
+
+.journeyHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.journeyHeader p,
+.journeyHeader h3 {
+  margin: 0;
+}
+
+.journeyHeader p {
+  font-size: 0.64rem;
+  color: #9bd7e2;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.journeyHeader h3 {
+  margin-top: 2px;
+  font-size: 0.95rem;
+  color: #f5fffe;
+}
+
+.journeyCloseBtn {
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 0.64rem;
+}
+
+.journeySection {
+  display: grid;
+  gap: 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 10px;
+}
+
+.journeySectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.journeySectionHeader strong {
+  font-size: 0.72rem;
+  color: #def7ff;
+}
+
+.journeySectionHeader span {
+  font-size: 0.62rem;
+  color: #a9c3cb;
+}
+
+.journeyBadge {
+  border-radius: 999px;
+  padding: 2px 8px;
+  border: 1px solid rgba(93, 255, 52, 0.4);
+  background: rgba(93, 255, 52, 0.12);
+  color: #d9ffd1 !important;
+}
+
+.journeyStatGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.journeyStatGrid article {
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.18);
+  padding: 8px;
+  display: grid;
+  gap: 2px;
+}
+
+.journeyStatGrid span {
+  font-size: 0.6rem;
+  color: #9fb8bf;
+}
+
+.journeyStatGrid strong {
+  font-size: 0.82rem;
+  color: #effcff;
+}
+
+.journeyStoryLine {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: #dceaf0;
+}
+
+.journeyStatsLine {
+  color: #bafed3;
+}
+
+.journeyTimelineList,
+.campaignMissionList,
+.debateLineList {
+  display: grid;
+  gap: 6px;
+}
+
+.journeyTimelineList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.journeyTimelineItem,
+.campaignMission,
+.debateLineItem {
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.16);
+  padding: 8px;
+  display: grid;
+  gap: 2px;
+}
+
+.journeyTimelineItem strong,
+.campaignMission strong {
+  font-size: 0.72rem;
+  color: #e8fbff;
+}
+
+.journeyTimelineItem span,
+.campaignMission span,
+.debateLineItem p {
+  margin: 0;
+  font-size: 0.64rem;
+  line-height: 1.4;
+  color: #bfd0d7;
+}
+
+.journeyTimelineItem small,
+.campaignMission small,
+.debateLineItem small {
+  font-size: 0.59rem;
+  color: #9eb7bf;
+}
+
+.campaignMission.completed {
+  border-color: rgba(93, 255, 52, 0.42);
+  box-shadow: 0 0 12px rgba(93, 255, 52, 0.12);
+}
+
+.campaignMission.pending {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.debatePickBtn {
+  justify-self: start;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 0.62rem;
+}
+
 .routeOptionItem.active {
   border-color: color-mix(in srgb, var(--city-tone) 64%, white);
   box-shadow: 0 0 14px color-mix(in srgb, var(--city-tone) 35%, transparent);

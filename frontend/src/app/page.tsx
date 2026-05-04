@@ -9,6 +9,7 @@ import EcoPanel from "./components/eco-panel";
 import EnterpriseOpsPanel, { AdminMode } from "./components/enterprise-ops-panel";
 import GlassCard from "./components/glass-card";
 import LayerControl from "./components/layer-control";
+import JourneyStoryboard from "./components/journey-storyboard";
 import PlaceStoryCard from "./components/place-story-card";
 import SlotMiniDashboard from "./components/slot-mini-dashboard";
 import StoryBubble from "./components/story-bubble";
@@ -18,7 +19,22 @@ import { CityState, EngineStep, RouteType, VoiceType, getSuggestion } from "./en
 import { inferPersona } from "./engine/personaEngine";
 import { findBestSlot, generateRoute } from "./engine/routing";
 import { getStory } from "./engine/storytelling";
-import { generateNarrativeScript, PlaceData } from "./engine/place-narrative";
+import {
+  buildDestinationIntelligence,
+  generateAdaptiveStory,
+  type DestinationIntelligence,
+  type NarrativeContext,
+  type Persona,
+  type PlaceData
+} from "./engine/place-narrative";
+import {
+  buildCampaignMissions,
+  buildJourneySummary,
+  buildJourneyVisit,
+  buildPersonaDebate,
+  type JourneyVisit,
+  type PersonaDebateLine
+} from "./engine/journey-mode";
 import { AIPlace, useAICity } from "./engine/useAICity";
 import { useCityEngine } from "./engine/useCityEngine";
 import { useDebouncedValue } from "./hooks/use-debounced-value";
@@ -516,6 +532,17 @@ function personaToGuide(persona: "COBA" | "DRIVER" | "YOUTH"): StoryCharacter {
   return "coba";
 }
 
+function personaToUpper(persona: StoryCharacter): Persona {
+  return persona === "driver" ? "DRIVER" : persona === "youth" ? "YOUTH" : "COBA";
+}
+
+function timeLabelNow(): string {
+  return new Date().toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
 export default function Home() {
   const [adminMode, setAdminMode] = useState<AdminMode>("closed");
   const [adminWidth, setAdminWidth] = useState(340);
@@ -580,6 +607,10 @@ export default function Home() {
   const [showPlaceNarrative, setShowPlaceNarrative] = useState(false);
   const [placeScript, setPlaceScript] = useState<string[]>([]);
   const [placePersona, setPlacePersona] = useState<"coba" | "driver" | "youth">("coba");
+  const [destinationProfile, setDestinationProfile] = useState<DestinationIntelligence | null>(null);
+  const [journeyVisits, setJourneyVisits] = useState<JourneyVisit[]>([]);
+  const [personaDebateLines, setPersonaDebateLines] = useState<PersonaDebateLine[]>([]);
+  const [placeLibrary, setPlaceLibrary] = useState<PlaceData[]>([]);
   const zoneRegenerationTokenRef = useRef(0);
   const storyLayerHydratedRef = useRef(false);
   const storyVoiceHydratedRef = useRef(false);
@@ -605,6 +636,13 @@ export default function Home() {
     camera: aiCameraSlots,
     places: aiPlaces
   } = useAICity();
+
+  useEffect(() => {
+    fetch("/data/places-full.json")
+      .then((response) => response.json())
+      .then((data: PlaceData[]) => setPlaceLibrary(Array.isArray(data) ? data : []))
+      .catch(() => setPlaceLibrary([]));
+  }, []);
 
   const {
     slots,
@@ -684,6 +722,8 @@ export default function Home() {
 
   const activePersona = useMemo(() => inferPersona({ intent: cityState.intent }), [cityState.intent]);
   const activePersonaGuide = useMemo(() => personaToGuide(activePersona), [activePersona]);
+  const journeySummary = useMemo(() => buildJourneySummary(journeyVisits), [journeyVisits]);
+  const campaignMissions = useMemo(() => buildCampaignMissions(journeyVisits, cityMood), [cityMood, journeyVisits]);
 
   useEffect(() => {
     if (cityState.mood === "CHAOTIC") {
@@ -2044,6 +2084,41 @@ export default function Home() {
     setBehaviorHint(`🧭 ${guideProfiles[guide].label} đang dẫn bạn tới ${landmark.name}. Đồng thời gợi ý bãi đỗ xe hợp lý gần điểm này.`);
 
     if (!buildRoute) {
+      const fallbackPlace: PlaceData = {
+        id: Math.abs(landmark.id.length * 17),
+        name: landmark.name,
+        type: "daily",
+        persona: personaToUpper(guide),
+        lat: landmark.lat,
+        lng: landmark.lng,
+        overview: landmark.description,
+        history: landmark.description,
+        greenStoryHook: "Lối đi bộ ngắn, giữ nhịp xanh cho chuyến ghé.",
+        walkingRoute: "Từ bãi xe đi bộ theo trục chính rồi rẽ vào điểm đến.",
+        ecoBenefit: "Giảm xe vào lõi trung tâm",
+        recommendedParking: "Bãi phụ gần nhất",
+        hiddenSpot: "Có một góc rẽ local ít người để ý"
+      };
+
+      const context: NarrativeContext = {
+        persona: personaToUpper(guide),
+        traffic: trafficLevel,
+        cityMood,
+        timeLabel: timeLabelNow(),
+        selectedSlotAvailable: selectedSlot?.available ?? false,
+        visitedCount: journeyVisits.length
+      };
+      const intelligence = buildDestinationIntelligence(fallbackPlace, context);
+      const script = generateAdaptiveStory(fallbackPlace, context);
+      const journeyVisit = buildJourneyVisit(fallbackPlace, intelligence, cityMood);
+
+      setSelectedPlace(fallbackPlace);
+      setDestinationProfile(intelligence);
+      setPlaceScript(script);
+      setPlacePersona(guide);
+      setShowPlaceNarrative(true);
+      setPersonaDebateLines(buildPersonaDebate(fallbackPlace, intelligence, context));
+      setJourneyVisits((current) => (current.some((visit) => visit.id === fallbackPlace.id) ? current : [...current, journeyVisit]));
       speakText(`Đây là ${landmark.name}. ${landmark.description}`, guide);
       return;
     }
@@ -2139,6 +2214,43 @@ export default function Home() {
     });
     setGuideSubtitle(`📌 ${landmark.name} • ${active.distanceKm} km • ${active.smartEtaMin} phút`);
     setStatusMessage(`Lộ trình đến ${landmark.name}: ${active.smartEtaMin} phút, ${active.distanceKm} km`);
+
+    const matchedPlace = placeLibrary.find((item) => item.name === landmark.name || item.name.includes(landmark.name) || landmark.name.includes(item.name));
+    const fallbackPlace: PlaceData = matchedPlace ?? {
+      id: Math.abs(landmark.id.length * 17),
+      name: landmark.name,
+      type: "history",
+      persona: personaToUpper(guide),
+      lat: landmark.lat,
+      lng: landmark.lng,
+      overview: landmark.description,
+      history: landmark.description,
+      greenStoryHook: "Chuyến này có thể đi bộ ngắn để giữ nhịp khám phá.",
+      walkingRoute: "Từ bãi xe đi vào theo trục chính rồi rẽ vào điểm đến.",
+      ecoBenefit: "Giảm khí thải và giảm áp lực bãi đỗ",
+      recommendedParking: "Bãi phụ gần điểm tham quan",
+      hiddenSpot: "Có một lối đi nhỏ ít người biết"
+    };
+
+    const context: NarrativeContext = {
+      persona: personaToUpper(guide),
+      traffic: trafficLevel,
+      cityMood,
+      timeLabel: timeLabelNow(),
+      selectedSlotAvailable: selectedSlot?.available ?? false,
+      visitedCount: journeyVisits.length
+    };
+    const intelligence = buildDestinationIntelligence(fallbackPlace, context);
+    const script = generateAdaptiveStory(fallbackPlace, context);
+    const journeyVisit = buildJourneyVisit(fallbackPlace, intelligence, cityMood);
+
+    setSelectedPlace(fallbackPlace);
+    setDestinationProfile(intelligence);
+    setPlaceScript(script);
+    setPlacePersona(guide);
+    setShowPlaceNarrative(true);
+    setPersonaDebateLines(buildPersonaDebate(fallbackPlace, intelligence, context));
+    setJourneyVisits((current) => (current.some((visit) => visit.id === fallbackPlace.id) ? current : [...current, journeyVisit]));
     speakText(`Đây là ${landmark.name}. ${landmark.description}`, guide);
   }
 
@@ -2183,87 +2295,56 @@ export default function Home() {
 
   function handleAIPlaceClick(place: AIPlace) {
     const guide = personaToGuide(place.persona);
-    const personaUpper = guide.toUpperCase() as "COBA" | "DRIVER" | "YOUTH";
-    
-    // Load the place details from places-full.json
-    fetch("/data/places-full.json")
-      .then((res) => res.json())
-      .then((placesData: PlaceData[]) => {
-        // Find matching place by name or create from AI place
-        const fullPlace = placesData.find((p) => p.name.includes(place.name)) || {
-          id: place.id,
-          name: place.name,
-          type: place.type || "landmark" as any,
-          persona: personaUpper,
-          lat: place.lat,
-          lng: place.lng,
-          overview: place.desc,
-          history: "",
-          greenStoryHook: "",
-          walkingRoute: "",
-          ecoBenefit: "",
-          recommendedParking: "",
-          hiddenSpot: ""
-        } as PlaceData;
+    const personaUpper = personaToUpper(guide);
+    const matchedPlace = placeLibrary.find((item) => item.name === place.name || item.name.includes(place.name) || place.name.includes(item.name));
+    const fullPlace: PlaceData = matchedPlace ?? {
+      id: place.id,
+      name: place.name,
+      type: place.type,
+      persona: personaUpper,
+      lat: place.lat,
+      lng: place.lng,
+      overview: place.desc,
+      history: place.desc,
+      greenStoryHook: "Giữ nhịp xanh bằng cách đi bộ thêm một đoạn.",
+      walkingRoute: "Từ bãi đỗ xe đến điểm đến theo lối ngắn nhất.",
+      ecoBenefit: "Giảm phát thải nhờ bớt chạy vòng",
+      recommendedParking: "Bãi phụ gần nhất",
+      hiddenSpot: "Có một góc local sát hông điểm đến"
+    };
 
-        // Generate narrative script
-        const script = generateNarrativeScript(fullPlace, personaUpper);
-        setSelectedPlace(fullPlace);
-        setPlaceScript(script);
-        setPlacePersona(guide);
-        setShowPlaceNarrative(true);
-        
-        // Also set landmark preview for map
-        const mapped: GuideLandmark = {
-          id: `ai-place-${place.id}`,
-          name: place.name,
-          description: place.desc,
-          lat: place.lat,
-          lng: place.lng
-        };
-        setSelectedDebate(guide);
-        setActiveLandmarkId(mapped.id);
-        setLandmarkPreview({ guide, landmark: mapped });
-        setMapCenter({ lat: place.lat, lng: place.lng });
-        setBehaviorHint(`🧭 ${guideProfiles[guide].label} đang kể chuyện về ${place.name}.`);
-        setCityNarration(`📍 ${place.name} - ${place.desc}`);
-      })
-      .catch(() => {
-        // Fallback: create basic place and show narrative anyway
-        const fallbackPlace: PlaceData = {
-          id: place.id,
-          name: place.name,
-          type: "daily",
-          persona: personaUpper,
-          lat: place.lat,
-          lng: place.lng,
-          overview: place.desc,
-          history: "",
-          greenStoryHook: "",
-          walkingRoute: "",
-          ecoBenefit: "",
-          recommendedParking: "",
-          hiddenSpot: ""
-        };
-        
-        const script = generateNarrativeScript(fallbackPlace, personaUpper);
-        setSelectedPlace(fallbackPlace);
-        setPlaceScript(script);
-        setPlacePersona(guide);
-        setShowPlaceNarrative(true);
-        
-        const mapped: GuideLandmark = {
-          id: `ai-place-${place.id}`,
-          name: place.name,
-          description: place.desc,
-          lat: place.lat,
-          lng: place.lng
-        };
-        setSelectedDebate(guide);
-        setActiveLandmarkId(mapped.id);
-        setLandmarkPreview({ guide, landmark: mapped });
-        setMapCenter({ lat: place.lat, lng: place.lng });
-      });
+    const context: NarrativeContext = {
+      persona: personaUpper,
+      traffic: trafficLevel,
+      cityMood,
+      timeLabel: timeLabelNow(),
+      selectedSlotAvailable: selectedSlot?.available ?? false,
+      visitedCount: journeyVisits.length
+    };
+    const intelligence = buildDestinationIntelligence(fullPlace, context);
+    const script = generateAdaptiveStory(fullPlace, context);
+
+    setSelectedPlace(fullPlace);
+    setDestinationProfile(intelligence);
+    setPlaceScript(script);
+    setPlacePersona(guide);
+    setShowPlaceNarrative(true);
+    setPersonaDebateLines(buildPersonaDebate(fullPlace, intelligence, context));
+    setJourneyVisits((current) => (current.some((visit) => visit.id === fullPlace.id) ? current : [...current, buildJourneyVisit(fullPlace, intelligence, cityMood)]));
+
+    const mapped: GuideLandmark = {
+      id: `ai-place-${place.id}`,
+      name: place.name,
+      description: place.desc,
+      lat: place.lat,
+      lng: place.lng
+    };
+    setSelectedDebate(guide);
+    setActiveLandmarkId(mapped.id);
+    setLandmarkPreview({ guide, landmark: mapped });
+    setMapCenter({ lat: place.lat, lng: place.lng });
+    setBehaviorHint(`🧭 ${guideProfiles[guide].label} đang kể chuyện về ${place.name}.`);
+    setCityNarration(`📍 ${place.name} - ${intelligence.crowdLevel} crowd • eco ${intelligence.ecoScore}/100`);
   }
 
   function runAICityPlanner() {
@@ -2740,12 +2821,31 @@ export default function Home() {
           persona={placePersona}
           isFinished={false}
           onNextStep={() => {
-            // Close story after finishing
             setShowPlaceNarrative(false);
-            setSelectedPlace(null);
           }}
         />
       ) : null}
+
+      <JourneyStoryboard
+        place={selectedPlace}
+        intelligence={destinationProfile}
+        visits={journeyVisits}
+        missions={campaignMissions}
+        debateLines={personaDebateLines}
+        summary={journeySummary}
+        cityMood={cityMood}
+        onChoosePersona={(persona) => {
+          const nextGuide = personaToGuide(persona);
+          setSelectedDebate(nextGuide);
+          setPlacePersona(nextGuide);
+        }}
+        onClose={() => {
+          setSelectedPlace(null);
+          setDestinationProfile(null);
+          setPersonaDebateLines([]);
+          setShowPlaceNarrative(false);
+        }}
+      />
     </main>
   );
 }

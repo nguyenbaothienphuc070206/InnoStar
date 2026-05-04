@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { PlaceData, generateGreenTips } from "../engine/place-narrative";
 import { useTypewriter } from "../hooks/use-typewriter";
 
@@ -18,7 +18,7 @@ export default function PlaceStoryCard({ place, script, persona, onNextStep, isF
   const [guideMotion, setGuideMotion] = useState<GuideMotionFrame>("idle");
   const [currentGreenTip, setCurrentGreenTip] = useState(0);
 
-  const { displayText, currentLineIndex, goToNext } = useTypewriter(script, (idx) => {
+  const { displayText, currentLineIndex, goToNext, isFinished: typingFinished } = useTypewriter(script, (idx) => {
     if (idx % 2 === 0) {
       setGuideMotion("blink");
       setTimeout(() => setGuideMotion("idle"), 300);
@@ -33,6 +33,7 @@ export default function PlaceStoryCard({ place, script, persona, onNextStep, isF
     return null;
   }
 
+  const storyFinished = isFinished || typingFinished;
   const greenTips = generateGreenTips(place);
   const guideImage = `/guides/${persona}-${guideMotion}.svg`;
 
@@ -64,8 +65,8 @@ export default function PlaceStoryCard({ place, script, persona, onNextStep, isF
       </div>
 
       <div className="storyControls">
-        <button className="storyNextBtn" onClick={goToNext} disabled={isFinished}>
-          {isFinished ? "Đã kết thúc" : displayText && displayText.length === script[currentLineIndex]?.length ? "Tiếp ▶" : "Skip"}
+        <button className="storyNextBtn" onClick={storyFinished ? onNextStep : goToNext} disabled={storyFinished && script.length === 0}>
+          {storyFinished ? "Đã kết thúc" : displayText && displayText.length === script[currentLineIndex]?.length ? "Tiếp ▶" : "Skip"}
         </button>
       </div>
     </div>

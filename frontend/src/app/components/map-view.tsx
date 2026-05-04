@@ -30,6 +30,8 @@ type MapViewProps = {
   aiPlaces: Array<{ id: number; name: string; type: "history" | "daily" | "local"; persona: "COBA" | "DRIVER" | "YOUTH"; lat: number; lng: number; desc: string }>;
   evStations: Array<{ id: string; name: string; lat: number; lng: number; plugs: number; available: number; speed: "AC" | "DC"; operator: string }>;
   bikeParking: Array<{ id: string; name: string; lat: number; lng: number; docks: number; available: number; guarded: boolean }>;
+  visitedDestinationIds: string[];
+  unlockedSecrets: string[];
   onSlotClick: (slot: Slot) => void;
   onLandmarkClick: (landmark: { id: string; name: string; description: string; lat: number; lng: number; guide: "coba" | "driver" | "youth" }) => void;
   onAIPlaceClick: (place: { id: number; name: string; type: "history" | "daily" | "local"; persona: "COBA" | "DRIVER" | "YOUTH"; lat: number; lng: number; desc: string }) => void;
@@ -95,7 +97,7 @@ function markerIcon(slot: Slot, isSelected: boolean): L.DivIcon {
   });
 }
 
-export default function MapView({ slots, zones, layers, selectedSlotId, userLocation, routeFocusToken, routeSegments, routeOpacity, routePath, activeRoutePenalty, activeRouteIsEco, carPosition, carAngle, navigationActive, landmarks, activeLandmarkId, aiSlots, aiTrafficZones, aiCameraSlots, aiPlaces, evStations, bikeParking, onSlotClick, onLandmarkClick, onAIPlaceClick, onViewportCenterChange }: MapViewProps) {
+export default function MapView({ slots, zones, layers, selectedSlotId, userLocation, routeFocusToken, routeSegments, routeOpacity, routePath, activeRoutePenalty, activeRouteIsEco, carPosition, carAngle, navigationActive, landmarks, activeLandmarkId, aiSlots, aiTrafficZones, aiCameraSlots, aiPlaces, evStations, bikeParking, visitedDestinationIds, unlockedSecrets, onSlotClick, onLandmarkClick, onAIPlaceClick, onViewportCenterChange }: MapViewProps) {
   const plugins = createMapPlugins();
   const [viewportBounds, setViewportBounds] = useState<{ north: number; south: number; east: number; west: number } | null>(null);
 
@@ -109,7 +111,7 @@ export default function MapView({ slots, zones, layers, selectedSlotId, userLoca
       <ViewportTracker onViewportCenterChange={onViewportCenterChange} onBoundsChange={setViewportBounds} />
 
       {plugins.map((plugin) => (
-        <Fragment key={plugin.id}>{plugin.render({ slots, zones, layers, selectedSlotId, userLocation, routeFocusToken, routeSegments, routeOpacity, routePath, activeRoutePenalty, activeRouteIsEco, carPosition, carAngle, navigationActive, landmarks, activeLandmarkId, aiSlots, aiTrafficZones, aiCameraSlots, aiPlaces, evStations, bikeParking, onSlotClick, onLandmarkClick, onAIPlaceClick, toLatLng, markerIcon, viewportBounds })}</Fragment>
+        <Fragment key={plugin.id}>{plugin.render({ slots, zones, layers, selectedSlotId, userLocation, routeFocusToken, routeSegments, routeOpacity, routePath, activeRoutePenalty, activeRouteIsEco, carPosition, carAngle, navigationActive, landmarks, activeLandmarkId, aiSlots, aiTrafficZones, aiCameraSlots, aiPlaces, evStations, bikeParking, visitedDestinationIds, unlockedSecrets, onSlotClick, onLandmarkClick, onAIPlaceClick, toLatLng, markerIcon, viewportBounds })}</Fragment>
       ))}
     </MapContainer>
   );

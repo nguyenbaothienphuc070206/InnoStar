@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import ErrorBoundary from "./components/error-boundary";
+import { JourneyProvider } from "./components/JourneyContext";
 
 export const metadata: Metadata = {
   title: "GreenPark AI",
@@ -11,9 +12,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <ErrorBoundary fallback={<div style={{ padding: "2rem", color: "#fff" }}>Something went wrong</div>}>
-          {children}
-        </ErrorBoundary>
+        <JourneyProvider>
+          <ErrorBoundary fallback={<div style={{ padding: "2rem", color: "#fff" }}>Something went wrong</div>}>
+            {children}
+          </ErrorBoundary>
+        </JourneyProvider>
       </body>
     </html>
   );

@@ -5,10 +5,14 @@ import dynamic from "next/dynamic";
 import { io, Socket } from "socket.io-client";
 import CameraListPanel from "./components/camera-list-panel";
 import CameraAIOverlay from "./components/camera-ai-overlay";
+import DestinationJourneyPanel from "./components/destination-journey-panel";
 import EcoPanel from "./components/eco-panel";
 import EnterpriseOpsPanel, { AdminMode } from "./components/enterprise-ops-panel";
 import GlassCard from "./components/glass-card";
+import { useJourney } from "./components/JourneyContext";
+import JourneyPassport from "./components/journey-passport";
 import LayerControl from "./components/layer-control";
+import OnboardingFlow from "./components/onboarding-flow";
 import JourneyStoryboard from "./components/journey-storyboard";
 import PlaceStoryCard from "./components/place-story-card";
 import SlotMiniDashboard from "./components/slot-mini-dashboard";
@@ -27,6 +31,7 @@ import {
   type Persona,
   type PlaceData
 } from "./engine/place-narrative";
+import { destinations, type Destination } from "./data/destinations";
 import {
   buildCampaignMissions,
   buildJourneySummary,
@@ -35,6 +40,7 @@ import {
   type JourneyVisit,
   type PersonaDebateLine
 } from "./engine/journey-mode";
+import { rewardTransport, type TransportType } from "./lib/scoreEngine";
 import { AIPlace, useAICity } from "./engine/useAICity";
 import { useCityEngine } from "./engine/useCityEngine";
 import { useDebouncedValue } from "./hooks/use-debounced-value";
@@ -543,6 +549,34 @@ function timeLabelNow(): string {
   });
 }
 
+function normalizeText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function findDestinationByName(name: string): Destination | null {
+  const normalizedName = normalizeText(name);
+
+  return (
+    destinations.find((item) => {
+      const candidate = normalizeText(item.name);
+      return candidate.includes(normalizedName) || normalizedName.includes(candidate);
+    }) ?? null
+  );
+}
+
+function personaLabelFromId(persona: "coba" | "driver" | "youth" | null): string {
+  if (persona === "driver") {
+    return "Chu Tai";
+  }
+  if (persona === "youth") {
+    return "Ut";
+  }
+  return "Co Ba";
+}
+
 export default function Home() {
   const [adminMode, setAdminMode] = useState<AdminMode>("closed");
   const [adminWidth, setAdminWidth] = useState(340);
@@ -611,6 +645,9 @@ export default function Home() {
   const [journeyVisits, setJourneyVisits] = useState<JourneyVisit[]>([]);
   const [personaDebateLines, setPersonaDebateLines] = useState<PersonaDebateLine[]>([]);
   const [placeLibrary, setPlaceLibrary] = useState<PlaceData[]>([]);
+  const [selectedDestination, setSelectedDestination] = useState<Destination | null>(null);
+  const [destinationTransport, setDestinationTransport] = useState<TransportType | null>(null);
+  const [onboardingDone, setOnboardingDone] = useState(false);
   const zoneRegenerationTokenRef = useRef(0);
   const storyLayerHydratedRef = useRef(false);
   const storyVoiceHydratedRef = useRef(false);
@@ -631,6 +668,25 @@ export default function Home() {
   const lastCameraNarrationAtRef = useRef(0);
 
   const {
+    greenScore: journeyGreenScore,
+    visitedDestinations,
+    unlockedSecrets,
+    completedChallenges,
+    transportUsed,
+    selectedPersona,
+    selectedTransport,
+    rank,
+    visitDestination,
+    completeChallenge,
+    useTransport,
+    unlockDestination,
+    unlockSecretRoute,
+    setPersona,
+    setInitialTransport,
+    setJourneyGoal
+  } = useJourney();
+
+  const {
     slots: aiSlots,
     traffic: aiTrafficZones,
     camera: aiCameraSlots,
@@ -645,6 +701,16 @@ export default function Home() {
       .then((data: PlaceData[]) => setPlaceLibrary(Array.isArray(data) ? data : []))
       .catch(() => setPlaceLibrary([]));
   }, []);
+
+  useEffect(() => {
+    if (!selectedPersona || !selectedTransport) {
+      return;
+    }
+
+    setOnboardingDone(true);
+    setSelectedDebate(selectedPersona);
+    setDestinationTransport(selectedTransport);
+  }, [selectedPersona, selectedTransport]);
 
   const {
     slots,
@@ -2076,6 +2142,59 @@ export default function Home() {
     speakText("Đi hẻm này, ít người biết nhưng ổn áp lắm", character);
   }
 
+  function openDestinationFlow(name: string) {
+    const destination = findDestinationByName(name);
+    if (!destination) {
+      return;
+    }
+
+    setSelectedDestination(destination);
+    visitDestination(destination.id);
+    unlockDestination(destination.id);
+    setBehaviorHint(`📘 Mission unlocked at ${destination.name}.`);
+  }
+
+  function handleJourneyTransport(type: TransportType) {
+    setDestinationTransport(type);
+
+    if (!selectedDestination) {
+      return;
+    }
+
+    const reward =
+      type === "motorbike"
+        ? rewardTransport(type)
+        : (selectedDestination.transportReward[type as "bike" | "ev" | "walk"] ?? rewardTransport(type));
+
+    useTransport(type, reward);
+
+    if (type === "walk") {
+      unlockSecretRoute(`${selectedDestination.id}-walk-secret`);
+      setBehaviorHint("🚶 Hidden alley unlocked. Walk route reveals a secret path.");
+      setMoralFeedback("Đi bộ chậm hơn nhưng mở thêm câu chuyện ẩn và giảm phát thải nhiều hơn.");
+      bumpEco(10, 0.35);
+      return;
+    }
+
+    if (type === "ev") {
+      setBehaviorHint("⚡ EV route selected. Quiet movement and cleaner air.");
+      setMoralFeedback("Lựa chọn EV giúp cân bằng tốc độ và môi trường.");
+      bumpEco(8, 0.24);
+      return;
+    }
+
+    if (type === "bike") {
+      setBehaviorHint("🚲 Bike route selected. Great for short urban hops.");
+      setMoralFeedback("Đi xe đạp giúp giảm khí thải và giữ nhịp khám phá địa phương.");
+      bumpEco(6, 0.2);
+      return;
+    }
+
+    setBehaviorHint("🛵 Quick ride selected.");
+    setMoralFeedback("Đi kiểu này nhanh thiệt, mà hơi tiếc cho không khí nghen.");
+    speakText("Đi kiểu này nhanh thiệt, mà hơi tiếc cho không khí nghen.", "coba");
+  }
+
   async function handleLandmarkClick(guide: StoryCharacter, landmark: GuideLandmark, buildRoute = true) {
     setSelectedDebate(guide);
     setActiveLandmarkId(landmark.id);
@@ -2115,6 +2234,7 @@ export default function Home() {
       const journeyVisit = buildJourneyVisit(fallbackPlace, intelligence, cityMood);
 
       setSelectedPlace(fallbackPlace);
+      openDestinationFlow(fallbackPlace.name);
       setDestinationProfile(intelligence);
       setPlaceScript(script);
       setPlacePersona(guide);
@@ -2247,6 +2367,7 @@ export default function Home() {
     const journeyVisit = buildJourneyVisit(fallbackPlace, intelligence, cityMood);
 
     setSelectedPlace(fallbackPlace);
+    openDestinationFlow(fallbackPlace.name);
     setDestinationProfile(intelligence);
     setPlaceScript(script);
     setPlacePersona(guide);
@@ -2327,6 +2448,7 @@ export default function Home() {
     const script = generateAdaptiveStory(fullPlace, context);
 
     setSelectedPlace(fullPlace);
+    openDestinationFlow(fullPlace.name);
     setDestinationProfile(intelligence);
     setPlaceScript(script);
     setPlacePersona(guide);
@@ -2472,6 +2594,8 @@ export default function Home() {
         aiPlaces={aiPlaces}
         evStations={evStations}
         bikeParking={bikeParking}
+        visitedDestinationIds={visitedDestinations}
+        unlockedSecrets={unlockedSecrets}
         onViewportCenterChange={(center) => {
           setMapCenter(center);
         }}
@@ -2512,7 +2636,7 @@ export default function Home() {
       <TopBar
         query={query}
         onQueryChange={setQuery}
-        greenScore={route?.score ?? stats.score}
+        greenScore={journeyGreenScore}
         profileName={profileName}
         onProfileNameChange={setProfileName}
       />
@@ -2684,7 +2808,7 @@ export default function Home() {
       <EcoPanel
         status={statusMessage}
         co2SavedKg={co2SavedKg}
-        greenScore={route?.score ?? stats.score}
+        greenScore={journeyGreenScore}
         ecoLevel={ecoLevel}
         ecoPoints={ecoPoints}
         etaMinutes={etaMinutes}
@@ -2834,6 +2958,33 @@ export default function Home() {
         />
       ) : null}
 
+      <DestinationJourneyPanel
+        destination={selectedDestination}
+        selectedTransport={destinationTransport}
+        completedChallengeIds={completedChallenges}
+        onClose={() => {
+          setSelectedDestination(null);
+        }}
+        onChooseTransport={handleJourneyTransport}
+        onChallengeCompleted={(challengeId, reward) => {
+          completeChallenge(challengeId, reward);
+          bumpEco(Math.max(4, Math.round(reward / 2)), Number((reward / 100).toFixed(2)));
+        }}
+        onStoryUnlocked={(destination) => {
+          setBehaviorHint(`📖 New story unlocked: ${destination.name}`);
+          speakText(destination.fullStory, selectedDebate);
+        }}
+      />
+
+      <JourneyPassport
+        profileName={profileName}
+        personaLabel={personaLabelFromId(selectedPersona)}
+        visitedIds={visitedDestinations}
+        transportUsed={transportUsed}
+        greenScore={journeyGreenScore}
+        rank={rank}
+      />
+
       <JourneyStoryboard
         place={selectedPlace}
         intelligence={destinationProfile}
@@ -2854,6 +3005,20 @@ export default function Home() {
           setShowPlaceNarrative(false);
         }}
       />
+
+      {!onboardingDone ? (
+        <OnboardingFlow
+          onComplete={({ selectedPersona: persona, selectedTransport: transport, journeyGoal: goal }) => {
+            setPersona(persona);
+            setInitialTransport(transport);
+            setJourneyGoal(goal);
+            setOnboardingDone(true);
+            setSelectedDebate(persona);
+            setDestinationTransport(transport);
+            setBehaviorHint(`🧭 ${personaLabelFromId(persona)} route ready • Goal: ${goal}`);
+          }}
+        />
+      ) : null}
     </main>
   );
 }

@@ -5,6 +5,7 @@ import { ReactNode, useEffect } from "react";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import { Circle, Marker, Polyline, Popup, TileLayer, useMap } from "react-leaflet";
 import CameraPopup from "./camera-popup";
+import { destinations } from "../data/destinations";
 import { LayersState, Slot, ZonePoint } from "./types";
 
 type MapPluginContext = {
@@ -30,6 +31,8 @@ type MapPluginContext = {
   aiPlaces: Array<{ id: number; name: string; type: "history" | "daily" | "local"; persona: "COBA" | "DRIVER" | "YOUTH"; lat: number; lng: number; desc: string }>;
   evStations: Array<{ id: string; name: string; lat: number; lng: number; plugs: number; available: number; speed: "AC" | "DC"; operator: string }>;
   bikeParking: Array<{ id: string; name: string; lat: number; lng: number; docks: number; available: number; guarded: boolean }>;
+  visitedDestinationIds: string[];
+  unlockedSecrets: string[];
   onSlotClick: (slot: Slot) => void;
   onLandmarkClick: (landmark: { id: string; name: string; description: string; lat: number; lng: number; guide: "coba" | "driver" | "youth" }) => void;
   onAIPlaceClick: (place: { id: number; name: string; type: "history" | "daily" | "local"; persona: "COBA" | "DRIVER" | "YOUTH"; lat: number; lng: number; desc: string }) => void;
@@ -37,6 +40,23 @@ type MapPluginContext = {
   markerIcon: (slot: Slot, isSelected: boolean) => L.DivIcon;
   viewportBounds: { north: number; south: number; east: number; west: number } | null;
 };
+
+function normalizeText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function matchDestinationId(name: string): string | null {
+  const normalizedName = normalizeText(name);
+  const matched = destinations.find((item) => {
+    const candidate = normalizeText(item.name);
+    return candidate.includes(normalizedName) || normalizedName.includes(candidate);
+  });
+
+  return matched?.id ?? null;
+}
 
 type RouteAutoFitProps = {
   routePath: Array<[number, number]>;
@@ -224,28 +244,35 @@ export function createMapPlugins(): MapLayerPlugin[] {
     },
     {
       id: "ai-places",
-      render: ({ aiPlaces, viewportBounds, onAIPlaceClick }) =>
+      render: ({ aiPlaces, viewportBounds, onAIPlaceClick, visitedDestinationIds, unlockedSecrets }) =>
         aiPlaces
           .filter((place) => isVisible(place.lat, place.lng, viewportBounds, 0.003))
-          .map((place) => (
-            <Marker
-              key={`ai-place-${place.id}`}
-              position={[place.lat, place.lng]}
-              eventHandlers={{ click: () => onAIPlaceClick(place) }}
-              icon={L.divIcon({
-                className: "landmarkDotHost",
-                html: `<span class="landmarkDotMarker"></span>`,
-                iconSize: [12, 12],
-                iconAnchor: [6, 6]
-              })}
-            >
-              <Popup>
-                <strong>{place.name}</strong>
-                <br />
-                {place.desc}
-              </Popup>
-            </Marker>
-          ))
+          .map((place) => {
+            const destinationId = matchDestinationId(place.name);
+            const isCompleted = destinationId ? visitedDestinationIds.includes(destinationId) : false;
+            const isSecret = destinationId ? unlockedSecrets.includes(`${destinationId}-walk-secret`) : false;
+            const progressClass = isSecret ? "progress-gold" : isCompleted ? "progress-green" : "progress-grey";
+
+            return (
+              <Marker
+                key={`ai-place-${place.id}`}
+                position={[place.lat, place.lng]}
+                eventHandlers={{ click: () => onAIPlaceClick(place) }}
+                icon={L.divIcon({
+                  className: "landmarkDotHost",
+                  html: `<span class="landmarkDotMarker ${progressClass}"></span>`,
+                  iconSize: [12, 12],
+                  iconAnchor: [6, 6]
+                })}
+              >
+                <Popup>
+                  <strong>{place.name}</strong>
+                  <br />
+                  {place.desc}
+                </Popup>
+              </Marker>
+            );
+          })
     },
     {
       id: "ai-camera",
@@ -401,28 +428,35 @@ export function createMapPlugins(): MapLayerPlugin[] {
     },
     {
       id: "landmarks",
-      render: ({ landmarks, activeLandmarkId, onLandmarkClick, viewportBounds }) => {
+      render: ({ landmarks, activeLandmarkId, onLandmarkClick, viewportBounds, visitedDestinationIds, unlockedSecrets }) => {
         const visible = landmarks.filter((item) => isVisible(item.lat, item.lng, viewportBounds, 0.003));
 
-        return visible.map((item) => (
-          <Marker
-            key={item.id}
-            position={[item.lat, item.lng]}
-            eventHandlers={{ click: () => onLandmarkClick(item) }}
-            icon={L.divIcon({
-              className: "landmarkDotHost",
-              html: `<span class="landmarkDotMarker ${activeLandmarkId === item.id ? "active" : ""}"></span>`,
-              iconSize: [14, 14],
-              iconAnchor: [7, 7]
-            })}
-          >
-            <Popup>
-              <strong>{item.name}</strong>
-              <br />
-              {item.description}
-            </Popup>
-          </Marker>
-        ));
+        return visible.map((item) => {
+          const destinationId = matchDestinationId(item.name);
+          const isCompleted = destinationId ? visitedDestinationIds.includes(destinationId) : false;
+          const isSecret = destinationId ? unlockedSecrets.includes(`${destinationId}-walk-secret`) : false;
+          const progressClass = isSecret ? "progress-gold" : isCompleted ? "progress-green" : "progress-grey";
+
+          return (
+            <Marker
+              key={item.id}
+              position={[item.lat, item.lng]}
+              eventHandlers={{ click: () => onLandmarkClick(item) }}
+              icon={L.divIcon({
+                className: "landmarkDotHost",
+                html: `<span class="landmarkDotMarker ${progressClass} ${activeLandmarkId === item.id ? "active" : ""}"></span>`,
+                iconSize: [14, 14],
+                iconAnchor: [7, 7]
+              })}
+            >
+              <Popup>
+                <strong>{item.name}</strong>
+                <br />
+                {item.description}
+              </Popup>
+            </Marker>
+          );
+        });
       }
     },
     {

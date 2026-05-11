@@ -2844,12 +2844,13 @@ button:active {
   display: none !important;
 }
 
+.guide-panel,
 .journeyDrawer {
   position: absolute;
-  left: 14px;
-  top: 126px;
+  left: 20px;
+  top: 140px;
   z-index: 53;
-  width: min(92vw, 280px);
+  width: min(92vw, 340px);
 }
 
 .journeyDrawerToggle {
@@ -3005,16 +3006,16 @@ button:active {
   padding-bottom: 2px;
 }
 
+.monitor-panel,
 .tabbedSidebarStack {
   position: absolute;
-  right: 14px;
-  top: 126px;
+  right: 20px;
+  top: 140px;
   z-index: 54;
-  width: min(92vw, 360px);
-  display: flex;
-  flex-direction: column;
+  width: min(92vw, 390px);
+  display: grid;
   gap: 12px;
-  max-height: calc(100vh - 156px);
+  max-height: calc(100vh - 170px);
   overflow-y: auto;
   padding-right: 2px;
 }
@@ -3045,15 +3046,174 @@ button:active {
   display: block;
 }
 
-.guideTabCard h3 {
+.monitorStatsRow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 8px 0 6px;
+}
+
+.monitorStatsRow div {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2);
+  padding: 8px;
+}
+
+.monitorStatsRow span {
+  display: block;
+  color: #9fb8c3;
+  font-size: 0.64rem;
+  margin-bottom: 4px;
+}
+
+.monitorStatsRow strong {
+  color: #f4fbff;
+  font-size: 0.8rem;
+}
+
+.vehicleBadge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 3;
+  display: grid;
+  gap: 2px;
+  border-radius: 12px;
+  border: 1px solid #6dff75;
+  background: rgba(0, 0, 0, 0.68);
+  padding: 8px 10px;
+  backdrop-filter: blur(12px);
+}
+
+.vehicleBadge strong {
+  color: #ecfff0;
+  font-size: 0.74rem;
+}
+
+.vehicleBadge span {
+  color: #b7f7c1;
+  font-size: 0.66rem;
+}
+
+.guideHubCard h3 {
   margin: 0 0 8px;
   color: #1ff4fa;
 }
 
-.guideTabCard p {
-  margin: 0 0 10px;
+.guideHubCard h3 {
+  margin: 0;
+  color: #1ff4fa;
+  font-size: 0.96rem;
+}
+
+.guideHubHero {
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.guideHubAvatar {
+  width: 84px;
+  height: 84px;
+  object-fit: contain;
+  border-radius: 18px;
+  border: 1px solid rgba(31, 244, 250, 0.2);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 6px;
+}
+
+.guideHubHero p,
+.guideHubHero blockquote {
+  margin: 0;
+}
+
+.guideHubHero p {
   color: #d6e5ea;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
+  margin-top: 4px;
+}
+
+.guideHubHero blockquote {
+  color: #f4fbff;
+  font-size: 0.84rem;
+  line-height: 1.35;
+  margin-top: 8px;
+}
+
+.guideHubMission {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(31, 244, 250, 0.08);
+  border: 1px solid rgba(31, 244, 250, 0.16);
+}
+
+.guideHubMission strong,
+.guideHubMission span {
+  color: #edf7ff;
+}
+
+.guideHubRewardRow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.guideHubRewardRow div,
+.guideHubHistory {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.2);
+  padding: 8px;
+}
+
+.guideHubRewardRow span,
+.guideHubHistory strong {
+  display: block;
+  color: #9fb8c3;
+  font-size: 0.64rem;
+  margin-bottom: 4px;
+}
+
+.guideHubRewardRow strong {
+  color: #f4fbff;
+  font-size: 0.8rem;
+}
+
+.guideHubActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.guideHubActions button {
+  flex: 1;
+  border-radius: 12px;
+  padding: 10px;
+  font-size: 0.74rem;
+  background: rgba(31, 244, 250, 0.12);
+}
+
+.guideHubHistory {
+  margin-top: 10px;
+}
+
+.guideHubHistory ul {
+  margin: 0;
+  padding-left: 18px;
+  color: #d6e5ea;
+  display: grid;
+  gap: 4px;
+}
+
+.guideHubHistory li {
+  font-size: 0.72rem;
 }
 
 .guideTabMeta {

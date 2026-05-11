@@ -6,11 +6,9 @@ import { io, Socket } from "socket.io-client";
 import CameraListPanel from "./components/camera-list-panel";
 import CameraAIOverlay from "./components/camera-ai-overlay";
 import DestinationJourneyPanel from "./components/destination-journey-panel";
-import EcoPanel from "./components/eco-panel";
 import EnterpriseOpsPanel, { AdminMode } from "./components/enterprise-ops-panel";
 import GlassCard from "./components/glass-card";
 import { useJourney } from "./components/JourneyContext";
-import JourneyPassport from "./components/journey-passport";
 import LayerControl from "./components/layer-control";
 import OnboardingFlow from "./components/onboarding-flow";
 import JourneyStoryboard from "./components/journey-storyboard";
@@ -639,8 +637,8 @@ export default function Home() {
   const [landmarkJourney, setLandmarkJourney] = useState<LandmarkJourney | null>(null);
   const [landmarkPreview, setLandmarkPreview] = useState<LandmarkPreview | null>(null);
   const [guidePanelMinimized, setGuidePanelMinimized] = useState(true);
-  const [journeyDrawerOpen, setJourneyDrawerOpen] = useState(false);
-  const [activeRightTab, setActiveRightTab] = useState<"live" | "passport" | "guide">("live");
+  const [journeyDrawerOpen, setJourneyDrawerOpen] = useState(true);
+  const [showJourneyHistory, setShowJourneyHistory] = useState(false);
   const [onboardingReady, setOnboardingReady] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<PlaceData | null>(null);
@@ -2781,47 +2779,75 @@ export default function Home() {
         </div>
       ) : null}
 
-      <div className={`journeyDrawer ${journeyDrawerOpen ? "open" : "closed"}`}>
+      <div className={`guide-panel ${journeyDrawerOpen ? "open" : "closed"}`}>
         <button className="journeyDrawerToggle" type="button" onClick={() => setJourneyDrawerOpen((value) => !value)}>
           ☰ Journey
         </button>
         {journeyDrawerOpen ? (
-          <GlassCard className="journeyDrawerCard">
+          <GlassCard className="journeyDrawerCard guideHubCard">
             <div className="journeyDrawerHeader">
-              <strong>Current mission</strong>
+              <strong>AI Guide Hub</strong>
               <button type="button" className="journeyDrawerClose" onClick={() => setJourneyDrawerOpen(false)}>
                 Hide
               </button>
             </div>
-            <div className="journeyDrawerMission">
-              <span>{journeyGoal || "Explore SaigonGreen"}</span>
-              <small>{completedChallenges.length} checkpoints</small>
+            <div className="guideHubHero">
+              <img
+                src={guideMotionImageMap[selectedDebate][guideMotionFrame]}
+                alt={`Hướng dẫn viên ${activeGuide.label}`}
+                className="guideHubAvatar"
+              />
+              <div>
+                <h3>{activeGuide.label}</h3>
+                <p>{guideSubtitle}</p>
+                <blockquote>{activeGuide.intro}</blockquote>
+              </div>
             </div>
-            <div className="journeyDrawerStats">
+            <div className="guideHubMission">
+              <strong>Mission:</strong>
+              <span>{journeyGoal || "Khám phá SaigonGreen"}</span>
+            </div>
+            <div className="guideHubRewardRow">
+              <div>
+                <span>Reward</span>
+                <strong>+{rewardTransport(selectedTransport ?? "walk")} Green Score</strong>
+              </div>
               <div>
                 <span>Progress</span>
-                <strong>{visitedDestinations.length} stops</strong>
+                <strong>{completedChallenges.length} checkpoints</strong>
               </div>
               <div>
-                <span>Green Score</span>
-                <strong>{journeyGreenScore}</strong>
-              </div>
-              <div>
-                <span>Rank</span>
-                <strong>{rank}</strong>
+                <span>CO2 saved</span>
+                <strong>{co2SavedKg} kg</strong>
               </div>
             </div>
-            <div className="journeyDrawerLeaderboard">
-              <h4>Leaderboard</h4>
-              <div className="journeyDrawerLeaderboardItem active">
-                <span>You</span>
-                <strong>{journeyGreenScore}</strong>
-              </div>
-              <div className="journeyDrawerLeaderboardItem">
-                <span>Next rank target</span>
-                <strong>{Math.max(0, 100 - journeyGreenScore)} pts</strong>
-              </div>
+            <div className="guideHubActions">
+              <button type="button" onClick={() => speakText(activeGuide.intro, selectedDebate)}>
+                Nghe voice
+              </button>
+              <button type="button" onClick={() => setShowJourneyHistory((value) => !value)}>
+                Xem lịch sử
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  void handleFindNearest();
+                  setJourneyDrawerOpen(false);
+                }}
+              >
+                Bắt đầu
+              </button>
             </div>
+            {showJourneyHistory ? (
+              <div className="guideHubHistory">
+                <strong>History</strong>
+                <ul>
+                  {(visitedDestinations.slice(-3).length > 0 ? visitedDestinations.slice(-3) : ["No stops yet"]).map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </GlassCard>
         ) : null}
       </div>
@@ -2865,113 +2891,70 @@ export default function Home() {
         </GlassCard>
       ) : null}
 
-      <div className="tabbedSidebarStack">
-        <div className="rightTabs">
-          <button type="button" className={`rightTab ${activeRightTab === "live" ? "active" : ""}`} onClick={() => setActiveRightTab("live")}>
-            Live
-          </button>
-          <button type="button" className={`rightTab ${activeRightTab === "passport" ? "active" : ""}`} onClick={() => setActiveRightTab("passport")}>
-            Passport
-          </button>
-          <button type="button" className={`rightTab ${activeRightTab === "guide" ? "active" : ""}`} onClick={() => setActiveRightTab("guide")}>
-            Guide
-          </button>
+      <GlassCard className="monitor-panel liveCameraCard">
+        <h3>LIVE PARKING</h3>
+        {routeLoading ? <p className="loadingHint" data-testid="route-loading">Analyzing best parking...</p> : null}
+        <div className="liveCameraFrame">
+          <video
+            src={cameraStreamUrl}
+            controls
+            autoPlay
+            className="liveCameraVideo"
+            onError={() => setCameraOffline(true)}
+            onCanPlay={() => setCameraOffline(false)}
+          />
+          <CameraAIOverlay active={Boolean(selectedSlot)} seed={selectedSlot?.id ?? 0} />
+          {Boolean(selectedSlot || aiCameraSlots.some((camera) => camera.occupied)) ? (
+            <div className="vehicleBadge" data-testid="vehicle-badge">
+              <strong>Vehicle detected</strong>
+              <span>Confidence: {selectedSlot ? 94 : 88}%</span>
+            </div>
+          ) : null}
         </div>
-
-        {activeRightTab === "live" ? (
-          <GlassCard className="rightTabPanel liveCameraCard">
-            <h3>Live View</h3>
-            {routeLoading ? <p className="loadingHint" data-testid="route-loading">Analyzing best parking...</p> : null}
-            <div className="liveCameraFrame">
-              <video
-                src={cameraStreamUrl}
-                controls
-                autoPlay
-                className="liveCameraVideo"
-                onError={() => setCameraOffline(true)}
-                onCanPlay={() => setCameraOffline(false)}
-              />
-              <CameraAIOverlay active={Boolean(selectedSlot)} seed={selectedSlot?.id ?? 0} />
-              {selectedSlot ? <span className="aiOverlayTag" data-testid="ai-overlay-tag">AI Tracking S{selectedSlot.id}</span> : null}
-            </div>
-            {cameraOffline ? <p className="cameraError">Camera offline</p> : null}
-            <p className="cameraHint">
-              Markers: {stats.available}/{slots.length} available • Recommended: {recommendedSlots.length} • {selectedSlotStatus}
-            </p>
-            {predictedAvailabilityPct !== null ? <p className="cameraHint">Expected availability (5m): {predictedAvailabilityPct}%</p> : null}
-            <CameraListPanel slots={slots} searchTerm={debouncedQuery} />
-            <div className="recommendCard">
-              <p>Recommended for you</p>
-              {recommendedSlots.length > 0 ? (
-                <>
-                  {recommendedSlots.map((slot) => (
-                    <div key={slot.id} className="recommendItem">
-                      <strong>{`S${slot.id} in ${slot.distanceM ?? 150}m`}</strong>
-                      <button
-                        data-testid={`inspect-slot-${slot.id}`}
-                        onClick={() => {
-                          setSelectedSlot(slot);
-                          setStatusMessage(`S${slot.id} selected`);
-                          emitStoryForSlot(slot, "youth", "inspect", 400);
-                        }}
-                      >
-                        Inspect
-                      </button>
-                    </div>
-                  ))}
-                </>
-              ) : (
-                <strong>No parking available nearby</strong>
-              )}
-              <span>Impact: {co2SavedKg}kg CO2 saved, equivalent to {treeEquivalent} tree-months.</span>
-            </div>
-          </GlassCard>
-        ) : null}
-
-        {activeRightTab === "passport" ? (
-          <GlassCard className="rightTabPanel">
-            <JourneyPassport
-              profileName={profileName}
-              personaLabel={personaLabelFromId(selectedPersona)}
-              visitedIds={visitedDestinations}
-              transportUsed={transportUsed}
-              greenScore={journeyGreenScore}
-              rank={rank}
-            />
-          </GlassCard>
-        ) : null}
-
-        {activeRightTab === "guide" ? (
-          <GlassCard className="rightTabPanel guideTabCard">
-            <h3>{activeGuide.label}</h3>
-            <p>{guideSubtitle}</p>
-            <div className="guideTabMeta">
-              <span>{activeGuide.theme}</span>
-              <span>{activeGuide.parkingStrategy}</span>
-            </div>
-            <ul className="guideTabPlaces">
-              {activeGuide.places.map((place) => (
-                <li key={place}>{place}</li>
+        {cameraOffline ? <p className="cameraError">Camera offline</p> : null}
+        <div className="monitorStatsRow">
+          <div>
+            <span>Available Slots</span>
+            <strong>{stats.available}/{slots.length}</strong>
+          </div>
+          <div>
+            <span>Traffic density</span>
+            <strong>{trafficLevel}</strong>
+          </div>
+          <div>
+            <span>Suggested Parking</span>
+            <strong>{recommendedSlots[0] ? `S${recommendedSlots[0].id}` : "None"}</strong>
+          </div>
+        </div>
+        <p className="cameraHint">Markers: {stats.available}/{slots.length} available • Recommended: {recommendedSlots.length} • {selectedSlotStatus}</p>
+        {predictedAvailabilityPct !== null ? <p className="cameraHint">Expected availability (5m): {predictedAvailabilityPct}%</p> : null}
+        <CameraListPanel slots={slots} searchTerm={debouncedQuery} />
+        <div className="recommendCard">
+          <p>Suggested parking</p>
+          {recommendedSlots.length > 0 ? (
+            <>
+              {recommendedSlots.map((slot) => (
+                <div key={slot.id} className="recommendItem">
+                  <strong>{`S${slot.id} in ${slot.distanceM ?? 150}m`}</strong>
+                  <button
+                    data-testid={`inspect-slot-${slot.id}`}
+                    onClick={() => {
+                      setSelectedSlot(slot);
+                      setStatusMessage(`S${slot.id} selected`);
+                      emitStoryForSlot(slot, "youth", "inspect", 400);
+                    }}
+                  >
+                    Inspect
+                  </button>
+                </div>
               ))}
-            </ul>
-            <div className="guideTabLandmarks">
-              {guideLandmarks[selectedDebate].slice(0, 3).map((landmark) => (
-                <button
-                  key={landmark.id}
-                  type="button"
-                  className={`guideTabLandmark ${activeLandmarkId === landmark.id ? "active" : ""}`}
-                  onClick={() => {
-                    void handleLandmarkClick(selectedDebate, landmark, true);
-                  }}
-                >
-                  <strong>{landmark.name}</strong>
-                  <small>{landmark.description}</small>
-                </button>
-              ))}
-            </div>
-          </GlassCard>
-        ) : null}
-      </div>
+            </>
+          ) : (
+            <strong>No parking available nearby</strong>
+          )}
+          <span>Impact: {co2SavedKg}kg CO2 saved, equivalent to {treeEquivalent} tree-months.</span>
+        </div>
+      </GlassCard>
 
       <section className={`guidePanel ${guidePanelMinimized ? "minimized" : ""}`} data-testid="ai-tour-guides">
         <div className="guidePanelHeader">
@@ -3118,33 +3101,6 @@ export default function Home() {
 
       <LayerControl layers={layers} onToggle={toggleLayer} />
 
-      <EcoPanel
-        status={statusMessage}
-        co2SavedKg={co2SavedKg}
-        greenScore={journeyGreenScore}
-        ecoLevel={ecoLevel}
-        ecoPoints={ecoPoints}
-        etaMinutes={etaMinutes}
-        finding={finding}
-        routeLoading={routeLoading}
-        mobilityStats={{
-          evStations: evStations.length,
-          bikeParking: bikeParking.length
-        }}
-        onFindNearest={handleFindNearest}
-        onDrawRoute={handleDrawRoute}
-      />
-
-      <SlotMiniDashboard slot={selectedSlot} onNavigate={handleDrawRoute} onOpenLiveView={openSelectedLiveView} routeLoading={routeLoading} />
-
-      <div className="actionDock" data-testid="action-dock">
-        <button onClick={handleFindNearest} disabled={finding}>Find</button>
-        <button onClick={handleDrawRoute} disabled={routeLoading}>Route</button>
-        <button onClick={selectedSlot ? handleDrawRoute : handleFindNearest} disabled={!selectedSlot && finding}>
-          Go
-        </button>
-      </div>
-
       {routeLoading ? <div className="routeLoadingBanner">Finding best route...</div> : null}
 
       <StoryBubble
@@ -3154,122 +3110,6 @@ export default function Home() {
         onToggleVoice={() => setStoryVoiceEnabled((value) => !value)}
         onStopVoice={cancelVoicePlayback}
       />
-
-      {routes.length > 0 ? (
-        <div className="routeOptionsBar" data-testid="route-options">
-          {routes.map((option, index) => {
-            const active = index === activeRoute;
-
-            return (
-              <button
-                key={`${option.durationMin}-${option.distanceKm}-${index}`}
-                className={`routeOptionItem ${active ? "active" : ""}`}
-                disabled={routeLoading}
-                onClick={() => {
-                  setActiveRoute(index);
-                  setTurnSteps(option.steps);
-                  setEtaMinutes(option.smartEtaMin);
-                  setRouteFocusToken((value) => value + 1);
-                }}
-              >
-                {option.smartEtaMin} min • {option.distanceKm} km {index === ecoRouteIndex ? "🌱" : ""}
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
-
-      {navigationActive ? (
-        <aside className="navPanel" data-testid="nav-panel">
-          <div>🚗 Đang di chuyển</div>
-          <div>🧭 {instruction || "Đang cập nhật hướng..."}</div>
-          <div>📍 {distanceLeftKm.toFixed(2)} km</div>
-          <div>⏱ ETA: {etaMinutes ?? "..."} phút</div>
-          <div>🎯 Route accuracy: {routeConfidence}</div>
-          <div>🌀 Center pressure: {centerPressure}</div>
-          {activeRouteMeta?.reason?.length ? <small>{activeRouteMeta.reason[0]}</small> : null}
-        </aside>
-      ) : null}
-
-      <aside className="cityLogPanel" data-testid="city-log-panel">
-        <h4>System Log</h4>
-        <div>
-          {logs.slice().reverse().map((entry) => (
-            <p key={entry}>{entry}</p>
-          ))}
-        </div>
-      </aside>
-
-      <div className="rightSidebarStack">
-        <GlassCard className="liveCameraCard">
-        <h3>Live View</h3>
-        {routeLoading ? <p className="loadingHint" data-testid="route-loading">Analyzing best parking...</p> : null}
-        <div className="liveCameraFrame">
-          <video
-            src={cameraStreamUrl}
-            controls
-            autoPlay
-            className="liveCameraVideo"
-            onError={() => setCameraOffline(true)}
-            onCanPlay={() => setCameraOffline(false)}
-          />
-          <CameraAIOverlay active={Boolean(selectedSlot)} seed={selectedSlot?.id ?? 0} />
-          {selectedSlot ? <span className="aiOverlayTag" data-testid="ai-overlay-tag">AI Tracking S{selectedSlot.id}</span> : null}
-        </div>
-        {cameraOffline ? <p className="cameraError">Camera offline</p> : null}
-        <p className="cameraHint">
-          Markers: {stats.available}/{slots.length} available • Recommended: {recommendedSlots.length} • {selectedSlotStatus}
-        </p>
-        {predictedAvailabilityPct !== null ? <p className="cameraHint">Expected availability (5m): {predictedAvailabilityPct}%</p> : null}
-        <CameraListPanel slots={slots} searchTerm={debouncedQuery} />
-        <div className="recommendCard">
-          <p>Recommended for you</p>
-          {recommendedSlots.length > 0 ? (
-            <>
-              {recommendedSlots.map((slot) => (
-                <div key={slot.id} className="recommendItem">
-                  <strong>{`S${slot.id} in ${slot.distanceM ?? 150}m`}</strong>
-                  <button
-                    data-testid={`inspect-slot-${slot.id}`}
-                    onClick={() => {
-                      setSelectedSlot(slot);
-                      setStatusMessage(`S${slot.id} selected`);
-                      emitStoryForSlot(slot, "youth", "inspect", 400);
-                    }}
-                  >
-                    Inspect
-                  </button>
-                </div>
-              ))}
-            </>
-          ) : (
-            <strong>No parking available nearby</strong>
-          )}
-          <span>Impact: {co2SavedKg}kg CO2 saved, equivalent to {treeEquivalent} tree-months.</span>
-        </div>
-      </GlassCard>
-
-        <JourneyPassport
-          profileName={profileName}
-          personaLabel={personaLabelFromId(selectedPersona)}
-          visitedIds={visitedDestinations}
-          transportUsed={transportUsed}
-          greenScore={journeyGreenScore}
-          rank={rank}
-        />
-
-        {turnSteps.length > 0 ? (
-          <aside className="directionsPanel directionsPanelStacked" data-testid="turn-directions">
-            <h3>Directions</h3>
-            <ul>
-              {turnSteps.map((step, index) => (
-                <li key={`${step}-${index}`}>• {step}</li>
-              ))}
-            </ul>
-          </aside>
-        ) : null}
-
-      </div>
 
       {showPlaceNarrative && selectedPlace ? (
         <PlaceStoryCard

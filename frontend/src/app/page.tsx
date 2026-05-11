@@ -45,6 +45,9 @@ import { useCityEngine } from "./engine/useCityEngine";
 import { useDebouncedValue } from "./hooks/use-debounced-value";
 import { useNavigation } from "./navigation/useNavigation";
 import { useMapStore } from "./store/use-map-store";
+import GuideHub, { PersonaKey, personas } from "./components/guide-hub";
+import DestinationCard, { DestinationCardData } from "./components/destination-card";
+import { destinationsData } from "./data/destinations-data";
 
 const MapView = dynamic(() => import("./components/map-view"), { ssr: false });
 
@@ -73,7 +76,7 @@ type RouteSegment = {
   color: string;
 };
 
-type StoryCharacter = "coba" | "driver" | "youth";
+type StoryCharacter = PersonaKey; // "coba" | "chutai" | "ut"
 
 type StoryMessage = {
   character: StoryCharacter;
@@ -162,7 +165,7 @@ type GuideProfile = {
 };
 
 const guideProfiles: Record<StoryCharacter, GuideProfile> = {
-  driver: {
+  chutai: {
     label: "Tài xế",
     vibe: "Nhanh, quyết, thực dụng",
     routeBias: "Nhanh",
@@ -180,7 +183,7 @@ const guideProfiles: Record<StoryCharacter, GuideProfile> = {
     parkingStrategy: "Ưu tiên bãi xanh và đi bộ 200-400m để thoáng khu trung tâm",
     intro: "Dẫn bạn đi các điểm lịch sử tiêu biểu vì Sài Gòn chứng kiến nhiều cột mốc quan trọng."
   },
-  youth: {
+  ut: {
     label: "Thanh niên",
     vibe: "Khám phá, local, cân bằng",
     routeBias: "Cân bằng",
@@ -215,7 +218,7 @@ const guideLandmarks: Record<StoryCharacter, GuideLandmark[]> = {
       lng: 106.6953
     }
   ],
-  driver: [
+  chutai: [
     {
       id: "driver-park-239",
       name: "Công viên 23/9",
@@ -238,7 +241,7 @@ const guideLandmarks: Record<StoryCharacter, GuideLandmark[]> = {
       lng: 106.6977
     }
   ],
-  youth: [
+  ut: [
     {
       id: "youth-co-giang",
       name: "Cà phê hẻm Cô Giang",
@@ -290,7 +293,7 @@ const storybook: Record<StoryCharacter, Record<StoryContext, string[]>> = {
       "Tầm này kín chỗ rồi, bà đề xuất rẽ sang hướng ngoài để dễ thở hơn."
     ]
   },
-  driver: {
+  chutai: {
     find: [
       "Em chốt được bãi gần nhất rồi, vào ngay là đẹp.",
       "Có chỗ rồi nha, ghé điểm này là tiết kiệm thời gian nhất."
@@ -316,7 +319,7 @@ const storybook: Record<StoryCharacter, Record<StoryContext, string[]>> = {
       "Đông xe quá, tránh mất thời gian mình chuyển sang điểm dự phòng nhé."
     ]
   },
-  youth: {
+  ut: {
     find: [
       "Có spot ổn rồi, gửi xe xong là đi chill được liền.",
       "Yep, tìm thấy chỗ hợp lý, vào đây là đúng vibe luôn."
@@ -346,12 +349,12 @@ const storybook: Record<StoryCharacter, Record<StoryContext, string[]>> = {
 
 const storyIcon: Record<StoryCharacter, string> = {
   coba: "🎭",
-  driver: "🚕",
-  youth: "🧢"
+  chutai: "🚕",
+  ut: "🧢"
 };
 
 const guideMotionImageMap: Record<StoryCharacter, Record<GuideMotionFrame, string>> = {
-  driver: {
+  chutai: {
     idle: "/guides/driver-idle.svg",
     up: "/guides/driver-up.svg",
     down: "/guides/driver-down.svg"
@@ -361,7 +364,7 @@ const guideMotionImageMap: Record<StoryCharacter, Record<GuideMotionFrame, strin
     up: "/guides/coba2.png",
     down: "/guides/coba3.png"
   },
-  youth: {
+  ut: {
     idle: "/guides/youth-idle.svg",
     up: "/guides/youth-up.svg",
     down: "/guides/youth-down.svg"
@@ -393,7 +396,7 @@ function resolveAreaName(slot: Slot): string {
 
 function withAreaFlavor(base: StoryMessage, slot: Slot): StoryMessage {
   const area = resolveAreaName(slot);
-  const addOn = base.character === "driver" ? ` Hướng ${area} đang hợp nhất.` : ` Khu ${area} đang lên mood rất đẹp.`;
+  const addOn = base.character === "chutai" ? ` Hướng ${area} đang hợp nhất.` : ` Khu ${area} đang lên mood rất đẹp.`;
   return {
     ...base,
     text: `${base.text}${addOn}`
@@ -415,9 +418,9 @@ function pickCharacterForSlot(slot: Slot): StoryCharacter {
     return "coba";
   }
   if ((slot.distanceM ?? 9999) < 220) {
-    return "driver";
+    return "chutai";
   }
-  return "youth";
+  return "ut";
 }
 
 function distance(a: [number, number], b: [number, number]): number {
@@ -459,9 +462,9 @@ function voiceProfileForCharacter(character: StoryCharacter): StoryVoiceProfile 
   if (character === "coba") {
     return { rate: 0.94, pitch: 0.88, volume: 0.9 };
   }
-  if (character === "driver") {
-    return { rate: 1.03, pitch: 1.0, volume: 0.92 };
-  }
+    if (character === "chutai") {
+      return { rate: 1.03, pitch: 1.0, volume: 0.92 };
+    }
   return { rate: 1.08, pitch: 1.08, volume: 0.9 };
 }
 
@@ -469,9 +472,9 @@ function voiceProfileForType(voice: VoiceType): StoryVoiceProfile {
   if (voice === "coba") {
     return { rate: 0.9, pitch: 1.2, volume: 0.9 };
   }
-  if (voice === "driver") {
-    return { rate: 1.15, pitch: 1.05, volume: 0.92 };
-  }
+    if (voice === "driver") {
+      return { rate: 1.15, pitch: 1.05, volume: 0.92 };
+    }
   return { rate: 1, pitch: 1, volume: 0.9 };
 }
 
@@ -530,16 +533,16 @@ function predictAvailability(current: number): number {
 
 function personaToGuide(persona: "COBA" | "DRIVER" | "YOUTH"): StoryCharacter {
   if (persona === "DRIVER") {
-    return "driver";
+    return "chutai"; // Local expert maps to driver
   }
   if (persona === "YOUTH") {
-    return "youth";
+    return "ut"; // Hidden gems maps to youth
   }
   return "coba";
 }
 
 function personaToUpper(persona: StoryCharacter): Persona {
-  return persona === "driver" ? "DRIVER" : persona === "youth" ? "YOUTH" : "COBA";
+  return persona === "chutai" ? "DRIVER" : persona === "ut" ? "YOUTH" : "COBA";
 }
 
 function timeLabelNow(): string {
@@ -567,11 +570,11 @@ function findDestinationByName(name: string): Destination | null {
   );
 }
 
-function personaLabelFromId(persona: "coba" | "driver" | "youth" | null): string {
-  if (persona === "driver") {
+function personaLabelFromId(persona: "coba" | "driver" | "youth" | "chutai" | "ut" | null): string {
+  if (persona === "driver" || persona === "chutai") {
     return "Chu Tai";
   }
-  if (persona === "youth") {
+  if (persona === "youth" || persona === "ut") {
     return "Ut";
   }
   return "Co Ba";
@@ -615,9 +618,10 @@ export default function Home() {
   const [instruction, setInstruction] = useState("");
   const [distanceLeftKm, setDistanceLeftKm] = useState(0);
   const [navigationActive, setNavigationActive] = useState(false);
+  const [selectedDestinationId, setSelectedDestinationId] = useState<string | null>(null);
   const [cityMood, setCityMood] = useState<"CALM" | "CHAOTIC" | "STRESSED">("CALM");
   const [cityNarration, setCityNarration] = useState("");
-  const [selectedDebate, setSelectedDebate] = useState<"driver" | "coba" | "youth">("coba");
+  const [selectedDebate, setSelectedDebate] = useState<PersonaKey>("coba");
   const [memoryHint, setMemoryHint] = useState("");
   const [moralFeedback, setMoralFeedback] = useState("");
   const [centerPressure, setCenterPressure] = useState(0);
@@ -644,7 +648,7 @@ export default function Home() {
   const [selectedPlace, setSelectedPlace] = useState<PlaceData | null>(null);
   const [showPlaceNarrative, setShowPlaceNarrative] = useState(false);
   const [placeScript, setPlaceScript] = useState<string[]>([]);
-  const [placePersona, setPlacePersona] = useState<"coba" | "driver" | "youth">("coba");
+  const [placePersona, setPlacePersona] = useState<PersonaKey>("coba");
   const [destinationProfile, setDestinationProfile] = useState<DestinationIntelligence | null>(null);
   const [journeyVisits, setJourneyVisits] = useState<JourneyVisit[]>([]);
   const [personaDebateLines, setPersonaDebateLines] = useState<PersonaDebateLine[]>([]);
@@ -718,7 +722,13 @@ export default function Home() {
     const hasSavedJourney = Boolean(selectedPersona && selectedTransport);
     setShowOnboarding(!(onboardingFinished || hasSavedJourney));
     if (selectedPersona && selectedTransport) {
-      setSelectedDebate(selectedPersona);
+      const personaMap: Record<string, PersonaKey> = {
+        "coba": "coba",
+        "driver": "chutai",
+        "youth": "ut"
+      };
+      const newPersona: PersonaKey = personaMap[selectedPersona] || "coba";
+      setSelectedDebate(newPersona);
       setDestinationTransport(selectedTransport);
     }
     setOnboardingReady(true);
@@ -763,10 +773,10 @@ export default function Home() {
       coba: available
         .filter((slot) => slot.zone === "green")
         .slice(0, 3),
-      driver: available
+      chutai: available
         .filter((slot) => slot.zone === "standard" && (slot.distanceM ?? 9999) <= 320)
         .slice(0, 3),
-      youth: available
+      ut: available
         .filter((slot) => (slot.distanceM ?? 0) >= 180)
         .slice(0, 3)
     } as Record<StoryCharacter, Slot[]>;
@@ -783,11 +793,9 @@ export default function Home() {
           : "CALM";
 
     const intent: CityState["intent"] =
-      selectedDebate === "driver" || routeLoading || finding
-        ? "HURRY"
-        : selectedDebate === "coba" || trafficLevel === "HIGH"
-          ? "ECO"
-          : "EXPLORE";
+      selectedDebate === "coba" || trafficLevel === "HIGH"
+        ? "ECO"
+        : "EXPLORE";
 
     return {
       traffic: trafficLevel,
@@ -902,20 +910,27 @@ export default function Home() {
 
   useEffect(() => {
     const raw = window.localStorage.getItem("saigongreen-last-slot");
-    if (!raw) {
+    if (!raw || slots.length === 0) {
       return;
     }
 
     try {
-      const parsed = JSON.parse(raw) as { slotId: number; at: string };
-      setMemoryHint(`👀 Hôm trước bạn đỗ S${parsed.slotId} lúc ${new Date(parsed.at).toLocaleString("vi-VN")}`);
+      const parsed = JSON.parse(raw) as { slotId?: number };
+      if (typeof parsed.slotId !== "number") {
+        return;
+      }
+
+      const restored = slots.find((slot) => slot.id === parsed.slotId);
+      if (restored) {
+        setSelectedSlot(restored);
+      }
     } catch {
-      setMemoryHint("");
+      return;
     }
-  }, []);
+  }, [setSelectedSlot, slots]);
 
   useEffect(() => {
-    if (!selectedSlot || !navigationActive) {
+    if (!selectedSlot) {
       return;
     }
 
@@ -923,7 +938,7 @@ export default function Home() {
       "saigongreen-last-slot",
       JSON.stringify({ slotId: selectedSlot.id, at: new Date().toISOString() })
     );
-  }, [navigationActive, selectedSlot]);
+  }, [selectedSlot]);
 
   useEffect(() => {
     if (selectedSlot || routeLoading || finding) {
@@ -1010,8 +1025,8 @@ export default function Home() {
     lastCameraNarrationAtRef.current = now;
     if (changed.occupied) {
       const line = `Camera ${changed.id} báo khu này đầy rồi, mình né ra cho nhanh.`;
-      setStory({ character: "driver", text: line });
-      speakText(line, "driver");
+      setStory({ character: "chutai", text: line });
+      speakText(line, "chutai");
       addLog(`Camera ${changed.id} detected occupied`);
       return;
     }
@@ -1299,7 +1314,7 @@ export default function Home() {
       const context = audioContextRef.current;
       const oscillator = context.createOscillator();
       const gain = context.createGain();
-      const baseFreq = character === "coba" ? 660 : character === "driver" ? 520 : 740;
+      const baseFreq = character === "coba" ? 660 : character === "chutai" ? 520 : 740;
 
       oscillator.type = "sine";
       oscillator.frequency.value = baseFreq;
@@ -1506,7 +1521,7 @@ export default function Home() {
     }
 
     setStatusMessage(`S${latest.id} just occupied. Auto re-routing...`);
-    emitStory("driver", "full", 250);
+    emitStory("chutai", "full", 250);
     void requestOsrmRoutes();
   }, [routeLoading, routes.length, selectedSlot, slots]);
 
@@ -1864,7 +1879,7 @@ export default function Home() {
       const nearest = findNearestSlot();
       if (!nearest || typeof nearest.lat !== "number" || typeof nearest.lng !== "number") {
         setStatusMessage("No nearby non-full slot found");
-        emitStory("driver", "full", 300);
+        emitStory("chutai", "full", 300);
         setFinding(false);
         return;
       }
@@ -1882,11 +1897,11 @@ export default function Home() {
       setStatusMessage(`Nearest slot found: S${nearest.id}`);
       const zoneType = dominantZoneAround([nearest.lat, nearest.lng]);
       if (zoneType === "red") {
-        emitStory("driver", "full", 500);
+        emitStory("chutai", "full", 500);
       } else if (zoneType === "green") {
         emitStory("coba", "find", 500);
       } else {
-        emitStoryForSlot(nearest, "driver", "find", 500);
+        emitStoryForSlot(nearest, "chutai", "find", 500);
       }
       const baseAvailability = nearest.available ? 85 : nearest.soon || (nearest.predictedFreeMin ?? 99) <= 10 ? 55 : 20;
       setPredictedAvailabilityPct(predictAvailability(baseAvailability));
@@ -2091,11 +2106,11 @@ export default function Home() {
       setStatusMessage(`Route ready: ${scored[bestRouteIndex].smartEtaMin} min • ${scored[bestRouteIndex].distanceKm} km`);
       addLog("Route computed via OSRM");
       if (trafficLevel === "HIGH") {
-        emitStory("driver", "route", 700);
+        emitStory("chutai", "route", 700);
       } else if (resolveAreaName(selectedSlot).includes("Bến Thành")) {
         emitStory("coba", "route", 700);
       } else if (scored[bestRouteIndex].penaltyScore > 15) {
-        emitStory("driver", "route", 800);
+        emitStory("chutai", "route", 800);
       } else {
         emitStory("coba", "route", selectedSlot.zone === "green" ? 600 : 800);
       }
@@ -2172,12 +2187,12 @@ export default function Home() {
     }, 2200);
   }
 
-  function chooseDebate(character: "driver" | "coba" | "youth") {
+  function chooseDebate(character: PersonaKey) {
     setSelectedDebate(character);
     const profile = guideProfiles[character];
     setQuery(profile.places[0]);
     setGuideSubtitle(`Đã chọn ${profile.label}. ${profile.intro}`);
-    if (character === "driver") {
+    if (character === "chutai") {
       setBehaviorHint(`🚕 ${profile.label}: tập trung điểm đời thường, dễ trải nghiệm nhịp sống bản địa.`);
       setCenterPressure((value) => value + 1);
       setMoralFeedback("Bạn vừa chọn nhanh hơn, nhưng tạo thêm khoảng 0.8kg CO2 😢");
@@ -2338,12 +2353,12 @@ export default function Home() {
           distanceKm: Math.max(0.2, Number((item.distance / 1000).toFixed(2))),
           steps: [
             `Xuất phát đến ${landmark.name}`,
-            guide === "coba" ? "Ưu tiên tuyến xanh" : guide === "driver" ? "Ưu tiên tuyến nhanh" : "Ưu tiên tuyến khám phá cân bằng",
+            guide === "coba" ? "Ưu tiên tuyến xanh" : guide === "chutai" ? "Ưu tiên tuyến nhanh" : "Ưu tiên tuyến khám phá cân bằng",
             `Đến ${landmark.name}`
           ]
         }));
 
-        const preferredProfile = guide === "coba" ? "eco" : guide === "driver" ? "fastest" : "chill";
+        const preferredProfile = guide === "coba" ? "eco" : guide === "chutai" ? "fastest" : "chill";
         bestIndex = Math.max(0, backendRoutes.findIndex((item) => item.profile === preferredProfile));
       }
     } catch {
@@ -2742,6 +2757,73 @@ export default function Home() {
 
       <div className="mapAtmosphereOverlay" aria-hidden />
 
+      {/* THREE-PANEL LAYOUT */}
+      
+      {/* LEFT PANEL - GUIDE HUB */}
+      <GuideHub 
+        activePersona={selectedDebate as PersonaKey}
+        onPersonaChange={(persona) => {
+          setSelectedDebate(persona);
+        }}
+        onAction={(action) => {
+          if (action === "start") {
+            void handleFindNearest();
+          } else if (action === "listen") {
+            speakText(personas[selectedDebate as PersonaKey].text, selectedDebate as PersonaKey);
+          }
+        }}
+      />
+
+      {/* CENTER - DESTINATION CARD */}
+      {selectedDestinationId ? (
+        <DestinationCard
+          data={{
+            title: destinationsData[selectedDestinationId]?.title ?? "Unknown",
+            description: destinationsData[selectedDestinationId]?.description ?? "",
+            vibe: destinationsData[selectedDestinationId]?.vibe
+          }}
+          onAction={(action) => {
+            if (action === "find-parking") {
+              void handleFindNearest();
+            }
+            // Add other action handlers as needed
+          }}
+          onClose={() => setSelectedDestinationId(null)}
+        />
+      ) : null}
+
+      {/* RIGHT PANEL - PARKING MONITOR */}
+      <div className="parking-panel">
+        <h2>Live Smart Parking</h2>
+        <div className="liveCameraFrame">
+          <video
+            src={cameraStreamUrl}
+            autoPlay
+            muted
+            className="liveCameraVideo"
+            onError={() => setCameraOffline(true)}
+            onCanPlay={() => setCameraOffline(false)}
+          />
+          {Boolean(selectedSlot || aiCameraSlots.some((camera) => camera.occupied)) ? (
+            <div className="vehicle-badge" data-testid="vehicle-badge">
+              <strong>Vehicle detected</strong>
+              <span>Confidence: {selectedSlot ? 94 : 88}%</span>
+            </div>
+          ) : null}
+        </div>
+        {cameraOffline ? <p style={{ color: "#ff8f93", fontSize: "0.75rem" }}>Camera offline</p> : null}
+        <div className="parking-stats">
+          <div>Available slots: {stats.available}/{slots.length}</div>
+          <div>Traffic: {trafficLevel}</div>
+          <div>Recommended: {recommendedSlots[0] ? `S${recommendedSlots[0].id}` : "None"}</div>
+          <div>Vehicle detected: {Boolean(selectedSlot || aiCameraSlots.some((camera) => camera.occupied)) ? "Yes" : "No"}</div>
+          <div>Status: {selectedSlotStatus}</div>
+        </div>
+      </div>
+
+      {/* KEEP MINIMAL UI FOR INTERACTIONS */}
+      {behaviorHint ? <div className="behaviorHintBanner">{behaviorHint}</div> : null}
+      
       <TopBar
         query={query}
         onQueryChange={setQuery}
@@ -2750,425 +2832,21 @@ export default function Home() {
         onProfileNameChange={setProfileName}
       />
 
-      <div className={`cityMoodBanner mood-${cityMood.toLowerCase()}`}>
-        <strong>City Mood: {cityMood}</strong> • {cityNarration}
-      </div>
-
-      <div className="cityActionsBar">
-        <button className="demoLaunchBtn" disabled={demoRunning} onClick={() => void startDemoMode()}>
-          {demoRunning ? "Running Demo..." : "🎬 Start Demo"}
-        </button>
-        <button className="demoLaunchBtn" disabled={cinematicMode} onClick={startCinematicMode}>
-          {cinematicMode ? "Exploring..." : "🎥 Explore City"}
-        </button>
-        <button className="demoLaunchBtn" disabled={pitchRunning} onClick={() => void runPitchChoreography()}>
-          {pitchRunning ? `Pitch Demo • Step ${pitchStepIndex}/8` : "🎞️ Run Pitch Demo"}
-        </button>
-        <button className="demoLaunchBtn" onClick={runAICityPlanner}>
-          🤖 Run AI Planner
-        </button>
-      </div>
-
-      <div className="cityMoodBanner">
-        <strong>AI Stream:</strong> {aiSlots.length} parking • {aiTrafficZones.length} traffic zones • {aiCameraSlots.length} camera lots • {aiPlaces.length} places
-      </div>
-
-      {predictiveForecast ? (
-        <div className="predictiveBanner">
-          <strong>Predictive AI Routing:</strong> {predictiveForecast.recommendation} ({predictiveForecast.densityIncreasePct}% in {predictiveForecast.nextMinutes} min)
-        </div>
-      ) : null}
-
-      <div className={`guide-panel ${journeyDrawerOpen ? "open" : "closed"}`}>
-        <button className="journeyDrawerToggle" type="button" onClick={() => setJourneyDrawerOpen((value) => !value)}>
-          ☰ Journey
-        </button>
-        {journeyDrawerOpen ? (
-          <GlassCard className="journeyDrawerCard guideHubCard">
-            <div className="journeyDrawerHeader">
-              <strong>AI Guide Hub</strong>
-              <button type="button" className="journeyDrawerClose" onClick={() => setJourneyDrawerOpen(false)}>
-                Hide
-              </button>
-            </div>
-            <div className="guideHubHero">
-              <img
-                src={guideMotionImageMap[selectedDebate][guideMotionFrame]}
-                alt={`Hướng dẫn viên ${activeGuide.label}`}
-                className="guideHubAvatar"
-              />
-              <div>
-                <h3>{activeGuide.label}</h3>
-                <p>{guideSubtitle}</p>
-                <blockquote>{activeGuide.intro}</blockquote>
-              </div>
-            </div>
-            <div className="guideHubMission">
-              <strong>Mission:</strong>
-              <span>{journeyGoal || "Khám phá SaigonGreen"}</span>
-            </div>
-            <div className="guideHubRewardRow">
-              <div>
-                <span>Reward</span>
-                <strong>+{rewardTransport(selectedTransport ?? "walk")} Green Score</strong>
-              </div>
-              <div>
-                <span>Progress</span>
-                <strong>{completedChallenges.length} checkpoints</strong>
-              </div>
-              <div>
-                <span>CO2 saved</span>
-                <strong>{co2SavedKg} kg</strong>
-              </div>
-            </div>
-            <div className="guideHubActions">
-              <button type="button" onClick={() => speakText(activeGuide.intro, selectedDebate)}>
-                Nghe voice
-              </button>
-              <button type="button" onClick={() => setShowJourneyHistory((value) => !value)}>
-                Xem lịch sử
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  void handleFindNearest();
-                  setJourneyDrawerOpen(false);
-                }}
-              >
-                Bắt đầu
-              </button>
-            </div>
-            {showJourneyHistory ? (
-              <div className="guideHubHistory">
-                <strong>History</strong>
-                <ul>
-                  {(visitedDestinations.slice(-3).length > 0 ? visitedDestinations.slice(-3) : ["No stops yet"]).map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-          </GlassCard>
-        ) : null}
-      </div>
-
-      {routes.length > 0 ? (
-        <GlassCard className="routeCardDock" data-testid="route-options">
-          <div className="routeCardHeader">
-            <strong>NEXT MOVE</strong>
-            <span>{etaMinutes ? `ETA: ${Math.max(1, etaMinutes)} min` : `Route ${activeRoute + 1}/${routes.length}`}</span>
-          </div>
-          <div className="routeCardSteps">
-            {(turnSteps.length > 0 ? turnSteps : ["Select a route to get moving"]).slice(0, 2).map((step, index) => (
-              <div key={`${step}-${index}`} className="routeCardStep">
-                <span>→</span>
-                <span>{step}</span>
-              </div>
-            ))}
-            {turnSteps.length > 2 ? <small>ETA: {etaMinutes ?? "..."} min • Route accuracy {routeConfidence}</small> : null}
-          </div>
-          <div className="routeCardOptions">
-            {routes.map((option, index) => {
-              const active = index === activeRoute;
-
-              return (
-                <button
-                  key={`${option.durationMin}-${option.distanceKm}-${index}`}
-                  className={`routeOptionItem ${active ? "active" : ""}`}
-                  disabled={routeLoading}
-                  onClick={() => {
-                    setActiveRoute(index);
-                    setTurnSteps(option.steps);
-                    setEtaMinutes(option.smartEtaMin);
-                    setRouteFocusToken((value) => value + 1);
-                  }}
-                >
-                  {option.smartEtaMin} min • {option.distanceKm} km {index === ecoRouteIndex ? "🌱" : ""}
-                </button>
-              );
-            })}
-          </div>
-        </GlassCard>
-      ) : null}
-
-      <GlassCard className="monitor-panel liveCameraCard">
-        <h3>LIVE PARKING</h3>
-        {routeLoading ? <p className="loadingHint" data-testid="route-loading">Analyzing best parking...</p> : null}
-        <div className="liveCameraFrame">
-          <video
-            src={cameraStreamUrl}
-            controls
-            autoPlay
-            className="liveCameraVideo"
-            onError={() => setCameraOffline(true)}
-            onCanPlay={() => setCameraOffline(false)}
-          />
-          <CameraAIOverlay active={Boolean(selectedSlot)} seed={selectedSlot?.id ?? 0} />
-          {Boolean(selectedSlot || aiCameraSlots.some((camera) => camera.occupied)) ? (
-            <div className="vehicleBadge" data-testid="vehicle-badge">
-              <strong>Vehicle detected</strong>
-              <span>Confidence: {selectedSlot ? 94 : 88}%</span>
-            </div>
-          ) : null}
-        </div>
-        {cameraOffline ? <p className="cameraError">Camera offline</p> : null}
-        <div className="monitorStatsRow">
-          <div>
-            <span>Available Slots</span>
-            <strong>{stats.available}/{slots.length}</strong>
-          </div>
-          <div>
-            <span>Traffic density</span>
-            <strong>{trafficLevel}</strong>
-          </div>
-          <div>
-            <span>Suggested Parking</span>
-            <strong>{recommendedSlots[0] ? `S${recommendedSlots[0].id}` : "None"}</strong>
-          </div>
-        </div>
-        <p className="cameraHint">Markers: {stats.available}/{slots.length} available • Recommended: {recommendedSlots.length} • {selectedSlotStatus}</p>
-        {predictedAvailabilityPct !== null ? <p className="cameraHint">Expected availability (5m): {predictedAvailabilityPct}%</p> : null}
-        <CameraListPanel slots={slots} searchTerm={debouncedQuery} />
-        <div className="recommendCard">
-          <p>Suggested parking</p>
-          {recommendedSlots.length > 0 ? (
-            <>
-              {recommendedSlots.map((slot) => (
-                <div key={slot.id} className="recommendItem">
-                  <strong>{`S${slot.id} in ${slot.distanceM ?? 150}m`}</strong>
-                  <button
-                    data-testid={`inspect-slot-${slot.id}`}
-                    onClick={() => {
-                      setSelectedSlot(slot);
-                      setStatusMessage(`S${slot.id} selected`);
-                      emitStoryForSlot(slot, "youth", "inspect", 400);
-                    }}
-                  >
-                    Inspect
-                  </button>
-                </div>
-              ))}
-            </>
-          ) : (
-            <strong>No parking available nearby</strong>
-          )}
-          <span>Impact: {co2SavedKg}kg CO2 saved, equivalent to {treeEquivalent} tree-months.</span>
-        </div>
-      </GlassCard>
-
-      <section className={`guidePanel ${guidePanelMinimized ? "minimized" : ""}`} data-testid="ai-tour-guides">
-        <div className="guidePanelHeader">
-          <p>AI Tour Guides</p>
-          <button className="guidePanelToggle" onClick={() => setGuidePanelMinimized((value) => !value)}>
-            {guidePanelMinimized ? "Mở" : "Thu gọn"}
-          </button>
-        </div>
-
-        {!guidePanelMinimized ? (
-          <div className="guidePanelBody">
-            <div className="guideGrid">
-              {(Object.keys(guideProfiles) as StoryCharacter[]).map((key) => {
-                const profile = guideProfiles[key];
-                const active = selectedDebate === key;
-                const icon = key === "driver" ? "🚕" : key === "coba" ? "👩" : "🧑";
-
-                return (
-                  <button key={key} className={`guideItem ${active ? "active" : ""}`} onClick={() => chooseDebate(key)}>
-                    <strong>{icon} {profile.label}</strong>
-                    <span>{profile.vibe}</span>
-                    <small>Route: {profile.routeBias}</small>
-                  </button>
-                );
-              })}
-            </div>
-            <div className="guideCurrent">
-          <strong>Đang dẫn: {activeGuide.label}</strong>
-          <div className="guideAvatarStage">
-            <img
-              src={guideMotionImageMap[selectedDebate][guideMotionFrame]}
-              alt={`Hướng dẫn viên ${activeGuide.label}`}
-              className={`guideAvatar guideAvatar-${guideMotionFrame}`}
-            />
-          </div>
-          <em className="guideSubtitle">{guideSubtitle}</em>
-          <span>{activeGuide.intro}</span>
-          <small>Phong cách tour: {activeGuide.theme}</small>
-          <small>Chiến lược đỗ xe: {activeGuide.parkingStrategy}</small>
-          <ul className="guidePlaces">
-            {activeGuide.places.map((place) => (
-              <li key={place}>{place}</li>
-            ))}
-          </ul>
-          <div className="guideSections">
-            <section className="guideSection">
-              <h5>Địa danh theo {activeGuide.label}</h5>
-              <div className="guideLandmarkList">
-                {guideLandmarks[selectedDebate].map((landmark) => (
-                  <article
-                    key={landmark.id}
-                    className={`guideLandmarkItem ${activeLandmarkId === landmark.id ? "active" : ""}`}
-                    onClick={() => {
-                      void handleLandmarkClick(selectedDebate, landmark, false);
-                    }}
-                  >
-                    <span className="guideLandmarkDot" />
-                    <strong>{landmark.name}</strong>
-                    <small>{landmark.description}</small>
-                    <button
-                      className="guideNavigateBtn"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        void handleLandmarkClick(selectedDebate, landmark, true);
-                      }}
-                    >
-                      Dẫn tôi tới bản đồ
-                    </button>
-                  </article>
-                ))}
-              </div>
-            </section>
-          </div>
-          <div className="guideParkingTips">
-            <strong>Gợi ý chỗ đỗ hợp lý:</strong>
-            {activeGuideParkingRecommendations.length > 0 ? (
-              <span>{activeGuideParkingRecommendations.map((slot) => `S${slot.id}`).join(" • ")} ({activeGuide.routeBias})</span>
-            ) : (
-              <span>Đang cập nhật bãi phù hợp...</span>
-            )}
-          </div>
-          {landmarkJourney && landmarkJourney.guide === selectedDebate ? (
-            <div className="landmarkJourneyCard">
-              <strong>{landmarkJourney.name}</strong>
-              <p>{landmarkJourney.description}</p>
-              <span>Quãng đường: {landmarkJourney.distanceKm.toFixed(2)} km</span>
-              <span>Dự kiến: {landmarkJourney.etaMin} phút</span>
-            </div>
-          ) : null}
-          {landmarkPreview && landmarkPreview.guide === selectedDebate ? (
-            <div className="landmarkPreviewCard">
-              <strong>{landmarkPreview.landmark.name}</strong>
-              <p>{landmarkPreview.landmark.description}</p>
-              <span>Nhấn "Dẫn tôi tới bản đồ" để mở chỉ đường và ETA.</span>
-            </div>
-          ) : null}
-            </div>
-          </div>
-        ) : null}
-      </section>
-
-      {behaviorHint ? <div className="behaviorHintBanner">{behaviorHint}</div> : null}
-      {memoryHint ? <div className="memoryHintBanner">{memoryHint}</div> : null}
-      {intentHint ? <div className="intentHintBanner">{intentHint}</div> : null}
-      {cityEvent ? <div className="cityEventBanner">{cityEvent}</div> : null}
-      {moralFeedback ? <div className="moralBanner">{moralFeedback}</div> : null}
-
-      <button
-        className="adminToggle"
-        data-testid="admin-toggle"
-        onClick={() => setAdminMode((mode) => (mode === "closed" ? "full" : "closed"))}
-      >
-        {adminMode === "closed" ? "Admin Panel" : adminMode === "compact" ? "Expand Admin" : "Close Admin"}
-      </button>
-
-      <aside
-        className={`enterpriseDock ${adminMode !== "closed" ? "open" : ""} mode-${adminMode} ${adminResizing ? "resizing" : ""}`}
-        style={{ width: adminMode === "full" ? adminWidth : adminMode === "compact" ? 88 : 0 }}
-      >
-        {adminMode !== "closed" ? (
-          <div
-            className="enterpriseDockResizer"
-            onMouseDown={(event) => {
-              event.preventDefault();
-              startAdminResize(event.clientX);
-            }}
-          />
-        ) : null}
-        <EnterpriseOpsPanel
-          availabilityPct={availabilityPct}
-          cameraOnlinePct={cameraOnlinePct}
-          etaMinutes={etaMinutes}
-          routeLoading={routeLoading}
-          systemState={systemState}
-          metrics={opsMetrics}
-          updatedAt={opsUpdatedAt}
-          incidents={incidentFeed}
-          mode={adminMode}
-          onModeChange={setAdminMode}
-          slo={slo}
-          executiveBrief={executiveBrief}
-        />
-      </aside>
-
-      <LayerControl layers={layers} onToggle={toggleLayer} />
-
-      {routeLoading ? <div className="routeLoadingBanner">Finding best route...</div> : null}
-
-      <StoryBubble
-        story={story}
-        icon={story ? storyIcon[story.character] : ""}
-        voiceEnabled={storyVoiceEnabled}
-        onToggleVoice={() => setStoryVoiceEnabled((value) => !value)}
-        onStopVoice={cancelVoicePlayback}
-      />
-
-      {showPlaceNarrative && selectedPlace ? (
-        <PlaceStoryCard
-          place={selectedPlace}
-          script={placeScript}
-          persona={placePersona}
-          isFinished={false}
-          onNextStep={() => {
-            setShowPlaceNarrative(false);
-          }}
-        />
-      ) : null}
-
-      <DestinationJourneyPanel
-        destination={selectedDestination}
-        selectedTransport={destinationTransport}
-        completedChallengeIds={completedChallenges}
-        onClose={() => {
-          setSelectedDestination(null);
-        }}
-        onChooseTransport={handleJourneyTransport}
-        onChallengeCompleted={(challengeId, reward) => {
-          completeChallenge(challengeId, reward);
-          bumpEco(Math.max(4, Math.round(reward / 2)), Number((reward / 100).toFixed(2)));
-        }}
-        onStoryUnlocked={(destination) => {
-          setBehaviorHint(`📖 New story unlocked: ${destination.name}`);
-          speakText(destination.fullStory, selectedDebate);
-        }}
-      />
-
-      <JourneyStoryboard
-        place={selectedPlace}
-        intelligence={destinationProfile}
-        visits={journeyVisits}
-        missions={campaignMissions}
-        debateLines={personaDebateLines}
-        summary={journeySummary}
-        cityMood={cityMood}
-        onChoosePersona={(persona) => {
-          const nextGuide = personaToGuide(persona);
-          setSelectedDebate(nextGuide);
-          setPlacePersona(nextGuide);
-        }}
-        onClose={() => {
-          setSelectedPlace(null);
-          setDestinationProfile(null);
-          setPersonaDebateLines([]);
-          setShowPlaceNarrative(false);
-        }}
-      />
-
       {onboardingReady && showOnboarding ? (
         <OnboardingFlow
           onComplete={({ selectedPersona: persona, selectedTransport: transport, journeyGoal: goal }) => {
+            // Map old persona names to new ones
+            const personaMap: Record<string, PersonaKey> = {
+              "coba": "coba",
+              "driver": "chutai",
+              "youth": "ut"
+            };
+            const newPersona: PersonaKey = personaMap[persona] || "coba";
+            
             setPersona(persona);
             setInitialTransport(transport);
             setJourneyGoal(goal);
-            setSelectedDebate(persona);
+            setSelectedDebate(newPersona);
             setDestinationTransport(transport);
             setBehaviorHint(`🧭 ${personaLabelFromId(persona)} route ready • Goal: ${goal}`);
             if (typeof window !== "undefined") {

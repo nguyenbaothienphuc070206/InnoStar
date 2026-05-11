@@ -5,6 +5,7 @@ import { ReactNode, useEffect } from "react";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import { Circle, Marker, Polyline, Popup, TileLayer, useMap } from "react-leaflet";
 import CameraPopup from "./camera-popup";
+import type { PersonaKey } from "./guide-hub";
 import { destinations } from "../data/destinations";
 import { LayersState, Slot, ZonePoint } from "./types";
 
@@ -23,7 +24,7 @@ type MapPluginContext = {
   carPosition: [number, number] | null;
   carAngle: number;
   navigationActive: boolean;
-  landmarks: Array<{ id: string; name: string; description: string; lat: number; lng: number; guide: "coba" | "driver" | "youth" }>;
+  landmarks: Array<{ id: string; name: string; description: string; lat: number; lng: number; guide: PersonaKey }>;
   activeLandmarkId: string | null;
   aiSlots: Array<{ id: number; lat: number; lng: number; capacity: number; available: number }>;
   aiTrafficZones: Array<{ zone: string; lat: number; lng: number; level: "LOW" | "MEDIUM" | "HIGH" }>;
@@ -34,7 +35,7 @@ type MapPluginContext = {
   visitedDestinationIds: string[];
   unlockedSecrets: string[];
   onSlotClick: (slot: Slot) => void;
-  onLandmarkClick: (landmark: { id: string; name: string; description: string; lat: number; lng: number; guide: "coba" | "driver" | "youth" }) => void;
+  onLandmarkClick: (landmark: { id: string; name: string; description: string; lat: number; lng: number; guide: PersonaKey }) => void;
   onAIPlaceClick: (place: { id: number; name: string; type: "history" | "daily" | "local"; persona: "COBA" | "DRIVER" | "YOUTH"; lat: number; lng: number; desc: string }) => void;
   toLatLng: (slot: Slot) => [number, number];
   markerIcon: (slot: Slot, isSelected: boolean) => L.DivIcon;

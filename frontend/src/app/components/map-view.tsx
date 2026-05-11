@@ -4,6 +4,7 @@ import L from "leaflet";
 import { Fragment, useState } from "react";
 import "leaflet/dist/leaflet.css";
 import { MapContainer, TileLayer, useMapEvents } from "react-leaflet";
+import type { PersonaKey } from "./guide-hub";
 import { createMapPlugins } from "./map-plugins";
 import { LayersState, Slot, ZonePoint } from "./types";
 
@@ -22,7 +23,7 @@ type MapViewProps = {
   carPosition: [number, number] | null;
   carAngle: number;
   navigationActive: boolean;
-  landmarks: Array<{ id: string; name: string; description: string; lat: number; lng: number; guide: "coba" | "driver" | "youth" }>;
+  landmarks: Array<{ id: string; name: string; description: string; lat: number; lng: number; guide: PersonaKey }>;
   activeLandmarkId: string | null;
   aiSlots: Array<{ id: number; lat: number; lng: number; capacity: number; available: number }>;
   aiTrafficZones: Array<{ zone: string; lat: number; lng: number; level: "LOW" | "MEDIUM" | "HIGH" }>;
@@ -33,7 +34,7 @@ type MapViewProps = {
   visitedDestinationIds: string[];
   unlockedSecrets: string[];
   onSlotClick: (slot: Slot) => void;
-  onLandmarkClick: (landmark: { id: string; name: string; description: string; lat: number; lng: number; guide: "coba" | "driver" | "youth" }) => void;
+  onLandmarkClick: (landmark: { id: string; name: string; description: string; lat: number; lng: number; guide: PersonaKey }) => void;
   onAIPlaceClick: (place: { id: number; name: string; type: "history" | "daily" | "local"; persona: "COBA" | "DRIVER" | "YOUTH"; lat: number; lng: number; desc: string }) => void;
   onViewportCenterChange: (center: { lat: number; lng: number }) => void;
 };

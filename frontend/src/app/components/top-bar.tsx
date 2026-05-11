@@ -11,7 +11,7 @@ type TopBarProps = {
 export default function TopBar({ query, onQueryChange, greenScore, profileName, onProfileNameChange }: TopBarProps) {
   return (
     <header className="topBarShell">
-      <div className="topLogo">GreenPark AI</div>
+      <div className="topLogo">SaigonGreen</div>
 
       <input
         className="topSearch"

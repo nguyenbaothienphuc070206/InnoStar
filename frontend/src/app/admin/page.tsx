@@ -85,7 +85,7 @@ export default function AdminPage() {
   return (
     <main className="adminPage">
       <header className="adminHeader">
-        <h1>GreenPark AI - Admin Dashboard</h1>
+        <h1>SaigonGreen - Admin Dashboard</h1>
         <Link href="/" className="adminBack">
           Back to Map
         </Link>

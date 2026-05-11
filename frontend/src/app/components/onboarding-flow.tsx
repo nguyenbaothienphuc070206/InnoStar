@@ -9,19 +9,34 @@ type OnboardingFlowProps = {
   onComplete: (payload: { selectedPersona: PersonaOption; selectedTransport: TransportType; journeyGoal: string }) => void;
 };
 
-const goals = ["History trail", "Local food", "Green commute", "Hidden gems"];
+const onboardingSteps = [
+  "Chọn persona",
+  "Chọn điểm đến",
+  "Follow green route",
+  "Scan checkpoint",
+  "Unlock story",
+  "Earn Green Score"
+];
 
 export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const [selectedPersona, setSelectedPersona] = useState<PersonaOption | null>(null);
   const [selectedTransport, setSelectedTransport] = useState<TransportType | null>(null);
-  const [journeyGoal, setJourneyGoal] = useState(goals[0]);
-  const [goalOpen, setGoalOpen] = useState(false);
+  const journeyGoal = "Explore SaigonGreen";
 
   return (
-    <div className="onboardingOverlay" data-testid="onboarding-flow">
-      <div className="onboardingCard">
-        <h1>Welcome to GreenPark AI</h1>
-        <p>Choose your explorer style</p>
+    <div className="onboardingOverlay">
+      <div className="onboardingCard onboardingModal" data-testid="onboarding-flow">
+        <h1>Welcome to SaigonGreen</h1>
+        <p>Use this once. Then the map takes over.</p>
+
+        <ol className="onboardingStepList">
+          {onboardingSteps.map((step, index) => (
+            <li key={step}>
+              <strong>{index + 1}.</strong>
+              <span>{step}</span>
+            </li>
+          ))}
+        </ol>
 
         <div className="onboardingPersonaGrid">
           <button type="button" className={selectedPersona === "coba" ? "active" : ""} onClick={() => setSelectedPersona("coba")}>
@@ -45,37 +60,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           <button type="button" className={selectedTransport === "walk" ? "active" : ""} onClick={() => setSelectedTransport("walk")}>🚶 Walk</button>
         </div>
 
-        <label className="onboardingGoalLabel">🌱 Select your eco mission</label>
-        <div className="missionDropdown">
-          <button
-            type="button"
-            className="onboardingGoalButton"
-            onClick={() => setGoalOpen((value) => !value)}
-            aria-expanded={goalOpen}
-            aria-haspopup="listbox"
-          >
-            <span>{journeyGoal}</span>
-            <span className="missionChevron">▾</span>
-          </button>
-          {goalOpen ? (
-            <div className="onboardingGoalMenu" role="listbox">
-              {goals.map((goal) => (
-                <button
-                  key={goal}
-                  type="button"
-                  className={`onboardingGoalOption ${journeyGoal === goal ? "active" : ""}`}
-                  onClick={() => {
-                    setJourneyGoal(goal);
-                    setGoalOpen(false);
-                  }}
-                >
-                  {goal}
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </div>
-
         <button
           type="button"
           className="onboardingStartBtn"
@@ -87,7 +71,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           }}
           disabled={!selectedPersona || !selectedTransport}
         >
-          Enter Map
+          Start Exploring
         </button>
       </div>
     </div>

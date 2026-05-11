@@ -30,7 +30,7 @@ type JourneyContextValue = JourneyState & {
 
 const JourneyContext = createContext<JourneyContextValue | null>(null);
 
-const STORAGE_KEY = "greenpark.journey.v1";
+const STORAGE_KEY = "saigongreen.journey.v1";
 
 const defaultState: JourneyState = {
   greenScore: 0,

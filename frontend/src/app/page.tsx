@@ -12,15 +12,12 @@ import GlassCard from "./components/glass-card";
 import { useJourney } from "./components/JourneyContext";
 import JourneyPassport from "./components/journey-passport";
 import LayerControl from "./components/layer-control";
-import NarrativeFlowRail from "./components/narrative-flow-rail";
 import OnboardingFlow from "./components/onboarding-flow";
 import JourneyStoryboard from "./components/journey-storyboard";
 import PlaceStoryCard from "./components/place-story-card";
 import SlotMiniDashboard from "./components/slot-mini-dashboard";
-import SocialGreenChallenge from "./components/social-green-challenge";
 import StoryBubble from "./components/story-bubble";
 import TopBar from "./components/top-bar";
-import WhyNowCard from "./components/why-now-card";
 import { Slot, SlotDiff, ZonePoint } from "./components/types";
 import { CityState, EngineStep, RouteType, VoiceType, getSuggestion } from "./engine/cityEngine";
 import { inferPersona } from "./engine/personaEngine";
@@ -57,6 +54,7 @@ const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001
 const backendWsUrl = backendUrl.replace(/\/api\/v1\/?$/, "");
 const cameraStreamUrl = process.env.NEXT_PUBLIC_CAMERA_STREAM_URL || "http://localhost:8000/stream.m3u8";
 const userLocation: [number, number] = [10.772, 106.698];
+const onboardingStorageKey = "saigongreen.onboarding.v1";
 
 type RouteOption = {
   coords: Array<[number, number]>;
@@ -640,7 +638,11 @@ export default function Home() {
   const [activeLandmarkId, setActiveLandmarkId] = useState<string | null>(null);
   const [landmarkJourney, setLandmarkJourney] = useState<LandmarkJourney | null>(null);
   const [landmarkPreview, setLandmarkPreview] = useState<LandmarkPreview | null>(null);
-  const [guidePanelMinimized, setGuidePanelMinimized] = useState(false);
+  const [guidePanelMinimized, setGuidePanelMinimized] = useState(true);
+  const [journeyDrawerOpen, setJourneyDrawerOpen] = useState(false);
+  const [activeRightTab, setActiveRightTab] = useState<"live" | "passport" | "guide">("live");
+  const [onboardingReady, setOnboardingReady] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<PlaceData | null>(null);
   const [showPlaceNarrative, setShowPlaceNarrative] = useState(false);
   const [placeScript, setPlaceScript] = useState<string[]>([]);
@@ -651,7 +653,6 @@ export default function Home() {
   const [placeLibrary, setPlaceLibrary] = useState<PlaceData[]>([]);
   const [selectedDestination, setSelectedDestination] = useState<Destination | null>(null);
   const [destinationTransport, setDestinationTransport] = useState<TransportType | null>(null);
-  const [onboardingDone, setOnboardingDone] = useState(false);
   const [predictiveForecast, setPredictiveForecast] = useState<CrowdPrediction | null>(null);
   const [pitchRunning, setPitchRunning] = useState(false);
   const [pitchStepIndex, setPitchStepIndex] = useState(0);
@@ -682,6 +683,7 @@ export default function Home() {
     transportUsed,
     selectedPersona,
     selectedTransport,
+    journeyGoal,
     rank,
     visitDestination,
     completeChallenge,
@@ -710,13 +712,18 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (!selectedPersona || !selectedTransport) {
+    if (typeof window === "undefined") {
       return;
     }
 
-    setOnboardingDone(true);
-    setSelectedDebate(selectedPersona);
-    setDestinationTransport(selectedTransport);
+    const onboardingFinished = window.localStorage.getItem(onboardingStorageKey) === "1";
+    const hasSavedJourney = Boolean(selectedPersona && selectedTransport);
+    setShowOnboarding(!(onboardingFinished || hasSavedJourney));
+    if (selectedPersona && selectedTransport) {
+      setSelectedDebate(selectedPersona);
+      setDestinationTransport(selectedTransport);
+    }
+    setOnboardingReady(true);
   }, [selectedPersona, selectedTransport]);
 
   const {
@@ -829,42 +836,6 @@ export default function Home() {
       }
     };
   }, [co2SavedKg, journeySummary.totalCo2SavedKg, journeyVisits, transportUsed]);
-  const narrativeStep = useMemo(() => {
-    const hasPersona = Boolean(selectedPersona);
-    const hasDestination = Boolean(selectedDestination || selectedPlace);
-    const hasRoute = routes.length > 0 || Boolean(route?.path?.length);
-    const hasCheckpoint = completedChallenges.length > 0;
-    const hasStoryUnlock = hasCheckpoint;
-    const hasScore = journeyGreenScore > 0;
-    const hasPassport = visitedDestinations.length > 0 && hasScore;
-
-    if (!hasPersona) {
-      return 1;
-    }
-    if (!hasDestination) {
-      return 2;
-    }
-    if (!hasRoute) {
-      return 3;
-    }
-    if (!navigationActive) {
-      return 4;
-    }
-    if (!hasCheckpoint) {
-      return 5;
-    }
-    if (!hasStoryUnlock) {
-      return 6;
-    }
-    if (!hasScore) {
-      return 7;
-    }
-    if (!hasPassport) {
-      return 8;
-    }
-    return 8;
-  }, [completedChallenges.length, journeyGreenScore, navigationActive, route?.path?.length, routes.length, selectedDestination, selectedPersona, selectedPlace, visitedDestinations.length]);
-
   useEffect(() => {
     if (cityState.mood === "CHAOTIC") {
       setCityMood("CHAOTIC");
@@ -932,7 +903,7 @@ export default function Home() {
   });
 
   useEffect(() => {
-    const raw = window.localStorage.getItem("greenpark-last-slot");
+    const raw = window.localStorage.getItem("saigongreen-last-slot");
     if (!raw) {
       return;
     }
@@ -951,7 +922,7 @@ export default function Home() {
     }
 
     window.localStorage.setItem(
-      "greenpark-last-slot",
+      "saigongreen-last-slot",
       JSON.stringify({ slotId: selectedSlot.id, at: new Date().toISOString() })
     );
   }, [navigationActive, selectedSlot]);
@@ -1197,14 +1168,14 @@ export default function Home() {
   }, [adminResizing, adminWidth]);
 
   useEffect(() => {
-    const cachedName = window.localStorage.getItem("greenpark-user");
+    const cachedName = window.localStorage.getItem("saigongreen-user");
     if (cachedName) {
       setProfileName(cachedName);
     }
   }, [setProfileName]);
 
   useEffect(() => {
-    window.localStorage.setItem("greenpark-user", profileName);
+    window.localStorage.setItem("saigongreen-user", profileName);
   }, [profileName]);
 
   useEffect(() => {
@@ -1387,7 +1358,7 @@ export default function Home() {
       return;
     }
 
-    const savedStoryLayer = window.localStorage.getItem("greenpark-layer-story");
+    const savedStoryLayer = window.localStorage.getItem("saigongreen-layer-story");
     if (savedStoryLayer === "off" && layers.story) {
       toggleLayer("story");
     }
@@ -1398,14 +1369,14 @@ export default function Home() {
     if (!storyLayerHydratedRef.current) {
       return;
     }
-    window.localStorage.setItem("greenpark-layer-story", layers.story ? "on" : "off");
+    window.localStorage.setItem("saigongreen-layer-story", layers.story ? "on" : "off");
   }, [layers.story]);
 
   useEffect(() => {
     if (storyVoiceHydratedRef.current) {
       return;
     }
-    const savedVoice = window.localStorage.getItem("greenpark-story-voice");
+    const savedVoice = window.localStorage.getItem("saigongreen-story-voice");
     if (savedVoice === "off") {
       setStoryVoiceEnabled(false);
     }
@@ -1416,7 +1387,7 @@ export default function Home() {
     if (!storyVoiceHydratedRef.current) {
       return;
     }
-    window.localStorage.setItem("greenpark-story-voice", storyVoiceEnabled ? "on" : "off");
+    window.localStorage.setItem("saigongreen-story-voice", storyVoiceEnabled ? "on" : "off");
     if (!storyVoiceEnabled) {
       cancelVoicePlayback();
     }
@@ -2707,9 +2678,10 @@ export default function Home() {
         ? `Likely free in ${selectedSlot.predictedFreeMin ?? 8} min`
         : "Currently full"
     : "Tap a slot marker to inspect";
+  const platformStyle = { "--city-tone": cityTone } as CSSProperties;
 
   return (
-    <main className={`platformShell pt-safe pb-safe als-ui-${uiMode}`} style={{ "--city-tone": cityTone } as CSSProperties}>
+    <main className={`platformShell pt-safe pb-safe als-ui-${uiMode}`} style={platformStyle}>
       <MapView
         slots={slots}
         zones={zones}
@@ -2809,9 +2781,197 @@ export default function Home() {
         </div>
       ) : null}
 
-      <NarrativeFlowRail activeStep={pitchRunning ? pitchStepIndex : narrativeStep} score={journeyGreenScore} />
-      <SocialGreenChallenge selfName={profileName} selfScore={journeyGreenScore} visitedCount={visitedDestinations.length} />
-      <WhyNowCard />
+      <div className={`journeyDrawer ${journeyDrawerOpen ? "open" : "closed"}`}>
+        <button className="journeyDrawerToggle" type="button" onClick={() => setJourneyDrawerOpen((value) => !value)}>
+          ☰ Journey
+        </button>
+        {journeyDrawerOpen ? (
+          <GlassCard className="journeyDrawerCard">
+            <div className="journeyDrawerHeader">
+              <strong>Current mission</strong>
+              <button type="button" className="journeyDrawerClose" onClick={() => setJourneyDrawerOpen(false)}>
+                Hide
+              </button>
+            </div>
+            <div className="journeyDrawerMission">
+              <span>{journeyGoal || "Explore SaigonGreen"}</span>
+              <small>{completedChallenges.length} checkpoints</small>
+            </div>
+            <div className="journeyDrawerStats">
+              <div>
+                <span>Progress</span>
+                <strong>{visitedDestinations.length} stops</strong>
+              </div>
+              <div>
+                <span>Green Score</span>
+                <strong>{journeyGreenScore}</strong>
+              </div>
+              <div>
+                <span>Rank</span>
+                <strong>{rank}</strong>
+              </div>
+            </div>
+            <div className="journeyDrawerLeaderboard">
+              <h4>Leaderboard</h4>
+              <div className="journeyDrawerLeaderboardItem active">
+                <span>You</span>
+                <strong>{journeyGreenScore}</strong>
+              </div>
+              <div className="journeyDrawerLeaderboardItem">
+                <span>Next rank target</span>
+                <strong>{Math.max(0, 100 - journeyGreenScore)} pts</strong>
+              </div>
+            </div>
+          </GlassCard>
+        ) : null}
+      </div>
+
+      {routes.length > 0 ? (
+        <GlassCard className="routeCardDock" data-testid="route-options">
+          <div className="routeCardHeader">
+            <strong>NEXT MOVE</strong>
+            <span>{etaMinutes ? `ETA: ${Math.max(1, etaMinutes)} min` : `Route ${activeRoute + 1}/${routes.length}`}</span>
+          </div>
+          <div className="routeCardSteps">
+            {(turnSteps.length > 0 ? turnSteps : ["Select a route to get moving"]).slice(0, 2).map((step, index) => (
+              <div key={`${step}-${index}`} className="routeCardStep">
+                <span>→</span>
+                <span>{step}</span>
+              </div>
+            ))}
+            {turnSteps.length > 2 ? <small>ETA: {etaMinutes ?? "..."} min • Route accuracy {routeConfidence}</small> : null}
+          </div>
+          <div className="routeCardOptions">
+            {routes.map((option, index) => {
+              const active = index === activeRoute;
+
+              return (
+                <button
+                  key={`${option.durationMin}-${option.distanceKm}-${index}`}
+                  className={`routeOptionItem ${active ? "active" : ""}`}
+                  disabled={routeLoading}
+                  onClick={() => {
+                    setActiveRoute(index);
+                    setTurnSteps(option.steps);
+                    setEtaMinutes(option.smartEtaMin);
+                    setRouteFocusToken((value) => value + 1);
+                  }}
+                >
+                  {option.smartEtaMin} min • {option.distanceKm} km {index === ecoRouteIndex ? "🌱" : ""}
+                </button>
+              );
+            })}
+          </div>
+        </GlassCard>
+      ) : null}
+
+      <div className="tabbedSidebarStack">
+        <div className="rightTabs">
+          <button type="button" className={`rightTab ${activeRightTab === "live" ? "active" : ""}`} onClick={() => setActiveRightTab("live")}>
+            Live
+          </button>
+          <button type="button" className={`rightTab ${activeRightTab === "passport" ? "active" : ""}`} onClick={() => setActiveRightTab("passport")}>
+            Passport
+          </button>
+          <button type="button" className={`rightTab ${activeRightTab === "guide" ? "active" : ""}`} onClick={() => setActiveRightTab("guide")}>
+            Guide
+          </button>
+        </div>
+
+        {activeRightTab === "live" ? (
+          <GlassCard className="rightTabPanel liveCameraCard">
+            <h3>Live View</h3>
+            {routeLoading ? <p className="loadingHint" data-testid="route-loading">Analyzing best parking...</p> : null}
+            <div className="liveCameraFrame">
+              <video
+                src={cameraStreamUrl}
+                controls
+                autoPlay
+                className="liveCameraVideo"
+                onError={() => setCameraOffline(true)}
+                onCanPlay={() => setCameraOffline(false)}
+              />
+              <CameraAIOverlay active={Boolean(selectedSlot)} seed={selectedSlot?.id ?? 0} />
+              {selectedSlot ? <span className="aiOverlayTag" data-testid="ai-overlay-tag">AI Tracking S{selectedSlot.id}</span> : null}
+            </div>
+            {cameraOffline ? <p className="cameraError">Camera offline</p> : null}
+            <p className="cameraHint">
+              Markers: {stats.available}/{slots.length} available • Recommended: {recommendedSlots.length} • {selectedSlotStatus}
+            </p>
+            {predictedAvailabilityPct !== null ? <p className="cameraHint">Expected availability (5m): {predictedAvailabilityPct}%</p> : null}
+            <CameraListPanel slots={slots} searchTerm={debouncedQuery} />
+            <div className="recommendCard">
+              <p>Recommended for you</p>
+              {recommendedSlots.length > 0 ? (
+                <>
+                  {recommendedSlots.map((slot) => (
+                    <div key={slot.id} className="recommendItem">
+                      <strong>{`S${slot.id} in ${slot.distanceM ?? 150}m`}</strong>
+                      <button
+                        data-testid={`inspect-slot-${slot.id}`}
+                        onClick={() => {
+                          setSelectedSlot(slot);
+                          setStatusMessage(`S${slot.id} selected`);
+                          emitStoryForSlot(slot, "youth", "inspect", 400);
+                        }}
+                      >
+                        Inspect
+                      </button>
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <strong>No parking available nearby</strong>
+              )}
+              <span>Impact: {co2SavedKg}kg CO2 saved, equivalent to {treeEquivalent} tree-months.</span>
+            </div>
+          </GlassCard>
+        ) : null}
+
+        {activeRightTab === "passport" ? (
+          <GlassCard className="rightTabPanel">
+            <JourneyPassport
+              profileName={profileName}
+              personaLabel={personaLabelFromId(selectedPersona)}
+              visitedIds={visitedDestinations}
+              transportUsed={transportUsed}
+              greenScore={journeyGreenScore}
+              rank={rank}
+            />
+          </GlassCard>
+        ) : null}
+
+        {activeRightTab === "guide" ? (
+          <GlassCard className="rightTabPanel guideTabCard">
+            <h3>{activeGuide.label}</h3>
+            <p>{guideSubtitle}</p>
+            <div className="guideTabMeta">
+              <span>{activeGuide.theme}</span>
+              <span>{activeGuide.parkingStrategy}</span>
+            </div>
+            <ul className="guideTabPlaces">
+              {activeGuide.places.map((place) => (
+                <li key={place}>{place}</li>
+              ))}
+            </ul>
+            <div className="guideTabLandmarks">
+              {guideLandmarks[selectedDebate].slice(0, 3).map((landmark) => (
+                <button
+                  key={landmark.id}
+                  type="button"
+                  className={`guideTabLandmark ${activeLandmarkId === landmark.id ? "active" : ""}`}
+                  onClick={() => {
+                    void handleLandmarkClick(selectedDebate, landmark, true);
+                  }}
+                >
+                  <strong>{landmark.name}</strong>
+                  <small>{landmark.description}</small>
+                </button>
+              ))}
+            </div>
+          </GlassCard>
+        ) : null}
+      </div>
 
       <section className={`guidePanel ${guidePanelMinimized ? "minimized" : ""}`} data-testid="ai-tour-guides">
         <div className="guidePanelHeader">
@@ -3162,16 +3322,19 @@ export default function Home() {
         }}
       />
 
-      {!onboardingDone ? (
+      {onboardingReady && showOnboarding ? (
         <OnboardingFlow
           onComplete={({ selectedPersona: persona, selectedTransport: transport, journeyGoal: goal }) => {
             setPersona(persona);
             setInitialTransport(transport);
             setJourneyGoal(goal);
-            setOnboardingDone(true);
             setSelectedDebate(persona);
             setDestinationTransport(transport);
             setBehaviorHint(`🧭 ${personaLabelFromId(persona)} route ready • Goal: ${goal}`);
+            if (typeof window !== "undefined") {
+              window.localStorage.setItem(onboardingStorageKey, "1");
+            }
+            setShowOnboarding(false);
           }}
         />
       ) : null}

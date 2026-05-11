@@ -254,7 +254,7 @@ export default function EnterpriseOpsPanel({
     y += 24;
     report.setFont("helvetica", "italic");
     report.setFontSize(10);
-    report.text("GreenPark AI - Executive Brief Mode", left, y);
+    report.text("SaigonGreen - Executive Brief Mode", left, y);
 
     report.save(`weekly-green-mobility-report-${new Date().toISOString().slice(0, 10)}.pdf`);
   }

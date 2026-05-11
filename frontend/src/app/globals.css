@@ -1652,101 +1652,6 @@ body {
   font-size: 0.76rem;
 }
 
-.narrativeFlowRail {
-  position: absolute;
-  left: 14px;
-  bottom: 102px;
-  z-index: 45;
-  width: min(92vw, 300px);
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(4, 12, 18, 0.8);
-  backdrop-filter: blur(14px);
-  padding: 10px;
-}
-
-.narrativeFlowRail header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.narrativeFlowRail ol {
-  margin: 0;
-  padding-left: 18px;
-  display: grid;
-  gap: 6px;
-  font-size: 0.66rem;
-  color: #cfe4eb;
-}
-
-.flow-done {
-  color: #86f7a9;
-}
-
-.flow-active {
-  color: #8eefff;
-  text-shadow: 0 0 12px rgba(31, 244, 250, 0.3);
-}
-
-.flow-todo {
-  color: #90a4ad;
-}
-
-.socialChallengeCard,
-.whyNowCard {
-  position: absolute;
-  left: 14px;
-  z-index: 45;
-  width: min(92vw, 300px);
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(4, 12, 18, 0.8);
-  backdrop-filter: blur(14px);
-  padding: 10px;
-}
-
-.socialChallengeCard {
-  bottom: 254px;
-}
-
-.whyNowCard {
-  bottom: 414px;
-}
-
-.socialChallengeCard ul,
-.whyNowCard ul {
-  margin: 0;
-  padding-left: 18px;
-  color: #cbdce2;
-  display: grid;
-  gap: 4px;
-}
-
-.socialChallengeCard header,
-.whyNowCard h4 {
-  margin: 0 0 8px;
-}
-
-.socialChallengeCard li {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  font-size: 0.74rem;
-}
-
-.challengeBadge {
-  margin-top: 8px;
-  display: inline-flex;
-  border-radius: 999px;
-  border: 1px solid rgba(93, 255, 52, 0.5);
-  color: #9ef780;
-  padding: 4px 10px;
-  font-size: 0.7rem;
-}
-
 .journeyPassport {
   position: relative;
   right: auto;
@@ -1857,6 +1762,34 @@ body {
 .onboardingCard p {
   margin: 0;
   color: #c7dce8;
+}
+
+.onboardingStepList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.onboardingStepList li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #eaf5fb;
+}
+
+.onboardingStepList strong {
+  color: #1ff4fa;
+  min-width: 1.2em;
+}
+
+.onboardingStepList span {
+  color: #d1e2ea;
 }
 
 .onboardingPersonaGrid,
@@ -2898,4 +2831,290 @@ button:active {
   .ecoPanelButtons {
     grid-template-columns: 1fr;
   }
+}
+
+.guidePanel,
+.routeOptionsBar,
+.directionsPanel,
+.navPanel,
+.cityLogPanel,
+.rightSidebarStack,
+.slotMiniDashboard,
+.actionDock {
+  display: none !important;
+}
+
+.journeyDrawer {
+  position: absolute;
+  left: 14px;
+  top: 126px;
+  z-index: 53;
+  width: min(92vw, 280px);
+}
+
+.journeyDrawerToggle {
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(2, 10, 14, 0.84);
+  color: #dffcff;
+  backdrop-filter: blur(16px);
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.journeyDrawerCard {
+  margin-top: 8px;
+  padding: 12px;
+  width: 100%;
+}
+
+.journeyDrawerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.journeyDrawerClose {
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 0.68rem;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.journeyDrawerMission {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(31, 244, 250, 0.08);
+  border: 1px solid rgba(31, 244, 250, 0.16);
+}
+
+.journeyDrawerMission span {
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.journeyDrawerMission small {
+  color: #9fb8c3;
+}
+
+.journeyDrawerStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.journeyDrawerStats div,
+.journeyDrawerLeaderboardItem {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.22);
+  padding: 8px;
+}
+
+.journeyDrawerStats span,
+.journeyDrawerLeaderboardItem span {
+  display: block;
+  color: #94aeb8;
+  font-size: 0.64rem;
+  margin-bottom: 4px;
+}
+
+.journeyDrawerStats strong,
+.journeyDrawerLeaderboardItem strong {
+  color: #f4fbff;
+  font-size: 0.8rem;
+}
+
+.journeyDrawerLeaderboard {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.journeyDrawerLeaderboard h4 {
+  margin: 0;
+  font-size: 0.72rem;
+  color: #1ff4fa;
+}
+
+.journeyDrawerLeaderboardItem.active {
+  border-color: rgba(93, 255, 52, 0.45);
+}
+
+.routeCardDock {
+  position: absolute;
+  left: 50%;
+  bottom: 84px;
+  transform: translateX(-50%);
+  z-index: 53;
+  width: min(92vw, 420px);
+  padding: 12px;
+}
+
+.routeCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.routeCardHeader strong {
+  color: #1ff4fa;
+  letter-spacing: 0.04em;
+}
+
+.routeCardHeader span {
+  color: #9fb8c3;
+  font-size: 0.72rem;
+}
+
+.routeCardSteps {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.routeCardStep {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  color: #dff6ff;
+  font-size: 0.78rem;
+}
+
+.routeCardStep span:first-child {
+  color: #5dff34;
+}
+
+.routeCardSteps small {
+  color: #99b3be;
+  font-size: 0.66rem;
+}
+
+.routeCardOptions {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.tabbedSidebarStack {
+  position: absolute;
+  right: 14px;
+  top: 126px;
+  z-index: 54;
+  width: min(92vw, 360px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: calc(100vh - 156px);
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.rightTabs {
+  display: flex;
+  gap: 8px;
+}
+
+.rightTab {
+  flex: 1;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(3, 12, 18, 0.82);
+  color: #d4e4ea;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.rightTab.active {
+  background: rgba(31, 244, 250, 0.86);
+  border-color: rgba(31, 244, 250, 0.92);
+  color: #011318;
+}
+
+.rightTabPanel {
+  display: block;
+}
+
+.guideTabCard h3 {
+  margin: 0 0 8px;
+  color: #1ff4fa;
+}
+
+.guideTabCard p {
+  margin: 0 0 10px;
+  color: #d6e5ea;
+  font-size: 0.78rem;
+}
+
+.guideTabMeta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.guideTabMeta span {
+  border-radius: 999px;
+  padding: 5px 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #cfe4eb;
+  font-size: 0.65rem;
+}
+
+.guideTabPlaces {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.guideTabPlaces li {
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.18);
+  padding: 8px 10px;
+  color: #d5e8ee;
+  font-size: 0.72rem;
+}
+
+.guideTabLandmarks {
+  display: grid;
+  gap: 8px;
+}
+
+.guideTabLandmark {
+  text-align: left;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2);
+  padding: 10px;
+}
+
+.guideTabLandmark.active {
+  border-color: rgba(93, 255, 52, 0.45);
+  box-shadow: 0 0 0 1px rgba(93, 255, 52, 0.16) inset;
+}
+
+.guideTabLandmark strong {
+  display: block;
+  color: #f4fbff;
+  font-size: 0.76rem;
+  margin-bottom: 4px;
+}
+
+.guideTabLandmark small {
+  display: block;
+  color: #9fb8c3;
+  font-size: 0.66rem;
+  line-height: 1.3;
 }

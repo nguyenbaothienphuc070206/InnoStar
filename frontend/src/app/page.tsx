@@ -2911,6 +2911,32 @@ export default function Home() {
         </div>
       </div>
 
+      {/* DIRECTIONS PANEL */}
+      {turnSteps && turnSteps.length ? (
+        <aside className="directionsPanel" data-testid="directions-panel">
+          <h3>Directions</h3>
+          <ul>
+            {turnSteps.map((step, idx) => (
+              <li key={`step-${idx}`}>{step}</li>
+            ))}
+          </ul>
+
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <button onClick={() => {
+              setNavigationActive(true);
+              setRouteFocusToken((v) => v + 1);
+              setRouteIndex(0);
+              setCarPosition((displayRoute && displayRoute.length) ? displayRoute[0] : routePath[0] ?? null);
+            }}>Start Navigation</button>
+            <button onClick={() => {
+              setTurnSteps([]);
+              setDisplayRoute([]);
+              setNavigationActive(false);
+            }}>Close</button>
+          </div>
+        </aside>
+      ) : null}
+
       {/* KEEP MINIMAL UI FOR INTERACTIONS */}
       {behaviorHint ? <div className="behaviorHintBanner">{behaviorHint}</div> : null}
       

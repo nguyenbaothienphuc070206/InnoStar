@@ -36,3 +36,4 @@ Thumbs.db
 # Data / uploads
 ai-service/uploads/
 ai-service/data/
+.vercel

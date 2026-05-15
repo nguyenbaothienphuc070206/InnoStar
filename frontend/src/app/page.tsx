@@ -2238,6 +2238,63 @@ export default function Home() {
     setBehaviorHint(`📘 Mission unlocked at ${destination.name}.`);
   }
 
+  function findNearestSlotToDestination(dest: [number, number]): Slot | null {
+    const [dLat, dLng] = dest;
+    const candidates = slots.filter((s) => typeof s.lat === "number" && typeof s.lng === "number" && (s.available || s.soon));
+
+    // Prefer persona-specific recommendations when available
+    const personaList = guideParkingRecommendationsByGuide[selectedDebate] ?? [];
+    const pool = personaList.length ? personaList : candidates;
+
+    if (!pool.length) return null;
+
+    return pool.reduce<Slot | null>((best, slot) => {
+      if (!best) return slot;
+      const d1 = Math.hypot((slot.lat ?? 0) - dLat, (slot.lng ?? 0) - dLng);
+      const d2 = Math.hypot((best.lat ?? 0) - dLat, (best.lng ?? 0) - dLng);
+      return d1 < d2 ? slot : best;
+    }, null);
+  }
+
+  // Generate a visible route to a destination: pick nearest parking, build polyline and update UI
+  function handleRouteToDestination(destination: any) {
+    if (!destination) return;
+
+    const destPoint: [number, number] = [destination.lat, destination.lng];
+
+    const nearest = findNearestSlotToDestination(destPoint);
+
+    // If no parking available, fallback to a direct route to destination
+    let routeCoords: Array<[number, number]> = [];
+
+    if (nearest && typeof nearest.lat === "number" && typeof nearest.lng === "number") {
+      setSelectedSlot(nearest);
+      const toSlot = generateRoute({ lat: userLocation[0], lng: userLocation[1] }, { lat: nearest.lat, lng: nearest.lng });
+      const slotToDest = generateRoute({ lat: nearest.lat, lng: nearest.lng }, { lat: destination.lat, lng: destination.lng });
+      routeCoords = [...toSlot, ...slotToDest.slice(1)];
+      setStatusMessage(`Routing via S${nearest.id} to ${destination.name}`);
+    } else {
+      routeCoords = generateRoute({ lat: userLocation[0], lng: userLocation[1] }, { lat: destination.lat, lng: destination.lng });
+      setStatusMessage(`Routing directly to ${destination.name}`);
+    }
+
+    // Persona-based narrative + ETA estimation
+    setSelectedDebate(destination.bestGuide ?? selectedDebate);
+    const directKm = calcDistanceKm(userLocation, [destination.lat, destination.lng]);
+    const approxEta = Math.max(1, Math.round((directKm / speedByTraffic(trafficLevel)) * 60));
+
+    setTurnSteps([`Xuất phát đến ${destination.name}`, nearest ? `Dừng tại bãi S${nearest?.id}` : "Đến điểm", "Đi bộ tới đích"]);
+    setEtaMinutes(approxEta);
+    setDisplayRoute(routeCoords);
+    setRouteFocusToken((v) => v + 1);
+    setNavigationActive(true);
+    setRouteIndex(0);
+    setCarPosition(routeCoords[0] ?? null);
+    setDistanceLeftKm(Number(directKm.toFixed(2)));
+    setBehaviorHint(`🗺️ Đang dẫn tới ${destination.name} • ${approxEta} phút`);
+    bumpEco(selectedDebate === "coba" ? 12 : 8, selectedDebate === "coba" ? 0.36 : 0.22);
+  }
+
   function handleJourneyTransport(type: TransportType) {
     setDestinationTransport(type);
 
@@ -2810,8 +2867,8 @@ export default function Home() {
             }
 
             if (action === "view-route") {
-              setBehaviorHint(`🗺️ Route xanh ready for ${activeDestinationData.title}.`);
-              openDestinationFlow(activeDestinationData.title);
+              // Generate route to destination: pick nearest parking, draw route, update directions and focus map
+              void handleRouteToDestination(activeDestinationData);
               return;
             }
 

@@ -8,7 +8,7 @@ export const personas = {
   coba: {
     name: "Cô Ba",
     vibe: "Lịch sử & Nghệ thuật",
-    avatar: "/images/coba.png",
+    avatar: "/guides/coba1.png",
     text: "Cưng gửi xe ở bãi S54 nha. Từ đó mình thong thả đi bộ qua Chợ Bến Thành, nghe chuyện Sài Gòn xưa.",
     parking: "S54",
     walk: "5 phút"
@@ -16,7 +16,7 @@ export const personas = {
   chutai: {
     name: "Chú Tài",
     vibe: "Đời sống địa phương",
-    avatar: "/images/chutai.png",
+    avatar: "/guides/driver-idle.svg",
     text: "Ra công viên 23/9 gửi xe cho khỏe. Rộng, mát, khỏi chen.",
     parking: "Công viên 23/9",
     walk: "4 phút"
@@ -24,7 +24,7 @@ export const personas = {
   ut: {
     name: "Út",
     vibe: "Hidden Gems",
-    avatar: "/images/ut.png",
+    avatar: "/guides/youth-idle.svg",
     text: "Đi theo tui vô hẻm. Có bãi giữ xe kín đáo rồi dẫn qua quán local chuẩn bài.",
     parking: "Bãi tổ dân phố",
     walk: "3 phút"
@@ -67,7 +67,7 @@ export default function GuideHub({
       </div>
 
       <div className="guide-card">
-        <img src={guide.avatar} alt={guide.name} className="guide-avatar" />
+        <img src={guide.avatar} alt={guide.name} className="guide-avatar" loading="eager" />
 
         <h3>{guide.name}</h3>
         <p className="guide-vibe">{guide.vibe}</p>

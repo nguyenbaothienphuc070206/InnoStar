@@ -757,9 +757,21 @@ export default function Home() {
   } = useMapStore();
 
   const debouncedQuery = useDebouncedValue(query, 280);
+  useEffect(() => {
+    const trimmedQuery = debouncedQuery.trim();
+    if (!trimmedQuery) {
+      return;
+    }
+
+    const destination = findDestinationByName(trimmedQuery);
+    if (destination) {
+      openDestinationFlow(destination.name);
+    }
+  }, [debouncedQuery]);
 
   const activeRouteMeta = routes[activeRoute] ?? null;
   const activeGuide = guideProfiles[selectedDebate];
+  const activeDestinationData = selectedDestinationId ? destinationsData[selectedDestinationId] : null;
   const allGuideLandmarks = useMemo(
     () => (Object.keys(guideLandmarks) as StoryCharacter[]).flatMap((guide) => guideLandmarks[guide].map((item) => ({ ...item, guide }))),
     []
@@ -2220,6 +2232,7 @@ export default function Home() {
     }
 
     setSelectedDestination(destination);
+    setSelectedDestinationId(destination.id);
     visitDestination(destination.id);
     unlockDestination(destination.id);
     setBehaviorHint(`📘 Mission unlocked at ${destination.name}.`);
@@ -2778,15 +2791,35 @@ export default function Home() {
       {selectedDestinationId ? (
         <DestinationCard
           data={{
-            title: destinationsData[selectedDestinationId]?.title ?? "Unknown",
-            description: destinationsData[selectedDestinationId]?.description ?? "",
-            vibe: destinationsData[selectedDestinationId]?.vibe
+            title: activeDestinationData?.title ?? "Unknown",
+            description: activeDestinationData?.description ?? "",
+            vibe: activeDestinationData?.vibe,
+            bestGuide: activeDestinationData ? personaLabelFromId(activeDestinationData.bestGuide) : undefined,
+            parking: activeDestinationData?.parking,
+            walk: activeDestinationData?.walk,
+            story: activeDestinationData?.story
           }}
           onAction={(action) => {
             if (action === "find-parking") {
               void handleFindNearest();
+              return;
             }
-            // Add other action handlers as needed
+
+            if (!activeDestinationData) {
+              return;
+            }
+
+            if (action === "view-route") {
+              setBehaviorHint(`🗺️ Route xanh ready for ${activeDestinationData.title}.`);
+              openDestinationFlow(activeDestinationData.title);
+              return;
+            }
+
+            if (action === "start-story") {
+              setSelectedDebate(activeDestinationData.bestGuide);
+              setGuideSubtitle(activeDestinationData.story);
+              speakText(personas[activeDestinationData.bestGuide].text, activeDestinationData.bestGuide);
+            }
           }}
           onClose={() => setSelectedDestinationId(null)}
         />

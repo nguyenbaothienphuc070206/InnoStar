@@ -22,7 +22,7 @@
     "@nestjs/platform-socket.io": "10.4.4",
     "@nestjs/throttler": "6.2.1",
     "@nestjs/websockets": "10.4.4",
-    "axios": "1.7.7",
+    "axios": "1.16.1",
     "bcryptjs": "2.4.3",
     "bullmq": "5.16.0",
     "class-transformer": "0.5.1",

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+  <defs>
+    <linearGradient id="bg4" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#130f24"/>
+      <stop offset="100%" stop-color="#2f2552"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" fill="url(#bg4)"/>
+  <rect x="0" y="214" width="640" height="146" fill="#302c4f"/>
+  <rect x="68" y="236" width="120" height="54" rx="8" fill="#674ea7"/>
+  <rect x="228" y="236" width="130" height="54" rx="8" fill="#45818e"/>
+  <rect x="396" y="236" width="140" height="54" rx="8" fill="#e69138"/>
+  <text x="18" y="28" font-size="18" fill="#d6d1ff" font-family="Segoe UI, sans-serif">CAM-4 WEST EXIT</text>
+  <text x="500" y="28" font-size="16" fill="#ece8ff" font-family="Segoe UI, sans-serif">22:14:11</text>
+</svg>

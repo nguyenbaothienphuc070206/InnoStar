@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Youth idle">
+  <rect width="120" height="120" rx="18" fill="#14252f"/>
+  <circle cx="60" cy="32" r="14" fill="#ffd7ba"/>
+  <rect x="38" y="50" width="44" height="42" rx="12" fill="#ff9e4f"/>
+  <line x1="40" y1="62" x2="28" y2="78" stroke="#ffd7ba" stroke-width="6" stroke-linecap="round"/>
+  <line x1="80" y1="62" x2="92" y2="78" stroke="#ffd7ba" stroke-width="6" stroke-linecap="round"/>
+  <path d="M46 24 Q60 12 74 24" stroke="#1ff4fa" stroke-width="5" fill="none" stroke-linecap="round"/>
+</svg>

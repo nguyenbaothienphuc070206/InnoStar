@@ -1,0 +1,7 @@
+[
+  { "id": 1, "lat": 10.7720, "lng": 106.6980, "capacity": 50, "available": 22 },
+  { "id": 2, "lat": 10.7730, "lng": 106.7000, "capacity": 40, "available": 6 },
+  { "id": 3, "lat": 10.7710, "lng": 106.6955, "capacity": 60, "available": 33 },
+  { "id": 4, "lat": 10.7740, "lng": 106.6970, "capacity": 30, "available": 12 },
+  { "id": 5, "lat": 10.7705, "lng": 106.6990, "capacity": 45, "available": 25 }
+]

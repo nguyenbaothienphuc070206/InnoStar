@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Co Ba hand up">
+  <rect width="120" height="120" rx="18" fill="#261b2d"/>
+  <circle cx="60" cy="32" r="14" fill="#ffe0c1"/>
+  <rect x="38" y="50" width="44" height="42" rx="12" fill="#7fd86a"/>
+  <line x1="40" y1="62" x2="22" y2="43" stroke="#ffe0c1" stroke-width="6" stroke-linecap="round"/>
+  <line x1="80" y1="62" x2="92" y2="78" stroke="#ffe0c1" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="60" cy="19" r="9" fill="#b8895b"/>
+</svg>

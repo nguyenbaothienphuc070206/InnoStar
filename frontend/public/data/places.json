@@ -1,0 +1,29 @@
+[
+  {
+    "id": 1,
+    "name": "Bảo tàng TP",
+    "type": "history",
+    "persona": "COBA",
+    "lat": 10.7765,
+    "lng": 106.7009,
+    "desc": "Nơi lưu giữ dấu ấn Sài Gòn xưa"
+  },
+  {
+    "id": 2,
+    "name": "Công viên 23/9",
+    "type": "daily",
+    "persona": "DRIVER",
+    "lat": 10.7712,
+    "lng": 106.6935,
+    "desc": "Chỗ gửi xe rộng, mát"
+  },
+  {
+    "id": 3,
+    "name": "Bún mọc cô Sáu",
+    "type": "local",
+    "persona": "YOUTH",
+    "lat": 10.7735,
+    "lng": 106.6972,
+    "desc": "Quán ruột dân local"
+  }
+]

@@ -4,7 +4,6 @@ import L from "leaflet";
 import { ReactNode, useEffect } from "react";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import { Circle, Marker, Polyline, Popup, TileLayer, useMap } from "react-leaflet";
-import CameraPopup from "./camera-popup";
 import { destinations } from "../data/destinations";
 import { LayersState, Slot, ZonePoint } from "./types";
 
@@ -122,6 +121,20 @@ export function createMapPlugins(): MapLayerPlugin[] {
       lng <= bounds.east + margin &&
       lng >= bounds.west - margin
     );
+  }
+
+  function distanceBetweenPoints(a: [number, number], b: [number, number]) {
+    const latDiff = a[0] - b[0];
+    const lngDiff = a[1] - b[1];
+    return Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
+  }
+
+  function distanceToPath(point: [number, number], path: Array<[number, number]>) {
+    if (path.length === 0) {
+      return Number.POSITIVE_INFINITY;
+    }
+
+    return path.reduce((best, current) => Math.min(best, distanceBetweenPoints(point, current)), Number.POSITIVE_INFINITY);
   }
 
   function mobilityIcon(kind: "ev" | "bike", available: number, total: number): L.DivIcon {
@@ -276,24 +289,50 @@ export function createMapPlugins(): MapLayerPlugin[] {
     },
     {
       id: "ai-camera",
-      render: ({ layers, aiCameraSlots, viewportBounds }) => {
+      render: ({ layers, aiCameraSlots, viewportBounds, routePath, userLocation }) => {
         if (!layers.camera) {
           return null;
         }
 
-        return aiCameraSlots
-          .filter((cam) => isVisible(cam.lat, cam.lng, viewportBounds, 0.002))
-          .map((cam) => (
-            <Marker
-              key={`ai-camera-${cam.id}`}
-              position={[cam.lat, cam.lng]}
-              icon={L.divIcon({ className: "cameraMarker", html: `<span>${cam.occupied ? "BUSY" : "FREE"}</span>` })}
-            >
-              <Popup>
-                <CameraPopup cam={cam} />
-              </Popup>
-            </Marker>
-          ));
+        const zoomedOut = viewportBounds ? Math.abs(viewportBounds.north - viewportBounds.south) > 0.022 : false;
+        const cameraMarkers = aiCameraSlots
+          .filter((cam) => isVisible(cam.lat, cam.lng, viewportBounds, 0.0014))
+          .map((cam) => {
+            const position: [number, number] = [cam.lat, cam.lng];
+            const routeDistance = distanceToPath(position, routePath);
+            const userDistance = distanceBetweenPoints(position, userLocation);
+            const proximity = Math.min(routeDistance, userDistance);
+            const opacity = cam.occupied ? 0.92 : proximity < 0.0032 ? 0.62 : 0.28;
+            const shouldShow = zoomedOut || cam.occupied || proximity < 0.0032;
+
+            return {
+              cam,
+              position,
+              opacity,
+              shouldShow,
+              size: cam.occupied ? 34 : 28
+            };
+          })
+          .filter(({ shouldShow }) => shouldShow);
+
+        const renderMarker = ({ cam, position, opacity, size }: (typeof cameraMarkers)[number]) => (
+          <Marker
+            key={`ai-camera-${cam.id}`}
+            position={position}
+            icon={L.divIcon({
+              className: "cameraMarker",
+              html: `<span class="cameraMarkerChip" style="opacity:${opacity}"><i>📷</i></span>`,
+              iconSize: [size, size],
+              iconAnchor: [Math.round(size / 2), Math.round(size / 2)]
+            })}
+          />
+        );
+
+        if (zoomedOut && cameraMarkers.length > 0) {
+          return <MarkerClusterGroup chunkedLoading>{cameraMarkers.map(renderMarker)}</MarkerClusterGroup>;
+        }
+
+        return cameraMarkers.map(renderMarker);
       }
     },
     {

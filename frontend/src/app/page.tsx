@@ -987,16 +987,20 @@ export default function Home() {
 
     lastCameraNarrationAtRef.current = now;
     if (changed.occupied) {
-      const line = `Camera ${changed.id} báo khu này đầy rồi, mình né ra cho nhanh.`;
-      setStory({ character: "driver", text: line });
-      speakText(line, "driver");
+      const line = `👵 Cô Ba: Khu này đông đó cưng, mình né sang tuyến khác cho thoáng.`;
+      setSelectedDebate("coba");
+      setGuideSubtitle(line);
+      setBehaviorHint(line);
+      speakText(line, "coba");
       addLog(`Camera ${changed.id} detected occupied`);
       return;
     }
 
-    const line = `Camera ${changed.id} báo chỗ này đang trống, mình ghé vào được nè.`;
-    setStory({ character: "coba", text: line });
-    speakText(line, "coba");
+    const line = `🚕 Chú Tài: Chỗ này còn trống, ghé vô được nè.`;
+    setSelectedDebate("driver");
+    setGuideSubtitle(line);
+    setBehaviorHint(line);
+    speakText(line, "driver");
     addLog(`Camera ${changed.id} detected empty`);
   }, [aiCameraSlots]);
 
@@ -2646,11 +2650,11 @@ export default function Home() {
   const treeEquivalent = Math.max(0.1, Number((co2SavedKg / 21).toFixed(2)));
   const selectedSlotStatus = selectedSlot
     ? selectedSlot.available
-      ? "Available now"
+      ? "Chỗ này đang thoáng, ghé vô được nè"
       : selectedSlot.soon || (selectedSlot.predictedFreeMin ?? 99) <= 10
-        ? `Likely free in ${selectedSlot.predictedFreeMin ?? 8} min`
-        : "Currently full"
-    : "Tap a slot marker to inspect";
+        ? `Sắp có chỗ trong khoảng ${selectedSlot.predictedFreeMin ?? 8} phút`
+        : "Khu này đang chật hơn một chút"
+    : "Chọn một marker để xem nhịp bãi xe";
 
   return (
     <main className={`platformShell pt-safe pb-safe als-ui-${uiMode}`} style={{ "--city-tone": cityTone } as CSSProperties}>
@@ -2944,10 +2948,16 @@ export default function Home() {
           <CameraAIOverlay active={Boolean(selectedSlot)} seed={selectedSlot?.id ?? 0} />
         </div>
         {cameraOffline ? <p className="cameraTitle cameraError">Camera offline</p> : null}
-        <p className="cameraMeta">
-          Markers: {stats.available}/{slots.length} available • Recommended: {recommendedSlots.length} • {selectedSlotStatus}
-        </p>
-        {predictedAvailabilityPct !== null ? <p className="cameraMeta secondary">Expected availability (5m): {predictedAvailabilityPct}%</p> : null}
+        <p className="cameraMeta">{selectedSlotStatus}</p>
+        {predictedAvailabilityPct !== null ? (
+          <p className="cameraMeta secondary">
+            {predictedAvailabilityPct >= 75
+              ? "Khả năng còn chỗ khá cao lúc này."
+              : predictedAvailabilityPct >= 50
+                ? "Vẫn còn cơ hội ghé, nhưng nên đi sớm một chút."
+                : "Khu này bắt đầu chật, mình nên ưu tiên tuyến khác."}
+          </p>
+        ) : null}
         <CameraListPanel slots={slots} searchTerm={debouncedQuery} />
         <div className="recommendCard">
           <p>Recommended for you</p>

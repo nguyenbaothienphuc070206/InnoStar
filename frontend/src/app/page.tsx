@@ -3,11 +3,8 @@
 import { CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { io, Socket } from "socket.io-client";
-import CameraListPanel from "./components/camera-list-panel";
-import CameraAIOverlay from "./components/camera-ai-overlay";
 import DestinationJourneyPanel from "./components/destination-journey-panel";
 import EcoPanel from "./components/eco-panel";
-import EnterpriseOpsPanel, { AdminMode } from "./components/enterprise-ops-panel";
 import GlassCard from "./components/glass-card";
 import { useJourney } from "./components/JourneyContext";
 import JourneyPassport from "./components/journey-passport";
@@ -47,7 +44,6 @@ const MapView = dynamic(() => import("./components/map-view"), { ssr: false });
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001/api/v1";
 const backendWsUrl = backendUrl.replace(/\/api\/v1\/?$/, "");
-const cameraStreamUrl = process.env.NEXT_PUBLIC_CAMERA_STREAM_URL || "http://localhost:8000/stream.m3u8";
 const userLocation: [number, number] = [10.772, 106.698];
 
 type RouteOption = {
@@ -567,11 +563,7 @@ function personaLabelFromId(persona: "coba" | "driver" | "youth" | null): string
 }
 
 export default function Home() {
-  const [adminMode, setAdminMode] = useState<AdminMode>("closed");
-  const [adminWidth, setAdminWidth] = useState(340);
-  const [adminResizing, setAdminResizing] = useState(false);
   const [routeLoading, setRouteLoading] = useState(false);
-  const [cameraOffline, setCameraOffline] = useState(false);
   const [trafficLevel, setTrafficLevel] = useState<StreamTraffic>("LOW");
   const [behaviorHint, setBehaviorHint] = useState<string>("");
   const [routeFocusToken, setRouteFocusToken] = useState(0);
@@ -652,8 +644,6 @@ export default function Home() {
   const cinematicTimerRef = useRef<number | null>(null);
   const nextEngineActionRef = useRef(0);
   const guideMotionTimerRef = useRef<number | null>(null);
-  const adminResizeStartXRef = useRef(0);
-  const adminResizeStartWidthRef = useRef(340);
   const visitedPlacesRef = useRef<Set<number>>(new Set());
   const cameraStateRef = useRef<Record<string, boolean>>({});
   const lastCameraNarrationAtRef = useRef(0);
@@ -1093,60 +1083,6 @@ export default function Home() {
     throw lastError;
   }
 
-  const clampAdminWidth = (value: number) => Math.max(220, Math.min(520, value));
-
-  function startAdminResize(clientX: number) {
-    adminResizeStartXRef.current = clientX;
-    adminResizeStartWidthRef.current = adminWidth;
-    setAdminResizing(true);
-  }
-
-  function moveAdminResize(clientX: number) {
-    if (!adminResizing) {
-      return;
-    }
-
-    const delta = adminResizeStartXRef.current - clientX;
-    const next = clampAdminWidth(adminResizeStartWidthRef.current + delta);
-    setAdminWidth(next);
-    if (next < 260) {
-      setAdminMode("compact");
-    } else {
-      setAdminMode("full");
-    }
-  }
-
-  function endAdminResize() {
-    if (!adminResizing) {
-      return;
-    }
-    setAdminResizing(false);
-
-    if (adminWidth < 260) {
-      setAdminMode("compact");
-      return;
-    }
-
-    setAdminMode("full");
-  }
-
-  useEffect(() => {
-    if (!adminResizing) {
-      return;
-    }
-
-    const onMouseMove = (event: MouseEvent) => moveAdminResize(event.clientX);
-    const onMouseUp = () => endAdminResize();
-
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-
-    return () => {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
-    };
-  }, [adminResizing, adminWidth]);
-
   useEffect(() => {
     const cachedName = window.localStorage.getItem("greenpark-user");
     if (cachedName) {
@@ -1225,9 +1161,6 @@ export default function Home() {
           detectedAt: Date.parse(incident.createdAt) || Date.now()
         }));
         setOpsIncidents(mappedIncidents.slice(0, 10));
-
-        const offlineCount = (payload.cameras || []).filter((camera) => camera.status === "offline").length;
-        setCameraOffline(offlineCount > 0);
 
         if (mappedIncidents.some((incident) => incident.severity === "SEV1" && incident.status === "investigating")) {
           setStatusMessage("Realtime critical alert");
@@ -2603,7 +2536,6 @@ export default function Home() {
 
     setPitchRunning(true);
     setPitchStepIndex(1);
-    setAdminMode("full");
     setBehaviorHint("🎬 Demo: Opening city dashboard");
     await wait(900);
 
@@ -2691,9 +2623,6 @@ export default function Home() {
         }}
         onAIPlaceClick={handleAIPlaceClick}
         onSlotClick={(slot) => {
-          if (adminMode === "full") {
-            setAdminMode("compact");
-          }
           if (abortRef.current) {
             abortRef.current.abort();
           }
@@ -2817,43 +2746,6 @@ export default function Home() {
       {cityEvent ? <div className="cityEventBanner">{cityEvent}</div> : null}
       {moralFeedback ? <div className="moralBanner">{moralFeedback}</div> : null}
 
-      <button
-        className="adminToggle"
-        data-testid="admin-toggle"
-        onClick={() => setAdminMode((mode) => (mode === "closed" ? "full" : "closed"))}
-      >
-        {adminMode === "closed" ? "Admin Panel" : adminMode === "compact" ? "Expand Admin" : "Close Admin"}
-      </button>
-
-      <aside
-        className={`enterpriseDock ${adminMode !== "closed" ? "open" : ""} mode-${adminMode} ${adminResizing ? "resizing" : ""}`}
-        style={{ width: adminMode === "full" ? adminWidth : adminMode === "compact" ? 88 : 0 }}
-      >
-        {adminMode !== "closed" ? (
-          <div
-            className="enterpriseDockResizer"
-            onMouseDown={(event) => {
-              event.preventDefault();
-              startAdminResize(event.clientX);
-            }}
-          />
-        ) : null}
-        <EnterpriseOpsPanel
-          availabilityPct={availabilityPct}
-          cameraOnlinePct={cameraOnlinePct}
-          etaMinutes={etaMinutes}
-          routeLoading={routeLoading}
-          systemState={systemState}
-          metrics={opsMetrics}
-          updatedAt={opsUpdatedAt}
-          incidents={incidentFeed}
-          mode={adminMode}
-          onModeChange={setAdminMode}
-          slo={slo}
-          executiveBrief={executiveBrief}
-        />
-      </aside>
-
       <LayerControl layers={layers} onToggle={toggleLayer} />
 
       <EcoPanel
@@ -2893,7 +2785,7 @@ export default function Home() {
         onStopVoice={cancelVoicePlayback}
       />
 
-      {routes.length > 0 ? (
+      {routes.length > 0 && !navigationActive ? (
         <div className="routeOptionsBar" data-testid="route-options">
           {routes.map((option, index) => {
             const active = index === activeRoute;
@@ -2939,78 +2831,54 @@ export default function Home() {
       </aside>
 
       <div className="rightSidebarStack">
-        <GlassCard className="liveCameraCard">
-        <h3>Live View</h3>
-        {routeLoading ? <p className="loadingHint" data-testid="route-loading">Analyzing best parking...</p> : null}
-        <div className="liveCameraFrame">
-          <video
-            src={cameraStreamUrl}
-            controls
-            autoPlay
-            className="liveCameraVideo"
-            onError={() => setCameraOffline(true)}
-            onCanPlay={() => setCameraOffline(false)}
-          />
-          <CameraAIOverlay active={Boolean(selectedSlot)} seed={selectedSlot?.id ?? 0} />
-        </div>
-        {cameraOffline ? <p className="cameraTitle cameraError">Camera offline</p> : null}
-        <p className="cameraMeta">{selectedSlotStatus}</p>
-        {predictedAvailabilityPct !== null ? (
-          <p className="cameraMeta secondary">
-            {predictedAvailabilityPct >= 75
-              ? "Khả năng còn chỗ khá cao lúc này."
-              : predictedAvailabilityPct >= 50
-                ? "Vẫn còn cơ hội ghé, nhưng nên đi sớm một chút."
-                : "Khu này bắt đầu chật, mình nên ưu tiên tuyến khác."}
-          </p>
-        ) : null}
-        <CameraListPanel slots={slots} searchTerm={debouncedQuery} />
-        <div className="recommendCard">
-          <p>Recommended for you</p>
-          {recommendedSlots.length > 0 ? (
-            <>
-              {recommendedSlots.map((slot) => (
-                <div key={slot.id} className="recommendItem">
-                  <strong>{`S${slot.id} in ${slot.distanceM ?? 150}m`}</strong>
-                  <button
-                    data-testid={`inspect-slot-${slot.id}`}
-                    onClick={() => {
-                      setSelectedSlot(slot);
-                      setStatusMessage(`S${slot.id} selected`);
-                      emitStoryForSlot(slot, "youth", "inspect", 400);
-                    }}
-                  >
-                    Inspect
-                  </button>
-                </div>
-              ))}
-            </>
-          ) : (
-            <strong>No parking available nearby</strong>
-          )}
-          <span>Impact: {co2SavedKg}kg CO2 saved, equivalent to {treeEquivalent} tree-months.</span>
-        </div>
-      </GlassCard>
+        {navigationActive ? (
+          <GlassCard className="routeFocusCard" data-testid="route-focus-card">
+            <p className="routeFocusKicker">Story mode route</p>
+            <strong>🚶 Walk {Math.max(0.1, distanceLeftKm).toFixed(1)} km</strong>
+            <span>
+              🅿 S{selectedSlot?.id ?? "--"} {selectedSlot?.available ? "available" : selectedSlot?.soon ? "opening soon" : "currently full"}
+            </span>
+            <span>🌱 Saved {Math.max(0.1, Number((co2SavedKg / 21).toFixed(1)))}kg CO2</span>
+            <span>{selectedSlotStatus}</span>
+          </GlassCard>
+        ) : (
+          <>
+            <GlassCard className="recommendCard">
+              <p>Best parking</p>
+              {recommendedSlots.length > 0 ? (
+                <>
+                  {recommendedSlots.map((slot) => (
+                    <div key={slot.id} className="recommendItem">
+                      <strong>{`S${slot.id} in ${slot.distanceM ?? 150}m`}</strong>
+                      <button
+                        data-testid={`inspect-slot-${slot.id}`}
+                        onClick={() => {
+                          setSelectedSlot(slot);
+                          setStatusMessage(`S${slot.id} selected`);
+                          emitStoryForSlot(slot, "youth", "inspect", 400);
+                        }}
+                      >
+                        Inspect
+                      </button>
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <strong>No parking available nearby</strong>
+              )}
+              {predictedAvailabilityPct !== null ? <span>Forecast: {predictedAvailabilityPct}% chance in 5 min</span> : null}
+            </GlassCard>
 
-        <JourneyPassport
-          profileName={profileName}
-          personaLabel={personaLabelFromId(selectedPersona)}
-          visitedIds={visitedDestinations}
-          transportUsed={transportUsed}
-          greenScore={journeyGreenScore}
-          rank={rank}
-        />
-
-        {turnSteps.length > 0 ? (
-          <aside className="directionsPanel directionsPanelStacked" data-testid="turn-directions">
-            <h3>Directions</h3>
-            <ul>
-              {turnSteps.map((step, index) => (
-                <li key={`${step}-${index}`}>• {step}</li>
-              ))}
-            </ul>
-          </aside>
-        ) : null}
+            <JourneyPassport
+              profileName={profileName}
+              personaLabel={personaLabelFromId(selectedPersona)}
+              visitedIds={visitedDestinations}
+              transportUsed={transportUsed}
+              greenScore={journeyGreenScore}
+              rank={rank}
+            />
+          </>
+        )}
 
       </div>
 

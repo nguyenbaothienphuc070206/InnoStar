@@ -321,7 +321,7 @@ export function createMapPlugins(): MapLayerPlugin[] {
             position={position}
             icon={L.divIcon({
               className: "cameraMarker",
-              html: `<span class="cameraMarkerChip" style="opacity:${opacity}"><i>📷</i></span>`,
+              html: `<span class="cameraMarkerChip" style="opacity:${opacity}"></span>`,
               iconSize: [size, size],
               iconAnchor: [Math.round(size / 2), Math.round(size / 2)]
             })}

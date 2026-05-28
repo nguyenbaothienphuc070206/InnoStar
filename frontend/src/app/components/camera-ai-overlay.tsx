@@ -27,24 +27,19 @@ export default function CameraAIOverlay({ active, width = 320, height = 188 }: C
       return;
     }
 
-    const label = "✓ EV Detected";
-    const confidence = "Confidence 94%";
-    ctx.font = "10px Space Grotesk";
-    ctx.textAlign = "right";
-    ctx.textBaseline = "top";
-    ctx.shadowColor = "rgba(0, 0, 0, 0.55)";
-    ctx.shadowBlur = 4;
-    ctx.shadowOffsetY = 1;
+    ctx.strokeStyle = "rgba(91, 231, 196, 0.55)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(10, 10, width - 20, height - 20);
 
-    const x = width - 10;
-    const y = 10;
-    ctx.fillStyle = "#dfffd3";
-    ctx.fillText(label, x, y);
-    ctx.fillStyle = "rgba(223, 255, 211, 0.7)";
-    ctx.fillText(confidence, x, y + 13);
-
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetY = 0;
+    ctx.strokeStyle = "rgba(124, 255, 178, 0.42)";
+    ctx.beginPath();
+    ctx.moveTo(18, 18);
+    ctx.lineTo(42, 18);
+    ctx.lineTo(42, 26);
+    ctx.moveTo(width - 42, height - 26);
+    ctx.lineTo(width - 18, height - 26);
+    ctx.lineTo(width - 18, height - 18);
+    ctx.stroke();
   }, [active, width, height]);
 
   return <canvas ref={canvasRef} width={width} height={height} className="aiOverlayCanvas" aria-hidden />;

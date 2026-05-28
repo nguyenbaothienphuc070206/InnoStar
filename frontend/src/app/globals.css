@@ -1,9 +1,9 @@
 :root {
-  --green: #7fd86a;
-  --cyan: #63c9d3;
+  --green: #7cffb2;
+  --cyan: #5be7c4;
   --earth: #753309;
   --bg: #0b0f14;
-  --city-tone: #5dff34;
+  --city-tone: #5be7c4;
   --als-speed: 1;
   --panel: rgba(9, 20, 29, 0.78);
   --glass-bg: rgba(0, 0, 0, 0.7);
@@ -22,12 +22,12 @@ body {
   background:
     radial-gradient(
       circle at 15% 15%,
-      rgba(31, 244, 250, 0.12),
+      rgba(91, 231, 196, 0.12),
       transparent 28%
     ),
     radial-gradient(
       circle at 85% 15%,
-      rgba(93, 255, 52, 0.14),
+      rgba(124, 255, 178, 0.12),
       transparent 34%
     ),
     var(--bg);
@@ -1260,12 +1260,13 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 0.58rem;
+  padding: 2px 7px;
+  border-radius: 12px;
+  font-size: 0.52rem;
   font-weight: 700;
-  background: rgba(2, 12, 18, 0.74);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(2, 12, 18, 0.64);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
   color: #e5fcff;
 }
 
@@ -1285,10 +1286,10 @@ body {
   z-index: 52;
   padding: 5px 9px;
   border-radius: 14px;
-  border: 1px solid rgba(31, 244, 250, 0.4);
+  border: 1px solid rgba(91, 231, 196, 0.34);
   background: rgba(5, 13, 18, 0.72);
   backdrop-filter: blur(14px);
-  color: #1ff4fa;
+  color: #8df0dd;
   font-size: 0.72rem;
   max-width: min(70vw, 220px);
   text-align: center;
@@ -2137,11 +2138,39 @@ body {
   white-space: nowrap;
   padding: 5px 9px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(0, 0, 0, 0.62);
   backdrop-filter: blur(14px);
   color: #f0f7ff;
   font-size: 0.66rem;
+}
+
+.routeFocusCard {
+  padding: 10px;
+  display: grid;
+  gap: 6px;
+  border: 1px solid rgba(91, 231, 196, 0.22);
+  background: rgba(6, 15, 18, 0.7);
+  backdrop-filter: blur(16px);
+}
+
+.routeFocusKicker {
+  margin: 0;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #93dacb;
+}
+
+.routeFocusCard strong {
+  font-size: 1rem;
+  color: #efffff;
+}
+
+.routeFocusCard span {
+  font-size: 0.8rem;
+  color: #bad5d0;
+  line-height: 1.5;
 }
 
 .routeOptionItem.active {
@@ -2288,11 +2317,11 @@ body {
   margin-top: 10px;
   padding: 8px;
   border-radius: 10px;
-  border: 1px solid rgba(93, 255, 52, 0.35);
+  border: 1px solid rgba(91, 231, 196, 0.22);
   background: linear-gradient(
     135deg,
-    rgba(93, 255, 52, 0.12),
-    rgba(31, 244, 250, 0.08)
+    rgba(91, 231, 196, 0.1),
+    rgba(124, 255, 178, 0.06)
   );
   display: grid;
   gap: 4px;
@@ -2330,18 +2359,12 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  font-size: 0.84rem;
-  font-weight: 700;
+  width: 10px;
+  height: 10px;
   border-radius: 999px;
-  color: #061014;
-  background: rgba(31, 244, 250, 0.9);
-  box-shadow: 0 0 8px rgba(31, 244, 250, 0.18);
-}
-
-.cameraMarkerChip i {
-  font-style: normal;
+  border: 1px solid rgba(91, 231, 196, 0.75);
+  background: rgba(91, 231, 196, 0.34);
+  box-shadow: 0 0 10px rgba(91, 231, 196, 0.18);
 }
 
 .camContainer {
@@ -2368,12 +2391,12 @@ body {
 }
 
 .camLabel {
-  color: #aefcf0;
+  color: #d4fff4;
   font-size: 12px;
   background: rgba(0, 0, 0, 0.64);
   border-radius: 4px;
   padding: 2px 6px;
-  border: 1px solid rgba(31, 244, 250, 0.24);
+  border: 1px solid rgba(91, 231, 196, 0.2);
 }
 
 .camScanLine {
@@ -2382,8 +2405,8 @@ body {
   width: 100%;
   height: 2px;
   z-index: 3;
-  background: rgba(31, 244, 250, 0.74);
-  box-shadow: 0 0 8px rgba(31, 244, 250, 0.28);
+  background: rgba(91, 231, 196, 0.68);
+  box-shadow: 0 0 8px rgba(91, 231, 196, 0.22);
   animation: camScan 2s linear infinite;
 }
 
@@ -2394,10 +2417,10 @@ body {
   top: 32%;
   left: 30%;
   z-index: 2;
-  border: 2px solid rgba(31, 244, 250, 0.76);
+  border: 2px solid rgba(91, 231, 196, 0.68);
   box-shadow:
-    inset 0 0 10px rgba(31, 244, 250, 0.18),
-    0 0 6px rgba(31, 244, 250, 0.2);
+    inset 0 0 10px rgba(91, 231, 196, 0.14),
+    0 0 6px rgba(91, 231, 196, 0.16);
   animation: camBlink 1s ease-in-out infinite;
 }
 

@@ -2506,7 +2506,7 @@ export default function Home() {
     setCityNarration(`📍 ${place.name} - ${intelligence.crowdLevel} crowd • eco ${intelligence.ecoScore}/100`);
   }
 
-  function runAICityPlanner() {
+  async function runAICityPlanner() {
     if (!aiSlots.length) {
       setStatusMessage("AI dataset đang nạp, thử lại sau vài giây.");
       return;
@@ -2524,7 +2524,7 @@ export default function Home() {
     }
 
     const aiGuide = activePersonaGuide;
-    const routeCoords = generateRoute(
+    const routeCoords = await generateRoute(
       { lat: userLocation[0], lng: userLocation[1] },
       { lat: best.lat, lng: best.lng }
     );
@@ -2767,39 +2767,45 @@ export default function Home() {
 
         {!guidePanelMinimized ? (
           <div className="guidePanelBody">
-            <div className="guideGrid">
+            <div className="guideAccordion">
               {(Object.keys(guideProfiles) as StoryCharacter[]).map((key) => {
                 const profile = guideProfiles[key];
                 const active = selectedDebate === key;
                 const icon = key === "driver" ? "🚕" : key === "coba" ? "👩" : "🧑";
 
                 return (
-                  <button key={key} className={`guideItem ${active ? "active" : ""}`} onClick={() => chooseDebate(key)}>
-                    <strong>{icon} {profile.label}</strong>
-                    <span>{profile.vibe}</span>
-                    <small>Route: {profile.routeBias}</small>
-                  </button>
+                  <div key={key} className={`guideAccordionItem ${active ? "active" : ""}`}>
+                    <button className="guideAccordionButton" onClick={() => chooseDebate(key)}>
+                      <strong>{icon} {profile.label}</strong>
+                      <span>{profile.vibe}</span>
+                      <small>Route: {profile.routeBias}</small>
+                    </button>
+                    {active ? (
+                      <div className="guideAccordionBody">
+                        <div className="guideCurrent">
+                          <strong>Đang dẫn: {activeGuide.label}</strong>
+                          <div className="guideAvatarStage">
+                            <img
+                              src={guideMotionImageMap[selectedDebate][guideMotionFrame]}
+                              alt={`Hướng dẫn viên ${activeGuide.label}`}
+                              className={`guideAvatar guideAvatar-${guideMotionFrame}`}
+                            />
+                          </div>
+                          <em className="guideSubtitle">{guideSubtitle}</em>
+                          <span>{activeGuide.intro}</span>
+                          <small>Phong cách tour: {activeGuide.theme}</small>
+                          <small>Chiến lược đỗ xe: {activeGuide.parkingStrategy}</small>
+                          <ul className="guidePlaces">
+                            {activeGuide.places.map((place) => (
+                              <li key={place}>{place}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
                 );
               })}
-            </div>
-            <div className="guideCurrent">
-          <strong>Đang dẫn: {activeGuide.label}</strong>
-          <div className="guideAvatarStage">
-            <img
-              src={guideMotionImageMap[selectedDebate][guideMotionFrame]}
-              alt={`Hướng dẫn viên ${activeGuide.label}`}
-              className={`guideAvatar guideAvatar-${guideMotionFrame}`}
-            />
-          </div>
-          <em className="guideSubtitle">{guideSubtitle}</em>
-          <span>{activeGuide.intro}</span>
-          <small>Phong cách tour: {activeGuide.theme}</small>
-          <small>Chiến lược đỗ xe: {activeGuide.parkingStrategy}</small>
-          <ul className="guidePlaces">
-            {activeGuide.places.map((place) => (
-              <li key={place}>{place}</li>
-            ))}
-          </ul>
             </div>
           </div>
         ) : null}

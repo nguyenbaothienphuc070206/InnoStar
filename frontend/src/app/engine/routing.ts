@@ -21,16 +21,35 @@ export function findBestSlot(user: UserPoint, slots: AIParkingSlot[], traffic: A
     .sort((a, b) => a.score - b.score)[0];
 }
 
-export function generateRoute(start: UserPoint, end: UserPoint) {
-  const points: Array<[number, number]> = [];
+export async function generateRoute(start: UserPoint, end: UserPoint) {
+  const fallback: Array<[number, number]> = [
+    [start.lat, start.lng],
+    [end.lat, end.lng]
+  ];
 
-  for (let i = 0; i <= 20; i += 1) {
-    const t = i / 20;
-    points.push([
-      start.lat + (end.lat - start.lat) * t,
-      start.lng + (end.lng - start.lng) * t
-    ]);
+  try {
+    const url =
+      `https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}` +
+      `?overview=full&geometries=geojson&alternatives=false&steps=false`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      return fallback;
+    }
+
+    const data = (await response.json()) as {
+      routes?: Array<{
+        geometry?: { coordinates?: Array<[number, number]> };
+      }>;
+    };
+
+    const coordinates = data.routes?.[0]?.geometry?.coordinates;
+    if (!coordinates?.length) {
+      return fallback;
+    }
+
+    return coordinates.map(([lng, lat]) => [lat, lng] as [number, number]);
+  } catch {
+    return fallback;
   }
-
-  return points;
 }

@@ -47,30 +47,6 @@ export default function JourneyPassport({ profileName, personaLabel, visitedIds,
         </article>
       </div>
 
-      <section>
-        <strong>Visited</strong>
-        {visitedNames.length ? (
-          <ul>
-            {visitedNames.slice(-4).map((name) => (
-              <li key={name}>{name}</li>
-            ))}
-          </ul>
-        ) : (
-          <p>Chưa có điểm đã tham quan.</p>
-        )}
-      </section>
-
-      <section>
-        <strong>Green actions</strong>
-        <p>Walked {estimatedKmWalked}km</p>
-        <p>Used EV route {evActions} times</p>
-      </section>
-
-      <section>
-        <strong>Persona path</strong>
-        <p>{personaLabel}</p>
-      </section>
-
     </aside>
   );
 }

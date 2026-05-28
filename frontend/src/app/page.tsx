@@ -12,15 +12,11 @@ import GlassCard from "./components/glass-card";
 import { useJourney } from "./components/JourneyContext";
 import JourneyPassport from "./components/journey-passport";
 import LayerControl from "./components/layer-control";
-import NarrativeFlowRail from "./components/narrative-flow-rail";
 import OnboardingFlow from "./components/onboarding-flow";
-import JourneyStoryboard from "./components/journey-storyboard";
 import PlaceStoryCard from "./components/place-story-card";
 import SlotMiniDashboard from "./components/slot-mini-dashboard";
-import SocialGreenChallenge from "./components/social-green-challenge";
 import StoryBubble from "./components/story-bubble";
 import TopBar from "./components/top-bar";
-import WhyNowCard from "./components/why-now-card";
 import { Slot, SlotDiff, ZonePoint } from "./components/types";
 import { CityState, EngineStep, RouteType, VoiceType, getSuggestion } from "./engine/cityEngine";
 import { inferPersona } from "./engine/personaEngine";
@@ -36,12 +32,8 @@ import {
 } from "./engine/place-narrative";
 import { destinations, type Destination } from "./data/destinations";
 import {
-  buildCampaignMissions,
-  buildJourneySummary,
   buildJourneyVisit,
-  buildPersonaDebate,
   type JourneyVisit,
-  type PersonaDebateLine
 } from "./engine/journey-mode";
 import { rewardTransport, type TransportType } from "./lib/scoreEngine";
 import { estimateEtaMinutes, predictCrowd, type CrowdPrediction } from "./lib/predictive-flow-engine";
@@ -640,7 +632,6 @@ export default function Home() {
   const [placePersona, setPlacePersona] = useState<"coba" | "driver" | "youth">("coba");
   const [destinationProfile, setDestinationProfile] = useState<DestinationIntelligence | null>(null);
   const [journeyVisits, setJourneyVisits] = useState<JourneyVisit[]>([]);
-  const [personaDebateLines, setPersonaDebateLines] = useState<PersonaDebateLine[]>([]);
   const [placeLibrary, setPlaceLibrary] = useState<PlaceData[]>([]);
   const [selectedDestination, setSelectedDestination] = useState<Destination | null>(null);
   const [destinationTransport, setDestinationTransport] = useState<TransportType | null>(null);
@@ -790,8 +781,6 @@ export default function Home() {
 
   const activePersona = useMemo(() => inferPersona({ intent: cityState.intent }), [cityState.intent]);
   const activePersonaGuide = useMemo(() => personaToGuide(activePersona), [activePersona]);
-  const journeySummary = useMemo(() => buildJourneySummary(journeyVisits), [journeyVisits]);
-  const campaignMissions = useMemo(() => buildCampaignMissions(journeyVisits, cityMood), [cityMood, journeyVisits]);
   const executiveBrief = useMemo(() => {
     const totalJourneys = journeyVisits.length;
     const destinationCount = new Map<string, number>();
@@ -813,7 +802,7 @@ export default function Home() {
     return {
       totalJourneys,
       topDestinations,
-      carbonSavedKg: Number((co2SavedKg + journeySummary.totalCo2SavedKg).toFixed(1)),
+      carbonSavedKg: Number(co2SavedKg.toFixed(1)),
       adoptionTrends: {
         walkPct: Math.round((walk / totalTransport) * 100),
         evPct: Math.round((ev / totalTransport) * 100),
@@ -821,42 +810,7 @@ export default function Home() {
         motorbikePct: Math.round((motorbike / totalTransport) * 100)
       }
     };
-  }, [co2SavedKg, journeySummary.totalCo2SavedKg, journeyVisits, transportUsed]);
-  const narrativeStep = useMemo(() => {
-    const hasPersona = Boolean(selectedPersona);
-    const hasDestination = Boolean(selectedDestination || selectedPlace);
-    const hasRoute = routes.length > 0 || Boolean(route?.path?.length);
-    const hasCheckpoint = completedChallenges.length > 0;
-    const hasStoryUnlock = hasCheckpoint;
-    const hasScore = journeyGreenScore > 0;
-    const hasPassport = visitedDestinations.length > 0 && hasScore;
-
-    if (!hasPersona) {
-      return 1;
-    }
-    if (!hasDestination) {
-      return 2;
-    }
-    if (!hasRoute) {
-      return 3;
-    }
-    if (!navigationActive) {
-      return 4;
-    }
-    if (!hasCheckpoint) {
-      return 5;
-    }
-    if (!hasStoryUnlock) {
-      return 6;
-    }
-    if (!hasScore) {
-      return 7;
-    }
-    if (!hasPassport) {
-      return 8;
-    }
-    return 8;
-  }, [completedChallenges.length, journeyGreenScore, navigationActive, route?.path?.length, routes.length, selectedDestination, selectedPersona, selectedPlace, visitedDestinations.length]);
+  }, [co2SavedKg, journeyVisits, transportUsed]);
 
   useEffect(() => {
     if (cityState.mood === "CHAOTIC") {
@@ -2319,7 +2273,6 @@ export default function Home() {
       setPlaceScript(script);
       setPlacePersona(guide);
       setShowPlaceNarrative(true);
-      setPersonaDebateLines(buildPersonaDebate(fallbackPlace, intelligence, context));
       setJourneyVisits((current) => (current.some((visit) => visit.id === fallbackPlace.id) ? current : [...current, journeyVisit]));
       speakText(`Đây là ${landmark.name}. ${landmark.description}`, guide);
       return;
@@ -2452,7 +2405,6 @@ export default function Home() {
     setPlaceScript(script);
     setPlacePersona(guide);
     setShowPlaceNarrative(true);
-    setPersonaDebateLines(buildPersonaDebate(fallbackPlace, intelligence, context));
     setJourneyVisits((current) => (current.some((visit) => visit.id === fallbackPlace.id) ? current : [...current, journeyVisit]));
     speakText(`Đây là ${landmark.name}. ${landmark.description}`, guide);
   }
@@ -2533,7 +2485,6 @@ export default function Home() {
     setPlaceScript(script);
     setPlacePersona(guide);
     setShowPlaceNarrative(true);
-    setPersonaDebateLines(buildPersonaDebate(fullPlace, intelligence, context));
     setJourneyVisits((current) => (current.some((visit) => visit.id === fullPlace.id) ? current : [...current, buildJourneyVisit(fullPlace, intelligence, cityMood)]));
 
     const mapped: GuideLandmark = {
@@ -2802,10 +2753,6 @@ export default function Home() {
         </div>
       ) : null}
 
-      <NarrativeFlowRail activeStep={pitchRunning ? pitchStepIndex : narrativeStep} score={journeyGreenScore} />
-      <SocialGreenChallenge selfName={profileName} selfScore={journeyGreenScore} visitedCount={visitedDestinations.length} />
-      <WhyNowCard />
-
       <section className={`guidePanel ${guidePanelMinimized ? "minimized" : ""}`} data-testid="ai-tour-guides">
         <div className="guidePanelHeader">
           <p>AI Tour Guides</p>
@@ -2849,58 +2796,6 @@ export default function Home() {
               <li key={place}>{place}</li>
             ))}
           </ul>
-          <div className="guideSections">
-            <section className="guideSection">
-              <h5>Địa danh theo {activeGuide.label}</h5>
-              <div className="guideLandmarkList">
-                {guideLandmarks[selectedDebate].map((landmark) => (
-                  <article
-                    key={landmark.id}
-                    className={`guideLandmarkItem ${activeLandmarkId === landmark.id ? "active" : ""}`}
-                    onClick={() => {
-                      void handleLandmarkClick(selectedDebate, landmark, false);
-                    }}
-                  >
-                    <span className="guideLandmarkDot" />
-                    <strong>{landmark.name}</strong>
-                    <small>{landmark.description}</small>
-                    <button
-                      className="guideNavigateBtn"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        void handleLandmarkClick(selectedDebate, landmark, true);
-                      }}
-                    >
-                      Dẫn tôi tới bản đồ
-                    </button>
-                  </article>
-                ))}
-              </div>
-            </section>
-          </div>
-          <div className="guideParkingTips">
-            <strong>Gợi ý chỗ đỗ hợp lý:</strong>
-            {activeGuideParkingRecommendations.length > 0 ? (
-              <span>{activeGuideParkingRecommendations.map((slot) => `S${slot.id}`).join(" • ")} ({activeGuide.routeBias})</span>
-            ) : (
-              <span>Đang cập nhật bãi phù hợp...</span>
-            )}
-          </div>
-          {landmarkJourney && landmarkJourney.guide === selectedDebate ? (
-            <div className="landmarkJourneyCard">
-              <strong>{landmarkJourney.name}</strong>
-              <p>{landmarkJourney.description}</p>
-              <span>Quãng đường: {landmarkJourney.distanceKm.toFixed(2)} km</span>
-              <span>Dự kiến: {landmarkJourney.etaMin} phút</span>
-            </div>
-          ) : null}
-          {landmarkPreview && landmarkPreview.guide === selectedDebate ? (
-            <div className="landmarkPreviewCard">
-              <strong>{landmarkPreview.landmark.name}</strong>
-              <p>{landmarkPreview.landmark.description}</p>
-              <span>Nhấn "Dẫn tôi tới bản đồ" để mở chỉ đường và ETA.</span>
-            </div>
-          ) : null}
             </div>
           </div>
         ) : null}
@@ -3130,27 +3025,6 @@ export default function Home() {
         onStoryUnlocked={(destination) => {
           setBehaviorHint(`📖 New story unlocked: ${destination.name}`);
           speakText(destination.fullStory, selectedDebate);
-        }}
-      />
-
-      <JourneyStoryboard
-        place={selectedPlace}
-        intelligence={destinationProfile}
-        visits={journeyVisits}
-        missions={campaignMissions}
-        debateLines={personaDebateLines}
-        summary={journeySummary}
-        cityMood={cityMood}
-        onChoosePersona={(persona) => {
-          const nextGuide = personaToGuide(persona);
-          setSelectedDebate(nextGuide);
-          setPlacePersona(nextGuide);
-        }}
-        onClose={() => {
-          setSelectedPlace(null);
-          setDestinationProfile(null);
-          setPersonaDebateLines([]);
-          setShowPlaceNarrative(false);
         }}
       />
 

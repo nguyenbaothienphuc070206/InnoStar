@@ -16,23 +16,6 @@ export default function SlotMiniDashboard({ slot }: SlotMiniDashboardProps) {
     return null;
   }
 
-  const personaStories = [
-    {
-      label: "Với Út",
-      detail: "Út tìm được bãi kín gần hẻm Cô Giang.",
-      hint: "Đi bộ 3 phút tới quán local."
-    },
-    {
-      label: "Với Chú Tài",
-      detail: `Bãi S${slot.id} còn trống.`,
-      hint: "Ra vô nhanh, ít kẹt xe."
-    },
-    {
-      label: "Với Cô Ba",
-      detail: "Từ đây đi bộ qua tuyến đường cổ đẹp nhất."
-    }
-  ];
-
   return (
     <motion.aside
       initial={{ y: 90, opacity: 0 }}
@@ -42,17 +25,9 @@ export default function SlotMiniDashboard({ slot }: SlotMiniDashboardProps) {
       data-testid="slot-mini-dashboard"
     >
       <GlassCard className="slotMiniCard">
-        <p className="slotPersonaKicker">Tuyến gợi ý theo nhân vật</p>
-        <h4>Chọn hành trình phù hợp</h4>
-        <div className="slotPersonaList">
-          {personaStories.map((story) => (
-            <article key={story.label} className="slotPersonaItem">
-              <strong>{story.label}</strong>
-              <span>{story.detail}</span>
-              {story.hint ? <small>{story.hint}</small> : null}
-            </article>
-          ))}
-        </div>
+        <p className="slotPersonaKicker">Selected parking</p>
+        <h4>{`Slot S${slot.id}`}</h4>
+        <p className="slotPersonaSummary">{slot.available ? "Currently available" : slot.soon ? "Likely free soon" : "Check nearby options"}</p>
       </GlassCard>
     </motion.aside>
   );

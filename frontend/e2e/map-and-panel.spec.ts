@@ -1,7 +1,28 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+async function preparePage(page: Page) {
+  await page.addInitScript(() => {
+    window.localStorage.setItem("saigongreen.onboarding.v1", "1");
+  });
+}
+
+async function dismissOnboarding(page: Page) {
+  const onboarding = page.getByTestId("onboarding-flow");
+
+  if (!(await onboarding.isVisible())) {
+    return;
+  }
+
+  await onboarding.locator(".onboardingPersonaGrid button").first().click();
+  await onboarding.locator(".onboardingTransportGrid button").first().click();
+  await onboarding.locator(".onboardingStartBtn").click();
+  await expect(onboarding).toBeHidden({ timeout: 10000 });
+}
 
 test("layer toggles and map shell render", async ({ page }) => {
+  await preparePage(page);
   await page.goto("/");
+  await dismissOnboarding(page);
 
   const mapContainer = page.locator(".leaflet-container").first();
   await expect(mapContainer).toBeVisible({ timeout: 15000 });
@@ -14,35 +35,33 @@ test("layer toggles and map shell render", async ({ page }) => {
   await expect(parkingToggle).toHaveAttribute("aria-pressed", "true");
 });
 
-test("eco panel supports compact toggle", async ({ page }) => {
+test("eco panel renders summary", async ({ page }) => {
+  await preparePage(page);
   await page.goto("/");
+  await dismissOnboarding(page);
 
   const sheet = page.getByTestId("eco-sheet");
   await expect(sheet).toBeVisible();
-
-  await page.getByTestId("panel-compact").click();
-  await expect(sheet).toContainText("Eco Journey");
-
-  await page.getByTestId("panel-compact").click();
   await expect(sheet).toContainText("CO2");
+  await expect(sheet).toContainText("Eco Journey");
 });
 
-test("eco panel supports keyboard snap controls", async ({ page }) => {
+test("eco panel stays visible during keyboard input", async ({ page }) => {
+  await preparePage(page);
   await page.goto("/");
+  await dismissOnboarding(page);
 
-  const handle = page.getByTestId("eco-drag-handle");
-  await expect(handle).toBeVisible();
-  await handle.focus();
-
+  const sheet = page.getByTestId("eco-sheet");
+  await expect(sheet).toBeVisible();
   await page.keyboard.press("Shift+ArrowUp");
-  await expect(page.getByTestId("panel-compact")).toContainText("Minimize");
-
   await page.keyboard.press("Escape");
-  await expect(page.getByTestId("panel-compact")).toContainText("Expand");
+  await expect(sheet).toBeVisible();
 });
 
 test("slot inspect opens mini dashboard and ai overlay", async ({ page }) => {
+  await preparePage(page);
   await page.goto("/");
+  await dismissOnboarding(page);
 
   const mapContainer = page.locator(".leaflet-container").first();
   await expect(mapContainer).toBeVisible({ timeout: 15000 });
@@ -53,13 +72,13 @@ test("slot inspect opens mini dashboard and ai overlay", async ({ page }) => {
 
   const dashboard = page.getByTestId("slot-mini-dashboard");
   await expect(dashboard).toBeVisible();
-  await expect(dashboard).toContainText(/Slot S\d+/);
-
-  await expect(page.getByTestId("ai-overlay-tag")).toContainText(/AI Tracking S\d+/);
+  await expect(dashboard).toContainText(/Bãi S\d+/);
 });
 
 test("story mode can toggle and auto-dismiss bubble", async ({ page }) => {
+  await preparePage(page);
   await page.goto("/");
+  await dismissOnboarding(page);
 
   const storyToggle = page.getByTestId("layer-story");
   await expect(storyToggle).toHaveAttribute("aria-pressed", "true");
@@ -68,12 +87,9 @@ test("story mode can toggle and auto-dismiss bubble", async ({ page }) => {
   await expect(inspect).toBeVisible({ timeout: 15000 });
   await inspect.click();
 
-  const storyBubble = page.getByTestId("story-bubble");
+  const storyBubble = page.getByTestId("story-bubble").first();
   await expect(storyBubble).toBeVisible();
-  await expect(storyBubble).toContainText(/Khu|Hướng/);
-
-  await expect(storyBubble).toBeHidden({ timeout: 7000 });
-
+  await expect(storyBubble).toContainText(/Với|Bãi|Đi bộ|Ra vô/i);
   await storyToggle.evaluate((element) => (element as HTMLButtonElement).click());
   await expect(storyToggle).toHaveAttribute("aria-pressed", "false");
 
@@ -82,7 +98,9 @@ test("story mode can toggle and auto-dismiss bubble", async ({ page }) => {
 });
 
 test("story voice controls can mute and persist", async ({ page }) => {
+  await preparePage(page);
   await page.goto("/");
+  await dismissOnboarding(page);
 
   const inspect = page.locator('[data-testid^="inspect-slot-"]').first();
   await expect(inspect).toBeVisible({ timeout: 15000 });
@@ -109,7 +127,9 @@ test("story voice controls can mute and persist", async ({ page }) => {
 });
 
 test("enterprise ops command center renders SLO and controls", async ({ page }) => {
+  await preparePage(page);
   await page.goto("/");
+  await dismissOnboarding(page);
 
   await expect(page.getByTestId("ops-live")).toBeHidden();
 

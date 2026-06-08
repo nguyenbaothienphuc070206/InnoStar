@@ -25,15 +25,15 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
         <div className="onboardingPersonaGrid">
           <button type="button" className={selectedPersona === "coba" ? "active" : ""} onClick={() => setSelectedPersona("coba")}>
-            <strong>🌸 Cô Ba</strong>
-            <span>Lịch sử / Nghệ thuật</span>
+            <strong>🌸 Coba</strong>
+            <span>History / Art</span>
           </button>
           <button type="button" className={selectedPersona === "driver" ? "active" : ""} onClick={() => setSelectedPersona("driver")}>
-            <strong>🛵 Chú Tài</strong>
-            <span>Tiện lợi / Đời sống địa phương</span>
+            <strong>🛵 Driver</strong>
+            <span>Convenience / Local life</span>
           </button>
           <button type="button" className={selectedPersona === "youth" ? "active" : ""} onClick={() => setSelectedPersona("youth")}>
-            <strong>🎒 Út Local</strong>
+            <strong>🎒 Local Scout</strong>
             <span>Hidden gems</span>
           </button>
         </div>

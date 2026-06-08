@@ -87,7 +87,7 @@ export default function PlaceStoryCard({ place, script, persona, onNextStep, isF
 
       <div className="storyControls">
         <button className="storyNextBtn" onClick={storyFinished ? onNextStep : goToNext} disabled={storyFinished && script.length === 0}>
-          {storyFinished ? "Đã kết thúc" : displayText && displayText.length === script[currentLineIndex]?.length ? "Tiếp ▶" : "Skip"}
+          {storyFinished ? "Finished" : displayText && displayText.length === script[currentLineIndex]?.length ? "Next ▶" : "Skip"}
         </button>
       </div>
     </div>

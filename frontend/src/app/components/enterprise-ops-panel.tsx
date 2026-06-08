@@ -106,7 +106,7 @@ export default function EnterpriseOpsPanel({
     return { label: "SLA Risk", className: "danger" };
   }, [etaMinutes, routeLoading]);
 
-  const updatedLabel = new Date(updatedAt).toLocaleTimeString("vi-VN");
+  const updatedLabel = new Date(updatedAt).toLocaleTimeString("en-US");
 
   const activeIncidents = useMemo(
     () => incidents.filter((incident) => !acknowledged[incident.id]),
@@ -201,7 +201,7 @@ export default function EnterpriseOpsPanel({
     y += 24;
     report.setFont("helvetica", "normal");
     report.setFontSize(10);
-    report.text(`Generated at: ${new Date().toLocaleString("vi-VN")}`, left, y);
+    report.text(`Generated at: ${new Date().toLocaleString("en-US")}`, left, y);
 
     y += 28;
     report.setFont("helvetica", "bold");
@@ -372,7 +372,7 @@ export default function EnterpriseOpsPanel({
                 <div className="opsIncidentMetaRow">
                   <span className={`opsSeverity ${incident.severity.toLowerCase()}`}>{incident.severity}</span>
                   <span>{incident.source}</span>
-                  <span>{new Date(incident.detectedAt).toLocaleTimeString("vi-VN")}</span>
+                  <span>{new Date(incident.detectedAt).toLocaleTimeString("en-US")}</span>
                 </div>
                 <p>
                   {incident.message} — <span className={incident.status === "resolved" ? "opsText-ok" : "opsText-warn"}>{incident.status}</span>

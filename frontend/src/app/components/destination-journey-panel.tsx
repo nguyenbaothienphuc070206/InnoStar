@@ -44,7 +44,7 @@ export default function DestinationJourneyPanel({
     }
 
     if (challengeDone) {
-      setScanMessage("Mission da hoan thanh.");
+      setScanMessage("Mission completed.");
       return;
     }
 
@@ -56,7 +56,7 @@ export default function DestinationJourneyPanel({
       return;
     }
 
-    setScanMessage("QR chua dung. Thu lai voi ma demo dung.");
+    setScanMessage("Incorrect QR code. Try again with the correct demo code.");
   }
 
   return (
@@ -67,7 +67,7 @@ export default function DestinationJourneyPanel({
       </header>
 
       <section>
-        <h4>Tong quan</h4>
+        <h4>Overview</h4>
         <p>{destination.shortDescription}</p>
       </section>
 
@@ -92,13 +92,13 @@ export default function DestinationJourneyPanel({
             {scanMessage ? <p className="scanMessage">{scanMessage}</p> : null}
           </>
         ) : (
-          <p>Chua co mission.</p>
+          <p>No mission available yet.</p>
         )}
       </section>
 
       <section>
         <h4>Deep Story</h4>
-        <p>{challengeDone ? activeDestination.fullStory : "Hoan thanh mission QR de mo khoa story sau."}</p>
+        <p>{challengeDone ? activeDestination.fullStory : "Complete the QR mission to unlock the full story."}</p>
       </section>
 
       <footer>

@@ -25,8 +25,8 @@ export function predictCrowd(nextMinutes: number, weather: "clear" | "rain", tre
 
   const recommendation =
     densityIncreasePct >= 30
-      ? `Predictive AI Routing: reroute sớm khỏi ${area}, ưu tiên trục xanh phụ.`
-      : `Predictive AI Routing: giữ tuyến hiện tại, theo dõi ${area} mỗi 5 phút.`;
+      ? `Predictive AI Routing: reroute early away from ${area}, and favor secondary green corridors.`
+      : `Predictive AI Routing: keep the current route and monitor ${area} every 5 minutes.`;
 
   return {
     area,

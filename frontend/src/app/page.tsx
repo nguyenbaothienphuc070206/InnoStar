@@ -7,7 +7,7 @@ import CameraListPanel from "./components/camera-list-panel";
 import CameraAIOverlay from "./components/camera-ai-overlay";
 import DestinationJourneyPanel from "./components/destination-journey-panel";
 import EcoPanel from "./components/eco-panel";
-import { AdminMode } from "./components/enterprise-ops-panel";
+import EnterpriseOpsPanel, { AdminMode } from "./components/enterprise-ops-panel";
 import GlassCard from "./components/glass-card";
 import { useJourney } from "./components/JourneyContext";
 import JourneyPassport from "./components/journey-passport";
@@ -150,7 +150,7 @@ type LandmarkPreview = {
 type GuideProfile = {
   label: string;
   vibe: string;
-  routeBias: "Nhanh" | "Xanh" | "Cân bằng";
+  routeBias: "Fast" | "Green" | "Balanced";
   theme: string;
   places: string[];
   parkingStrategy: string;
@@ -159,31 +159,31 @@ type GuideProfile = {
 
 const guideProfiles: Record<StoryCharacter, GuideProfile> = {
   driver: {
-    label: "Tài xế",
-    vibe: "Nhanh, quyết, thực dụng",
-    routeBias: "Nhanh",
-    theme: "Đời thường bản địa",
-    places: ["Công viên 23/9", "Nhà Văn hóa Thanh Niên", "Công viên Lê Văn Tám"],
-    parkingStrategy: "Ưu tiên bãi gần trục đông người, vào ra nhanh",
-    intro: "Dẫn bạn đến các điểm đời sống bản địa, dễ hòa vào nhịp sống thành phố."
+    label: "Driver",
+    vibe: "Fast, decisive, practical",
+    routeBias: "Fast",
+    theme: "Everyday local life",
+    places: ["September 23rd Park", "Youth Cultural House", "Le Van Tam Park"],
+    parkingStrategy: "Prefer lots near busy arteries for quick entry and exit",
+    intro: "Guides you to everyday local spots that fit the city's rhythm."
   },
   coba: {
-    label: "Cô Ba",
-    vibe: "Ấm, chậm, xanh",
-    routeBias: "Xanh",
-    theme: "Tham quan lịch sử",
-    places: ["Bảo tàng TP.HCM", "Dinh Độc Lập"],
-    parkingStrategy: "Ưu tiên bãi xanh và đi bộ 200-400m để thoáng khu trung tâm",
-    intro: "Dẫn bạn đi các điểm lịch sử tiêu biểu vì Sài Gòn chứng kiến nhiều cột mốc quan trọng."
+    label: "Coba",
+    vibe: "Warm, slow, green",
+    routeBias: "Green",
+    theme: "Historical sightseeing",
+    places: ["Ho Chi Minh City Museum", "Independence Palace"],
+    parkingStrategy: "Prefer green lots and walk 200-400m to keep the center airy",
+    intro: "Takes you to signature historical sites because Saigon has witnessed many important milestones."
   },
   youth: {
-    label: "Thanh niên",
-    vibe: "Khám phá, local, cân bằng",
-    routeBias: "Cân bằng",
-    theme: "Khám phá local ít người biết",
-    places: ["Quán cà phê hẻm Cô Giang", "Tiệm ăn local khu Bàn Cờ", "Rooftop nhỏ khu Nguyễn Trãi"],
-    parkingStrategy: "Ưu tiên bãi rìa khu hẻm để khám phá đi bộ thuận tiện",
-    intro: "Dẫn bạn săn quán local ít review, thiên về trải nghiệm và khám phá."
+    label: "Youth",
+    vibe: "Exploratory, local, balanced",
+    routeBias: "Balanced",
+    theme: "Explore lesser-known local gems",
+    places: ["Co Giang alley cafe", "Local eatery in Ban Co", "Small rooftop on Nguyen Trai"],
+    parkingStrategy: "Prefer edge-of-alley parking so you can explore on foot comfortably",
+    intro: "Hunts for low-profile local spots with a focus on experience and discovery."
   }
 };
 
@@ -191,15 +191,15 @@ const guideLandmarks: Record<StoryCharacter, GuideLandmark[]> = {
   coba: [
     {
       id: "coba-city-museum",
-      name: "Bảo tàng TP.HCM",
-      description: "Nơi lưu giữ nhiều hiện vật về quá trình hình thành và phát triển của thành phố.",
+      name: "Ho Chi Minh City Museum",
+      description: "Holds many artifacts about the city's formation and growth.",
       lat: 10.7765,
       lng: 106.7011
     },
     {
       id: "coba-reunification",
-      name: "Dinh Độc Lập",
-      description: "Biểu tượng quan trọng của lịch sử hiện đại Việt Nam, phù hợp cho tuyến tham quan chiều sâu.",
+      name: "Independence Palace",
+      description: "A major symbol of modern Vietnamese history and a strong choice for a deeper sightseeing route.",
       lat: 10.7781,
       lng: 106.6953
     }
@@ -207,22 +207,22 @@ const guideLandmarks: Record<StoryCharacter, GuideLandmark[]> = {
   driver: [
     {
       id: "driver-park-239",
-      name: "Công viên 23/9",
-      description: "Điểm sinh hoạt phổ biến, gần nhiều tuyến xe và khu thương mại đời thường.",
+      name: "September 23rd Park",
+      description: "A popular hangout near transit lines and everyday commercial areas.",
       lat: 10.7689,
       lng: 106.6937
     },
     {
       id: "driver-youth-house",
-      name: "Nhà Văn hóa Thanh Niên",
-      description: "Không gian cộng đồng quen thuộc, dễ bắt nhịp đời sống bản địa.",
+      name: "Youth Cultural House",
+      description: "A familiar community space that is easy to plug into the local rhythm.",
       lat: 10.7834,
       lng: 106.7008
     },
     {
       id: "driver-le-van-tam",
-      name: "Công viên Lê Văn Tám",
-      description: "Địa điểm sinh hoạt và vận động thường nhật, phù hợp trải nghiệm nhịp sống dân cư.",
+      name: "Le Van Tam Park",
+      description: "A daily spot for exercise and social time that reflects resident life.",
       lat: 10.7862,
       lng: 106.6977
     }
@@ -230,22 +230,22 @@ const guideLandmarks: Record<StoryCharacter, GuideLandmark[]> = {
   youth: [
     {
       id: "youth-co-giang",
-      name: "Cà phê hẻm Cô Giang",
-      description: "Góc local ít quảng bá, phù hợp khám phá trải nghiệm chân thực.",
+      name: "Co Giang alley cafe",
+      description: "A low-profile local corner, good for a genuine discovery feel.",
       lat: 10.7642,
       lng: 106.6923
     },
     {
       id: "youth-ban-co",
-      name: "Tiệm ăn local khu Bàn Cờ",
-      description: "Khu ăn uống bản địa đậm chất dân cư, nhiều món ít người review.",
+      name: "Ban Co local eatery",
+      description: "A neighborhood food strip with lots of under-reviewed dishes.",
       lat: 10.7729,
       lng: 106.6821
     },
     {
       id: "youth-nguyen-trai-rooftop",
-      name: "Rooftop nhỏ khu Nguyễn Trãi",
-      description: "Điểm nhìn thành phố theo góc local, thiên về trải nghiệm khám phá.",
+      name: "Small rooftop on Nguyen Trai",
+      description: "A city overlook with a local angle, leaning toward discovery.",
       lat: 10.7666,
       lng: 106.6846
     }
@@ -255,80 +255,80 @@ const guideLandmarks: Record<StoryCharacter, GuideLandmark[]> = {
 const storybook: Record<StoryCharacter, Record<StoryContext, string[]>> = {
   coba: {
     find: [
-      "Bà tìm được điểm đỗ xe đẹp rồi, mình thong thả gửi xe là vừa.",
-      "Điểm này hợp nhịp lắm, gửi xe xong ta đi bộ ngắm phố cho trọn vẹn."
+      "You found a nice parking spot, so park calmly and enjoy the pace.",
+      "This place fits the rhythm well; park first and then walk to take it all in."
     ],
     route: [
-      "Lộ trình này đẹp và ngắn, vừa tiết kiệm thời gian vừa giữ nhịp êm ái.",
-      "Mình đi tuyến này nhé, đường thoáng và đến nơi rất yên tâm."
+      "This route is short and scenic, saving time while keeping the pace smooth.",
+      "Let's take this path; the road is open and the arrival feels easy."
     ],
     inspect: [
-      "Góc này có nét xưa dễ thương, mình đỗ xe gọn rồi thong dong tham quan.",
-      "Chọn chỗ này được đó, từ đây tản bộ ra khu phố cổ rất hợp."
+      "This corner has a charming old feel, so park neatly and wander slowly.",
+      "This spot works well; from here, a relaxed walk into the old quarter feels right."
     ],
     available: [
-      "Chỗ này trống sẵn, mình ghé vào là có thể gửi ngay.",
-      "Còn chỗ đẹp quá, tranh thủ đỗ xe trước khi đông hơn nha."
+      "This one is already open, so you can pull in right away.",
+      "A great spot is still open, so park before it gets busier."
     ],
     soon: [
-      "Chỗ này sắp trống, đợi một chút là mình vào được ngay.",
-      "Mình tới đúng nhịp rồi, bãi này sắp xoay vòng có chỗ."
+      "This spot is about to open up; wait a moment and you can get in.",
+      "You arrived at the right time; this lot should turn over soon."
     ],
     full: [
-      "Khu này đang đông, mình đổi tuyến kế bên cho thông thoáng hơn nhé.",
-      "Tầm này kín chỗ rồi, bà đề xuất rẽ sang hướng ngoài để dễ thở hơn."
+      "This area is crowded, so let's switch to a nearby route with more breathing room.",
+      "It is full right now, so I suggest shifting to the outer side for an easier approach."
     ]
   },
   driver: {
     find: [
-      "Em chốt được bãi gần nhất rồi, vào ngay là đẹp.",
-      "Có chỗ rồi nha, ghé điểm này là tiết kiệm thời gian nhất."
+      "I locked in the nearest lot, so heading in now is ideal.",
+      "There is a slot ready, and this stop saves the most time."
     ],
     route: [
-      "Lấy route này nhé, dễ quay đầu và đến nhanh hơn.",
-      "Tuyến này ngắn nhất hiện tại, đến nơi gọn lẹ luôn."
+      "Take this route; it is easy to turn around and gets you there faster.",
+      "This is the shortest route right now, so arrival stays smooth and quick."
     ],
     inspect: [
-      "Spot này ổn, dễ vào dễ ra và khá an toàn.",
-      "Canh lái chút là vào vừa khít, không phải chỉnh nhiều."
+      "This spot is solid, easy to enter and exit, and fairly safe.",
+      "Watch the steering a little and it will fit cleanly without much correction."
     ],
     available: [
-      "Còn trống tốt, mình vào gửi luôn cho khỏi mất lượt.",
-      "Bãi này đang thoáng, chốt nhanh là đẹp."
+      "It is still nicely open, so pull in now and do not lose the chance.",
+      "This lot is clear, so a quick decision works best."
     ],
     soon: [
-      "Sắp trống rồi, đợi tầm vài phút là có suất.",
-      "Lượt xe này sắp nhích, mình canh nhịp rồi vào là vừa."
+      "It should open soon, so a few minutes of waiting will do it.",
+      "This turnover is about to move, so time the entry and it will fit well."
     ],
     full: [
-      "Bãi này full rồi, em đổi hướng qua bãi thứ hai cho nhanh.",
-      "Đông xe quá, tránh mất thời gian mình chuyển sang điểm dự phòng nhé."
+      "This lot is full, so switch to the second lot for a faster move.",
+      "Too many cars here, so let's move to the backup spot and save time."
     ]
   },
   youth: {
     find: [
-      "Có spot ổn rồi, gửi xe xong là đi chill được liền.",
-      "Yep, tìm thấy chỗ hợp lý, vào đây là đúng vibe luôn."
+      "A good spot is here, so park first and then chill right away.",
+      "Yep, a solid spot is found; this is exactly the right vibe."
     ],
     route: [
-      "Đi line này cho cool, vừa nhanh vừa đúng gu city walk.",
-      "Route này ổn nha, gửi xe xong là có nguyên khu local để khám phá."
+      "Take this line; it is quick and still feels right for a city walk.",
+      "This route works well; once you park, a whole local area opens up to explore."
     ],
     inspect: [
-      "Spot này nhìn được nha, đúng chất local chill zone.",
-      "Check chỗ này ok, từ đây có nhiều hẻm hay để đi bộ luôn."
+      "This spot looks good, with the feel of a local chill zone.",
+      "This place checks out, and from here there are plenty of great alleys to walk through."
     ],
     available: [
-      "Còn slot trống nè, tranh thủ vào là đẹp.",
-      "Quá ngon, chỗ này trống sẵn nha!"
+      "There is still a free slot here, so grab it while you can.",
+      "Nice, this one is open and fits the vibe perfectly."
     ],
     soon: [
-      "Sắp có chỗ rồi, đứng đợi xíu là chen vào được.",
-      "Bãi này quay vòng nhanh lắm, canh xíu là có slot."
+      "It should open soon, so a few minutes of waiting will do it.",
+      "This turnover is about to move, so time the entry and it will fit well."
     ],
     full: [
-      "Chỗ này kín rồi, mình lùa qua spot khác cho đỡ kẹt.",
-      "Đông quá rồi, rẽ sang bãi bên cho dễ thở rồi chơi tiếp."
+      "It is packed, so move to the nearby lot and keep the rest of the trip easy.",
+      "It is packed, so move to the nearby lot and keep the rest of the trip easy."
     ]
   }
 };
@@ -365,26 +365,27 @@ function pickStory(character: StoryCharacter, context: StoryContext): StoryMessa
 
 function resolveAreaName(slot: Slot): string {
   if (slot.zone === "green") {
-    return "Lê Lợi";
+    return "Le Loi";
   }
 
   if (typeof slot.lng === "number") {
     if (slot.lng < 106.697) {
-      return "Bến Thành";
+      return "Ben Thanh";
     }
     if (slot.lng > 106.703) {
-      return "Nguyễn Huệ";
+      return "Nguyen Hue";
     }
   }
 
-  return "trung tâm Sài Gòn";
+  return "downtown Ho Chi Minh City";
 }
 
 function withAreaFlavor(base: StoryMessage, slot: Slot): StoryMessage {
   const area = resolveAreaName(slot);
-  const addOn = base.character === "driver" ? ` Hướng ${area} đang hợp nhất.` : ` Khu ${area} đang lên mood rất đẹp.`;
+  const addOn = base.character === "driver" ? ` ${area} feels like the best fit right now.` : ` ${area} is building a great vibe.`;
+
   return {
-    ...base,
+    character: base.character,
     text: `${base.text}${addOn}`
   };
 }
@@ -393,9 +394,11 @@ function slotStoryContext(slot: Slot): StoryContext {
   if (slot.available) {
     return "available";
   }
+
   if (slot.soon || (slot.predictedFreeMin ?? 99) <= 10) {
     return "soon";
   }
+
   return "full";
 }
 
@@ -403,54 +406,57 @@ function pickCharacterForSlot(slot: Slot): StoryCharacter {
   if (slot.zone === "green") {
     return "coba";
   }
+
   if ((slot.distanceM ?? 9999) < 220) {
     return "driver";
   }
+
   return "youth";
 }
 
 function distance(a: [number, number], b: [number, number]): number {
-  return Math.hypot(a[0] - b[0], a[1] - b[1]);
-}
-
-function calcDistanceKm(a: [number, number], b: [number, number]): number {
   const dx = a[0] - b[0];
   const dy = a[1] - b[1];
   return Math.sqrt(dx * dx + dy * dy) * 111;
 }
 
+function calcDistanceKm(a: [number, number], b: [number, number]): number {
+  return distance(a, b);
+}
+
 function speedByTraffic(traffic: StreamTraffic): number {
   if (traffic === "HIGH") {
-    return 12;
+    return 14;
   }
+
   if (traffic === "MEDIUM") {
     return 22;
   }
+
   return 35;
 }
 
 function getDirection(from: [number, number], to: [number, number]): string {
   if (Math.abs(to[0] - from[0]) > Math.abs(to[1] - from[1])) {
-    return to[0] > from[0] ? "⬆️ Đi thẳng" : "⬇️ Đi xuống";
+    return to[0] > from[0] ? "➡️ Go right" : "⬅️ Go left";
   }
 
-  return to[1] > from[1] ? "➡️ Rẽ phải" : "⬅️ Rẽ trái";
+  return to[1] > from[1] ? "➡️ Turn right" : "⬅️ Turn left";
 }
 
 function interpolatePoint(p1: [number, number], p2: [number, number], t: number): [number, number] {
-  return [
-    p1[0] + (p2[0] - p1[0]) * t,
-    p1[1] + (p2[1] - p1[1]) * t
-  ];
+  return [p1[0] + (p2[0] - p1[0]) * t, p1[1] + (p2[1] - p1[1]) * t];
 }
 
 function voiceProfileForCharacter(character: StoryCharacter): StoryVoiceProfile {
   if (character === "coba") {
     return { rate: 0.94, pitch: 0.88, volume: 0.9 };
   }
+
   if (character === "driver") {
     return { rate: 1.03, pitch: 1.0, volume: 0.92 };
   }
+
   return { rate: 1.08, pitch: 1.08, volume: 0.9 };
 }
 
@@ -532,7 +538,7 @@ function personaToUpper(persona: StoryCharacter): Persona {
 }
 
 function timeLabelNow(): string {
-  return new Date().toLocaleTimeString("vi-VN", {
+  return new Date().toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit"
   });
@@ -886,7 +892,7 @@ export default function Home() {
 
     try {
       const parsed = JSON.parse(raw) as { slotId: number; at: string };
-      setMemoryHint(`👀 Hôm trước bạn đỗ S${parsed.slotId} lúc ${new Date(parsed.at).toLocaleString("vi-VN")}`);
+      setMemoryHint(`👀 Last time you parked at S${parsed.slotId} at ${new Date(parsed.at).toLocaleString("en-US")}`);
     } catch {
       setMemoryHint("");
     }
@@ -1238,9 +1244,9 @@ export default function Home() {
         }
 
         if (payload.metrics.traffic === "HIGH") {
-          setBehaviorHint("Ban dang vao khu dong. Thu gui xe xa hon 150m de giam ~30% CO2.");
+          setBehaviorHint("You are entering a crowded area. Try parking more than 150m away to cut CO2 by about 30%.");
         } else {
-          setBehaviorHint("Tuyen hien tai on dinh. Uu tien slot xanh de toi uu CO2.");
+          setBehaviorHint("The current route is stable. Prefer green slots to optimize CO2.");
         }
       });
     } catch {
@@ -1942,9 +1948,9 @@ export default function Home() {
           penaltyScore: item.profile === "eco" ? 4 : item.profile === "chill" ? 7 : 12,
           distanceKm: Math.max(1, Number((item.distance / 1000).toFixed(1))),
           steps: [
-            "Đi theo trục chính",
-            item.profile === "eco" ? "Rẽ sang tuyến xanh" : "Rẽ theo tuyến nhanh",
-            "Đến bãi mục tiêu"
+            "Follow the main corridor",
+            item.profile === "eco" ? "Turn onto the green route" : "Turn onto the fast route",
+            "Arrive at the target lot"
           ]
         }));
 
@@ -2160,24 +2166,24 @@ export default function Home() {
     setQuery(profile.places[0]);
     setGuideSubtitle(`Đã chọn ${profile.label}. ${profile.intro}`);
     if (character === "driver") {
-      setBehaviorHint(`🚕 ${profile.label}: tập trung điểm đời thường, dễ trải nghiệm nhịp sống bản địa.`);
+      setBehaviorHint(`🚕 ${profile.label}: focuses on everyday spots that are easy to experience.`);
       setCenterPressure((value) => value + 1);
-      setMoralFeedback("Bạn vừa chọn nhanh hơn, nhưng tạo thêm khoảng 0.8kg CO2 😢");
-      speakText("Đi nhanh thì vào trung tâm thôi", character);
+      setMoralFeedback("You chose the faster option, but it added about 0.8kg of CO2.");
+      speakText("Going fast gets you to the center sooner.", character);
       return;
     }
 
     if (character === "coba") {
-      setBehaviorHint(`👩 ${profile.label}: dẫn đi bảo tàng và điểm lịch sử, ưu tiên tuyến xanh giảm ùn tắc.`);
-      setMoralFeedback("Lựa chọn xanh giúp giảm tải trung tâm và tiết kiệm CO2 🌱");
+      setBehaviorHint(`👩 ${profile.label}: guides you to museums and historic spots, favoring green routes to reduce congestion.`);
+      setMoralFeedback("The green choice eases pressure on the center and saves CO2.");
       bumpEco(8, 0.2);
-      speakText("Đi thong thả một chút sẽ dễ thở hơn", character);
+      speakText("Taking it slow makes the trip feel easier.", character);
       return;
     }
 
-    setBehaviorHint(`🧑 ${profile.label}: dẫn bạn khám phá quán local ít người biết, thiên về trải nghiệm.`);
-    setMoralFeedback("Bạn chọn trải nghiệm cân bằng giữa tốc độ và phát thải.");
-    speakText("Đi hẻm này, ít người biết nhưng ổn áp lắm", character);
+    setBehaviorHint(`🧑 ${profile.label}: leads you to lesser-known local spots with an experience-first approach.`);
+    setMoralFeedback("You chose a balance between speed and emissions.");
+    speakText("This alley is lesser known, but it works well.", character);
   }
 
   function openDestinationFlow(name: string) {
@@ -2229,8 +2235,8 @@ export default function Home() {
     }
 
     setBehaviorHint("🛵 Quick ride selected.");
-    setMoralFeedback("Đi kiểu này nhanh thiệt, mà hơi tiếc cho không khí nghen.");
-    speakText("Đi kiểu này nhanh thiệt, mà hơi tiếc cho không khí nghen.", "coba");
+    setMoralFeedback("This is fast, but it is not great for the air.");
+    speakText("This is fast, but it is not great for the air.", "coba");
   }
 
   async function handleLandmarkClick(guide: StoryCharacter, landmark: GuideLandmark, buildRoute = true) {
@@ -2817,6 +2823,43 @@ export default function Home() {
       {cityEvent ? <div className="cityEventBanner">{cityEvent}</div> : null}
       {moralFeedback ? <div className="moralBanner">{moralFeedback}</div> : null}
 
+      <button
+        className="adminToggle"
+        data-testid="admin-toggle"
+        onClick={() => setAdminMode((mode) => (mode === "closed" ? "full" : "closed"))}
+      >
+        {adminMode === "closed" ? "Admin Panel" : adminMode === "compact" ? "Expand Admin" : "Close Admin"}
+      </button>
+
+      <aside
+        className={`enterpriseDock ${adminMode !== "closed" ? "open" : ""} mode-${adminMode} ${adminResizing ? "resizing" : ""}`}
+        style={{ width: adminMode === "full" ? adminWidth : adminMode === "compact" ? 88 : 0 }}
+      >
+        {adminMode !== "closed" ? (
+          <div
+            className="enterpriseDockResizer"
+            onMouseDown={(event) => {
+              event.preventDefault();
+              startAdminResize(event.clientX);
+            }}
+          />
+        ) : null}
+        <EnterpriseOpsPanel
+          availabilityPct={availabilityPct}
+          cameraOnlinePct={cameraOnlinePct}
+          etaMinutes={etaMinutes}
+          routeLoading={routeLoading}
+          systemState={systemState}
+          metrics={opsMetrics}
+          updatedAt={opsUpdatedAt}
+          incidents={incidentFeed}
+          mode={adminMode}
+          onModeChange={setAdminMode}
+          slo={slo}
+          executiveBrief={executiveBrief}
+        />
+      </aside>
+
       <LayerControl layers={layers} onToggle={toggleLayer} />
 
       <EcoPanel
@@ -2902,93 +2945,78 @@ export default function Home() {
       </aside>
 
       <div className="rightSidebarStack">
-        {navigationActive || routeLoading ? (
-          <GlassCard className="routeStatusCard">
-            <h3>Route Mode</h3>
-            <p>🚶 Walk {Math.max(0, Math.round(distanceLeftKm * 1000))}m</p>
-            <p>
-              🅿 {selectedSlot ? `Slot S${selectedSlot.id}` : "Selecting parking..."}
-              {selectedSlot ? (selectedSlot.available ? " available" : selectedSlot.soon ? " likely soon" : " full") : ""}
-            </p>
-            <p>🌱 Saved {co2SavedKg.toFixed(1)}kg CO2</p>
-            <p>⏱ ETA {etaMinutes ?? "..."} min</p>
-          </GlassCard>
-        ) : (
-          <>
-            <GlassCard className="liveCameraCard">
-              <h3>Live View</h3>
-              {routeLoading ? <p className="loadingHint" data-testid="route-loading">Analyzing best parking...</p> : null}
-              <div className="liveCameraFrame">
-                <video
-                  src={cameraStreamUrl}
-                  controls
-                  autoPlay
-                  className="liveCameraVideo"
-                  onError={() => setCameraOffline(true)}
-                  onCanPlay={() => setCameraOffline(false)}
-                />
-                <CameraAIOverlay active={Boolean(selectedSlot)} seed={selectedSlot?.id ?? 0} />
-              </div>
-              {cameraOffline ? <p className="cameraTitle cameraError">Camera offline</p> : null}
-              <p className="cameraMeta">{selectedSlotStatus}</p>
-              {predictedAvailabilityPct !== null ? (
-                <p className="cameraMeta secondary">
-                  {predictedAvailabilityPct >= 75
-                    ? "Khả năng còn chỗ khá cao lúc này."
-                    : predictedAvailabilityPct >= 50
-                      ? "Vẫn còn cơ hội ghé, nhưng nên đi sớm một chút."
-                      : "Khu này bắt đầu chật, mình nên ưu tiên tuyến khác."}
-                </p>
-              ) : null}
-              <CameraListPanel slots={slots} searchTerm={debouncedQuery} />
-              <div className="recommendCard">
-                <p>Recommended for you</p>
-                {recommendedSlots.length > 0 ? (
-                  <>
-                    {recommendedSlots.map((slot) => (
-                      <div key={slot.id} className="recommendItem">
-                        <strong>{`S${slot.id} in ${slot.distanceM ?? 150}m`}</strong>
-                        <button
-                          data-testid={`inspect-slot-${slot.id}`}
-                          onClick={() => {
-                            setSelectedSlot(slot);
-                            setStatusMessage(`S${slot.id} selected`);
-                            emitStoryForSlot(slot, "youth", "inspect", 400);
-                          }}
-                        >
-                          Inspect
-                        </button>
-                      </div>
-                    ))}
-                  </>
-                ) : (
-                  <strong>No parking available nearby</strong>
-                )}
-                <span>Impact: {co2SavedKg}kg CO2 saved, equivalent to {treeEquivalent} tree-months.</span>
-              </div>
-            </GlassCard>
+        <GlassCard className="liveCameraCard">
+        <h3>Live View</h3>
+        {routeLoading ? <p className="loadingHint" data-testid="route-loading">Analyzing best parking...</p> : null}
+        <div className="liveCameraFrame">
+          <video
+            src={cameraStreamUrl}
+            controls
+            autoPlay
+            className="liveCameraVideo"
+            onError={() => setCameraOffline(true)}
+            onCanPlay={() => setCameraOffline(false)}
+          />
+          <CameraAIOverlay active={Boolean(selectedSlot)} seed={selectedSlot?.id ?? 0} />
+        </div>
+        {cameraOffline ? <p className="cameraTitle cameraError">Camera offline</p> : null}
+        <p className="cameraMeta">{selectedSlotStatus}</p>
+        {predictedAvailabilityPct !== null ? (
+          <p className="cameraMeta secondary">
+            {predictedAvailabilityPct >= 75
+              ? "Khả năng còn chỗ khá cao lúc này."
+              : predictedAvailabilityPct >= 50
+                ? "Vẫn còn cơ hội ghé, nhưng nên đi sớm một chút."
+                : "Khu này bắt đầu chật, mình nên ưu tiên tuyến khác."}
+          </p>
+        ) : null}
+        <CameraListPanel slots={slots} searchTerm={debouncedQuery} />
+        <div className="recommendCard">
+          <p>Recommended for you</p>
+          {recommendedSlots.length > 0 ? (
+            <>
+              {recommendedSlots.map((slot) => (
+                <div key={slot.id} className="recommendItem">
+                  <strong>{`S${slot.id} in ${slot.distanceM ?? 150}m`}</strong>
+                  <button
+                    data-testid={`inspect-slot-${slot.id}`}
+                    onClick={() => {
+                      setSelectedSlot(slot);
+                      setStatusMessage(`S${slot.id} selected`);
+                      emitStoryForSlot(slot, "youth", "inspect", 400);
+                    }}
+                  >
+                    Inspect
+                  </button>
+                </div>
+              ))}
+            </>
+          ) : (
+            <strong>No parking available nearby</strong>
+          )}
+          <span>Impact: {co2SavedKg}kg CO2 saved, equivalent to {treeEquivalent} tree-months.</span>
+        </div>
+      </GlassCard>
 
-            <JourneyPassport
-              profileName={profileName}
-              personaLabel={personaLabelFromId(selectedPersona)}
-              visitedIds={visitedDestinations}
-              transportUsed={transportUsed}
-              greenScore={journeyGreenScore}
-              rank={rank}
-            />
+        <JourneyPassport
+          profileName={profileName}
+          personaLabel={personaLabelFromId(selectedPersona)}
+          visitedIds={visitedDestinations}
+          transportUsed={transportUsed}
+          greenScore={journeyGreenScore}
+          rank={rank}
+        />
 
-            {turnSteps.length > 0 ? (
-              <aside className="directionsPanel directionsPanelStacked" data-testid="turn-directions">
-                <h3>Directions</h3>
-                <ul>
-                  {turnSteps.map((step, index) => (
-                    <li key={`${step}-${index}`}>• {step}</li>
-                  ))}
-                </ul>
-              </aside>
-            ) : null}
-          </>
-        )}
+        {turnSteps.length > 0 ? (
+          <aside className="directionsPanel directionsPanelStacked" data-testid="turn-directions">
+            <h3>Directions</h3>
+            <ul>
+              {turnSteps.map((step, index) => (
+                <li key={`${step}-${index}`}>• {step}</li>
+              ))}
+            </ul>
+          </aside>
+        ) : null}
 
       </div>
 

@@ -3,12 +3,12 @@ import { Persona } from "./personaEngine";
 
 export function getStory(persona: Persona, place: AIPlace) {
   if (persona === "COBA") {
-    return `Cưng ơi, gần đây có ${place.name}, ${place.desc}, mình gửi xe rồi đi bộ nghen...`;
+    return `There is ${place.name} nearby, ${place.desc}; park first and walk over.`;
   }
 
   if (persona === "DRIVER") {
-    return `${place.name} đó, gửi xe tiện, mát, đi bộ chút là tới.`;
+    return `${place.name} is close by, with easy parking and a short walk.`;
   }
 
-  return `Ê, ${place.name} nè, ${place.desc}, dân local hay ghé lắm.`;
+  return `Check out ${place.name}; ${place.desc}. Locals go there a lot.`;
 }

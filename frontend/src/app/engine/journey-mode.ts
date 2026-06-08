@@ -55,7 +55,7 @@ export function buildJourneyVisit(place: PlaceData, intelligence: DestinationInt
     ecoScore: intelligence.ecoScore,
     co2SavedKg,
     walkingMinutes,
-    impact: `${co2SavedKg}kg CO₂ saved • ${walkingMinutes} phút đi bộ`,
+    impact: `${co2SavedKg}kg CO₂ saved • ${walkingMinutes} walking minutes`,
     hiddenPath: intelligence.localSecret
   };
 }
@@ -84,29 +84,29 @@ export function buildCampaignMissions(visits: JourneyVisit[], mood: CityMood): C
   return [
     {
       id: "mission-1",
-      title: "Khám phá lịch sử",
-      objective: "Đi một điểm di sản và nghe câu chuyện gốc của nó.",
+      title: "Discover history",
+      objective: "Visit one heritage spot and hear its original story.",
       reward: "",
       completed: hasHistory || visits.length >= 1
     },
     {
       id: "mission-2",
-      title: "Ăn local",
-      objective: "Dừng ở một điểm đời thường hoặc khu local đúng vibe.",
+      title: "Eat local",
+      objective: "Stop at an everyday spot or a local area with the right vibe.",
       reward: "",
       completed: hasLocal || visits.length >= 2
     },
     {
       id: "mission-3",
       title: "Sunset walk",
-      objective: "Đi bộ một đoạn khi thành phố đang dịu xuống.",
+      objective: "Walk for a while as the city starts to wind down.",
       reward: "",
       completed: hasDaily || mood === "CALM"
     },
     {
       id: "mission-4",
       title: "Hidden alley",
-      objective: "Bắt một lối hẻm hoặc góc khuất ít người biết.",
+      objective: "Find a hidden alley or a little-known corner.",
       reward: "",
       completed: hasHiddenPath || visits.length >= 3
     }
@@ -116,26 +116,26 @@ export function buildCampaignMissions(visits: JourneyVisit[], mood: CityMood): C
 export function buildPersonaDebate(place: PlaceData, intelligence: DestinationIntelligence, context: NarrativeContext): PersonaDebateLine[] {
   const trafficLine =
     context.traffic === "HIGH"
-      ? "Đường đang căng, nên tách xe ra xa một chút cho đỡ kẹt."
+      ? "Traffic is tight, so park a little farther away to avoid getting stuck."
       : context.traffic === "MEDIUM"
-        ? "Lưu lượng vừa phải, mình vẫn có thể vừa lái vừa canh điểm dừng hợp lý."
-        : "Đường đang nhẹ, ghé thêm một vòng nữa cũng không sao.";
+        ? "Traffic is moderate, so you can still drive and watch for a good stop."
+        : "The roads are light, so one more stop is fine.";
 
   return [
     {
       persona: "COBA",
-      label: "Cô Ba",
-      line: `${place.name} nên đi vào ${intelligence.bestVisitTime} để vừa mát vừa dễ cảm được nhịp chậm của nơi này.`
+      label: "Coba",
+      line: `${place.name} is best at ${intelligence.bestVisitTime}, when it feels cool and its slower rhythm comes through.`
     },
     {
       persona: "DRIVER",
-      label: "Chú tài",
+      label: "Driver",
       line: `${trafficLine} ${intelligence.bestParkingStrategy}`
     },
     {
       persona: "YOUTH",
-      label: "Thanh niên",
-      line: `${place.name} lúc này ${intelligence.walkingComfort.toLowerCase()} nên đi bộ vào sẽ ra chất local hơn.`
+      label: "Youth",
+      line: `${place.name} feels ${intelligence.walkingComfort.toLowerCase()} right now, so walking in makes it feel more local.`
     }
   ];
 }

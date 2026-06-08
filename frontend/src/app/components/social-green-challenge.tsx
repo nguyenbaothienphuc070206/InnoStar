@@ -29,7 +29,7 @@ export default function SocialGreenChallenge({ selfName, selfScore, visitedCount
         <span>Week mission</span>
       </header>
 
-      <p className="challengeText">Kham pha 3 di tich bang route xanh.</p>
+      <p className="challengeText">Explore 3 heritage sites using a green route.</p>
       <p className="challengeProgress">
         Progress: {progress}/{weeklyTarget}
       </p>

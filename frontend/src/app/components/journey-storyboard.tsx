@@ -40,7 +40,7 @@ export default function JourneyStoryboard({
           <h3>{place.name}</h3>
         </div>
         <button type="button" className="journeyCloseBtn" onClick={onClose}>
-          Đóng
+          Close
         </button>
       </header>
 
@@ -84,7 +84,7 @@ export default function JourneyStoryboard({
           ))}
         </div>
         <p className="journeyStoryLine journeyStatsLine">
-          {summary.totalCo2SavedKg}kg CO₂ saved • {summary.totalWalkingMinutes} phút đi bộ • {summary.congestionAvoided} congestion zones avoided
+          {summary.totalCo2SavedKg}kg CO₂ saved • {summary.totalWalkingMinutes} walking minutes • {summary.congestionAvoided} congestion zones avoided
         </p>
       </section>
 

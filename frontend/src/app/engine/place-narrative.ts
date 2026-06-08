@@ -77,21 +77,21 @@ export function buildDestinationIntelligence(place: PlaceData, context: Narrativ
   const ecoScore = clamp(74 + walkability * 2.1 - crowdPenalty * 5 + (context.selectedSlotAvailable ? 4 : 0), 0, 100);
 
   const parkingLines: Record<Persona, string> = {
-    COBA: `Chọn bãi gần nhất rồi đi bộ theo tuyến rợp bóng cây để giữ nhịp thong thả.`,
-    DRIVER: `Gửi ở bãi phụ, canh lối ra nhanh để không bị kẹt ở khúc cuối.`,
-    YOUTH: `Park ở bên ngoài một chút, rồi men theo hẻm local để vào điểm này cho đúng vibe.`
+    COBA: `Pick the closest lot and walk the tree-lined route to keep a relaxed pace.`,
+    DRIVER: `Park in the side lot and watch the exit so you do not get stuck at the end.`,
+    YOUTH: `Park a bit outside, then slip through the local alley to keep the right vibe.`
   };
 
   const comfortByMood: Record<CityMood, string> = {
-    CALM: "Đi bộ rất êm, không gian mở và dễ dừng lại chụp hình.",
-    STRESSED: "Đi bộ vẫn ổn nhưng nên ưu tiên lối ngắn và có bóng râm.",
-    CHAOTIC: "Nên đi theo lối vòng, tránh lõi trung tâm để đỡ ngợp xe cộ."
+    CALM: "Walking is easy, with open space and plenty of room to pause for photos.",
+    STRESSED: "Walking is still fine, but shorter routes and shade work best.",
+    CHAOTIC: "Take a detour and avoid the core so the traffic pressure does not feel overwhelming."
   };
 
   const storyByPersona: Record<Persona, string> = {
-    COBA: `Cô Ba thấy ${place.name} hợp nhất lúc ${timeLabel}; mình đi chậm một chút, cảm nhận lịch sử và giữ nhịp xanh cho cả chuyến.`,
-    DRIVER: `Chú tài chốt ${place.name} vào ${timeLabel} vì lúc đó lối vào dễ xoay hơn và chỗ đỗ phụ đỡ căng.`,
-    YOUTH: `Thanh niên ghé ${place.name} vào ${timeLabel} là vừa đẹp: đủ chill để đi bộ, đủ thoáng để mở ra góc local ít người biết.`
+    COBA: `Coba thinks ${place.name} works best at ${timeLabel}; slow down a little, feel the history, and keep the whole trip green.`,
+    DRIVER: `Driver picks ${place.name} at ${timeLabel} because the entrance is easier to handle and the backup parking is less tense.`,
+    YOUTH: `Youth hits ${place.name} at ${timeLabel} perfectly: chill enough to walk, open enough to reveal a less-known local corner.`
   };
 
   return {
@@ -119,9 +119,9 @@ export function generateAdaptiveStory(place: PlaceData, context: NarrativeContex
     intelligence.npcStory[persona],
     place.overview,
     place.history,
-    `Crowd level: ${intelligence.crowdLevel} • best at ${intelligence.bestVisitTime}`,
+    `Crowd level: ${intelligence.crowdLevel} • best time: ${intelligence.bestVisitTime}`,
     routeLine,
-    `Green score ${intelligence.ecoScore}/100 • walkability ${intelligence.walkability}/10`,
+    `Green score: ${intelligence.ecoScore}/100 • walkability: ${intelligence.walkability}/10`,
     `Hidden path: ${intelligence.localSecret}`
   ];
 }
@@ -136,9 +136,9 @@ export function generateNarrativeScript(place: PlaceData, persona: Persona, cont
 
 export function generateGreenTips(place: PlaceData): string[] {
   return [
-    `🚗 Gửi xe: ${place.recommendedParking}`,
-    `🚶 Tuyến đi bộ: ${place.walkingRoute}`,
-    `🌱 Lợi ích: ${place.ecoBenefit}`,
-    `✨ Bí kíp local: ${place.hiddenSpot}`
+    `🚗 Parking: ${place.recommendedParking}`,
+    `🚶 Walking route: ${place.walkingRoute}`,
+    `🌱 Benefit: ${place.ecoBenefit}`,
+    `✨ Local tip: ${place.hiddenSpot}`
   ];
 }

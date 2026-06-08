@@ -27,14 +27,14 @@ export interface Destination {
 export const destinations: Destination[] = [
   {
     id: "cuchi",
-    name: "Dia dao Cu Chi",
+    name: "Cu Chi Tunnels",
     category: "history",
     lat: 11.1434,
     lng: 106.462,
-    shortDescription: "Mang luoi dia dao gan lien voi lich su khang chien.",
+    shortDescription: "An underground tunnel network closely tied to the resistance era.",
     fullStory:
-      "Noi day tung la he thong phong thu ngam voi benh xa, bep Hoang Cam va duong lien lac giup luc luong tru vung trong giai doan kho khan.",
-    greenHint: "Gui xe ngoai cong, di bo de cam nhan khong gian sinh thai.",
+      "This was once a hidden defense system with field hospitals, Hoang Cam kitchens, and communication routes that supported forces in difficult times.",
+    greenHint: "Park outside the gate and walk in to experience the site at a calmer pace.",
     transportReward: {
       bike: 20,
       ev: 25,
@@ -45,7 +45,7 @@ export const destinations: Destination[] = [
     qrChallenges: [
       {
         id: "cuchi-1",
-        question: "Tim tam bang ghi nam mo rong dia dao.",
+        question: "Find the plaque that marks the tunnel expansion year.",
         qrCode: "QR_CUCHI_001",
         reward: 15
       }
@@ -53,14 +53,14 @@ export const destinations: Destination[] = [
   },
   {
     id: "independence-palace",
-    name: "Dinh Doc Lap",
+    name: "Independence Palace",
     category: "history",
     lat: 10.7781,
     lng: 106.6953,
-    shortDescription: "Bieu tuong kien truc va cot moc lich su hien dai Viet Nam.",
+    shortDescription: "An architectural icon and a key landmark in modern Vietnamese history.",
     fullStory:
-      "Dinh Doc Lap la diem giao nhau giua lich su, kien truc va ngoai giao. Khong gian noi that va ham nguyen ban mang den trai nghiem song dong cho nguoi tham quan.",
-    greenHint: "Uu tien EV hoac di bo tu bai xe de giu khu trung tam thoang khi.",
+      "The palace sits at the intersection of history, architecture, and diplomacy. Its preserved interiors and underground bunker create a vivid visitor experience.",
+    greenHint: "Prefer EV access or walk from the parking lot to keep the center airy.",
     transportReward: {
       bike: 16,
       ev: 22,
@@ -71,7 +71,7 @@ export const destinations: Destination[] = [
     qrChallenges: [
       {
         id: "palace-1",
-        question: "Tim thong tin ve phong hop lich su trong khu trung tam dinh.",
+        question: "Find the information about the historic meeting room in the central wing.",
         qrCode: "QR_DDL_001",
         reward: 14
       }

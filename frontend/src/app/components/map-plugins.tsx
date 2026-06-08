@@ -444,11 +444,11 @@ export function createMapPlugins(): MapLayerPlugin[] {
 
             <Marker
               position={routePath[0]}
-              icon={L.divIcon({ className: "routeEndpoint routeStart", html: "<span>●</span>", iconSize: [18, 18], iconAnchor: [9, 9] })}
+              icon={L.divIcon({ className: "routeEndpoint routeStart", html: "<span>📍 Start</span>", iconSize: [60, 20], iconAnchor: [12, 10] })}
             />
             <Marker
               position={routePath[routePath.length - 1]}
-              icon={L.divIcon({ className: "routeEndpoint routeEnd", html: "<span>●</span>", iconSize: [18, 18], iconAnchor: [9, 9] })}
+              icon={L.divIcon({ className: "routeEndpoint routeEnd", html: "<span>🎯 Destination</span>", iconSize: [86, 22], iconAnchor: [24, 12] })}
             />
 
             {carPosition ? (

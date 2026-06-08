@@ -51,10 +51,10 @@ export function nextStep(state: CityState): EngineStep {
 
 export function getSuggestion(state: CityState): string {
   if (state.mood === "CHAOTIC") {
-    return "Thành phố đang đông, nên đi route eco hoặc vòng";
+    return "The city is crowded, so take an eco route or a detour.";
   }
   if (state.intent === "HURRY") {
-    return "Bạn đang vội, chọn đường nhanh nhất";
+    return "You are in a hurry, so choose the fastest route.";
   }
   return "";
 }

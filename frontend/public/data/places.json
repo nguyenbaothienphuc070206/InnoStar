@@ -1,29 +1,29 @@
 [
   {
     "id": 1,
-    "name": "Bảo tàng TP",
+    "name": "Ho Chi Minh City Museum",
     "type": "history",
     "persona": "COBA",
     "lat": 10.7765,
     "lng": 106.7009,
-    "desc": "Nơi lưu giữ dấu ấn Sài Gòn xưa"
+    "desc": "A place that preserves old Saigon's legacy"
   },
   {
     "id": 2,
-    "name": "Công viên 23/9",
+    "name": "September 23rd Park",
     "type": "daily",
     "persona": "DRIVER",
     "lat": 10.7712,
     "lng": 106.6935,
-    "desc": "Chỗ gửi xe rộng, mát"
+    "desc": "A spacious, shady parking spot"
   },
   {
     "id": 3,
-    "name": "Bún mọc cô Sáu",
+    "name": "Aunt Sau's Bun Moc",
     "type": "local",
     "persona": "YOUTH",
     "lat": 10.7735,
     "lng": 106.6972,
-    "desc": "Quán ruột dân local"
+    "desc": "A favorite among locals"
   }
 ]

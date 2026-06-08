@@ -778,25 +778,6 @@ body {
   background: rgba(18, 22, 28, 0.65);
 }
 
-.routeStatusCard {
-  width: 100%;
-  padding: 10px;
-  display: grid;
-  gap: 6px;
-}
-
-.routeStatusCard h3 {
-  margin: 0 0 2px;
-  font-size: 0.82rem;
-}
-
-.routeStatusCard p {
-  margin: 0;
-  color: #dff3ff;
-  font-size: 0.76rem;
-  line-height: 1.5;
-}
-
 .mapAtmosphereOverlay {
   position: absolute;
   inset: 0;
@@ -1266,7 +1247,7 @@ body {
 }
 
 .routeArrow span {
-  font-size: 0.58rem;
+  font-size: 0.66rem;
   text-shadow: 0 0 8px rgba(31, 244, 250, 0.42);
 }
 
@@ -1279,15 +1260,13 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
+  padding: 2px 8px;
   border-radius: 999px;
-  font-size: 0.65rem;
+  font-size: 0.58rem;
   font-weight: 700;
-  width: 18px;
-  height: 18px;
-  background: rgba(2, 12, 18, 0.56);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #dffcff;
+  background: rgba(2, 12, 18, 0.74);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #e5fcff;
 }
 
 .routeStart span {
@@ -1314,6 +1293,54 @@ body {
   max-width: min(70vw, 220px);
   text-align: center;
 }
+
+.guidePanel {
+  position: absolute;
+  top: 118px;
+  left: 14px;
+  z-index: 52;
+  width: min(94vw, 360px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(4, 10, 14, 0.76);
+  backdrop-filter: blur(12px);
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.guidePanel.minimized {
+  width: min(78vw, 260px);
+}
+
+.guidePanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.guidePanelToggle {
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 0.64rem;
+}
+
+.guidePanelBody {
+  max-height: min(48vh, 420px);
+  overflow-y: auto;
+  padding-right: 4px;
+  display: grid;
+  gap: 8px;
+}
+
+.guidePanel p {
+  margin: 0;
+  font-size: 0.72rem;
+  color: #bdeaf5;
+  letter-spacing: 0.03em;
+}
+
 .guideAccordion {
   display: grid;
   gap: 6px;

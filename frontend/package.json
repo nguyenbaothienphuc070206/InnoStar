@@ -14,7 +14,7 @@
     "lhci:autorun": "lhci autorun --config=./lighthouserc.json"
   },
   "dependencies": {
-    "framer-motion": "^12.38.0",
+    "framer-motion": "^12.42.2",
     "jspdf": "^4.2.1",
     "leaflet": "1.9.4",
     "next": "14.2.14",
